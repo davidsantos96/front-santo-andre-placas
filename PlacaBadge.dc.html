@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@600;700&display=swap" rel="stylesheet">
+</helmet>
+<sc-if value="{{ isSm }}" hint-placeholder-val="{{ false }}">
+  <div style="display:inline-block;width:58px;border:1px solid #1A1D21;border-radius:3px;overflow:hidden;background:#FFFFFF;font-family:'Archivo Narrow',sans-serif;flex-shrink:0">
+    <div style="background:#003399;color:#FFFFFF;font-size:5px;font-weight:700;letter-spacing:2px;text-align:center;line-height:8px;height:8px;text-indent:2px">BRASIL</div>
+    <div style="text-align:center;font-weight:700;font-size:13px;letter-spacing:0.5px;color:#1A1D21;line-height:17px">{{ placa }}</div>
+  </div>
+</sc-if>
+<sc-if value="{{ isMd }}" hint-placeholder-val="{{ true }}">
+  <div style="display:inline-block;width:86px;border:1.5px solid #1A1D21;border-radius:4px;overflow:hidden;background:#FFFFFF;font-family:'Archivo Narrow',sans-serif;flex-shrink:0">
+    <div style="background:#003399;color:#FFFFFF;font-size:6.5px;font-weight:700;letter-spacing:2.5px;text-align:center;line-height:11px;height:11px;text-indent:2.5px">BRASIL</div>
+    <div style="text-align:center;font-weight:700;font-size:19px;letter-spacing:1px;color:#1A1D21;line-height:25px">{{ placa }}</div>
+  </div>
+</sc-if>
+<sc-if value="{{ isLg }}" hint-placeholder-val="{{ false }}">
+  <div style="display:inline-block;width:248px;border:3px solid #1A1D21;border-radius:9px;overflow:hidden;background:#FFFFFF;font-family:'Archivo Narrow',sans-serif;flex-shrink:0;box-shadow:0 1px 3px rgba(0,27,77,0.12)">
+    <div style="background:#003399;color:#FFFFFF;font-size:14px;font-weight:700;letter-spacing:7px;text-align:center;line-height:28px;height:28px;text-indent:7px">BRASIL</div>
+    <div style="text-align:center;font-weight:700;font-size:54px;letter-spacing:3px;color:#1A1D21;line-height:70px">{{ placa }}</div>
+  </div>
+</sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:300,&quot;height&quot;:140},&quot;placa&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;ABC1D23&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;tam&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;md&quot;,&quot;options&quot;:[&quot;sm&quot;,&quot;md&quot;,&quot;lg&quot;],&quot;tsType&quot;:&quot;'sm' | 'md' | 'lg'&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const t = this.props.tam ?? 'md';
+    return { placa: this.props.placa ?? 'ABC1D23', isSm: t === 'sm', isMd: t === 'md', isLg: t === 'lg' };
+  }
+}
+</script>
+</body>
+</html>

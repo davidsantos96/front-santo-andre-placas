@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F4F5F7;color:#1A1D21;font-family:'IBM Plex Sans',system-ui,sans-serif;}
+a{color:#003399}a:hover{color:#001B4D}
+*:focus-visible{outline:2px solid #003399;outline-offset:1px}
+button,input,select{font-family:inherit}
+@keyframes skpulse{0%,100%{opacity:.45}50%{opacity:1}}
+@keyframes toastin{from{transform:translateY(10px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes placaflutua{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes placabrilho{from{left:-70px}to{left:260px}}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:#C9CED6;border-radius:6px}::-webkit-scrollbar-track{background:transparent}
+</style>
+</helmet>
+<div style="display:flex;height:100vh;overflow:hidden" data-screen-label="AppShell">
+  <aside style="width:214px;flex-shrink:0;background:#001B4D;color:#FFFFFF;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;gap:10px;padding:16px 14px 14px 14px;border-bottom:1px solid rgba(255,255,255,0.09)">
+      <div style="width:44px;border:1.5px solid #FFFFFF;border-radius:4px;overflow:hidden;background:#FFFFFF;flex-shrink:0">
+        <div style="background:#003399;color:#FFFFFF;font-size:4.5px;font-weight:700;letter-spacing:1.5px;text-align:center;line-height:7px;height:7px;font-family:'Archivo Narrow',sans-serif">BRASIL</div>
+        <div style="text-align:center;font-weight:700;font-size:12px;color:#1A1D21;line-height:16px;font-family:'Archivo Narrow',sans-serif;letter-spacing:0.5px">SAP</div>
+      </div>
+      <div>
+        <div style="font-family:'Archivo Narrow',sans-serif;font-weight:700;font-size:15px;line-height:1.1;letter-spacing:0.3px">SANTO ANDRÉ<br>PLACAS</div>
+        <div style="font-size:10px;color:#93A0BC;margin-top:2px;letter-spacing:0.5px">SISTEMA INTERNO</div>
+      </div>
+    </div>
+    <nav style="flex:1;padding:10px 0;display:flex;flex-direction:column;gap:1px;overflow:auto">
+      <sc-for list="{{ modulos }}" as="m" hint-placeholder-count="6">
+        <button onClick="{{ m.ir }}" style="display:flex;align-items:center;gap:10px;width:100%;border:none;background:{{ m.bg }};color:{{ m.cor }};padding:9px 14px 9px 11px;font-size:13.5px;font-weight:500;cursor:pointer;text-align:left;border-left:3px solid {{ m.barra }}">
+          <span style="display:inline-flex;width:16px;justify-content:center">{{ m.icone }}</span>
+          <span style="flex:1">{{ m.nome }}</span>
+          <sc-if value="{{ m.badge }}" hint-placeholder-val="{{ false }}">
+            <span style="background:#B45309;color:#FFFFFF;font-size:10.5px;font-weight:600;border-radius:9px;padding:1px 7px;font-variant-numeric:tabular-nums">{{ m.badge }}</span>
+          </sc-if>
+        </button>
+      </sc-for>
+    </nav>
+    <div style="display:flex;align-items:center;gap:9px;padding:12px 14px;border-top:1px solid rgba(255,255,255,0.09)">
+      <div style="width:30px;height:30px;border-radius:50%;background:#003399;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600">{{ usuarioIniciais }}</div>
+      <div>
+        <div style="font-size:12.5px;font-weight:500">{{ usuarioNome }}</div>
+        <div style="font-size:10px;color:#93A0BC;letter-spacing:0.8px">{{ papelLabel }}</div>
+      </div>
+    </div>
+  </aside>
+  <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+    <header style="height:54px;background:#FFFFFF;border-bottom:1px solid #E2E5EA;display:flex;align-items:center;gap:16px;padding:0 20px;flex-shrink:0">
+      <div style="position:relative;width:400px">
+        <input id="busca-global" aria-label="Busca global" placeholder="Buscar placa, cliente ou nº do pedido" value="{{ buscaVal }}" onChange="{{ aoBuscar }}" onKeyDown="{{ buscaKey }}" style="width:100%;box-sizing:border-box;height:34px;border:1px solid #D4D8DF;border-radius:6px;padding:0 34px 0 11px;font-size:13px;background:#F4F5F7;color:#1A1D21"></input>
+        <span style="position:absolute;right:8px;top:7px;border:1px solid #D4D8DF;border-radius:4px;background:#FFFFFF;color:#5C6470;font-size:11px;line-height:18px;padding:0 6px;font-family:'IBM Plex Mono',monospace">/</span>
+        <sc-if value="{{ mostrarResultados }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;top:38px;left:0;right:0;background:#FFFFFF;border:1px solid #D4D8DF;border-radius:8px;box-shadow:0 8px 24px rgba(0,27,77,0.14);z-index:60;overflow:hidden">
+            <sc-for list="{{ resultados }}" as="r" hint-placeholder-count="2">
+              <button onClick="{{ r.abrir }}" style="display:flex;align-items:center;gap:10px;width:100%;border:none;background:#FFFFFF;padding:8px 12px;cursor:pointer;text-align:left;border-bottom:1px solid #EFF1F4" style-hover="background:#F4F5F7">
+                <dc-import name="PlacaBadge" placa="{{ r.placa }}" tam="sm" hint-size="58px,26px"></dc-import>
+                <span style="flex:1;min-width:0">
+                  <span style="display:block;font-size:13px;font-weight:500">{{ r.cliente }}</span>
+                  <span style="display:block;font-size:11.5px;color:#5C6470">{{ r.servico }}</span>
+                </span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#5C6470">#{{ r.id }}</span>
+              </button>
+            </sc-for>
+            <sc-if value="{{ semResultados }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:12px;font-size:12.5px;color:#5C6470">Nada encontrado para essa busca.</div>
+            </sc-if>
+          </div>
+        </sc-if>
+      </div>
+      <div style="flex:1"></div>
+      <button onClick="{{ irNovo }}" style="background:#003399;color:#FFFFFF;border:none;border-radius:6px;height:34px;padding:0 16px;font-size:13px;font-weight:600;cursor:pointer" style-hover="background:#002471">+ Novo pedido</button>
+    </header>
+    <main style="flex:1;overflow:auto;min-width:0">
+      <sc-if value="{{ estCarregando }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:18px">
+          <div style="animation:placaflutua 1.6s ease-in-out infinite;width:248px;border:3px solid #1A1D21;border-radius:9px;overflow:hidden;background:#FFFFFF;font-family:'Archivo Narrow',sans-serif;box-shadow:0 6px 20px rgba(0,27,77,0.15)">
+            <div style="background:#003399;color:#FFFFFF;font-size:14px;font-weight:700;letter-spacing:7px;text-indent:7px;text-align:center;line-height:28px;height:28px">BRASIL</div>
+            <div style="position:relative;overflow:hidden">
+              <div style="text-align:center;font-weight:700;font-size:54px;letter-spacing:3px;color:#1A1D21;line-height:70px;font-variant-numeric:tabular-nums">{{ placaCarregando }}</div>
+              <div style="position:absolute;top:0;bottom:0;width:60px;background:linear-gradient(100deg,rgba(255,255,255,0) 0%,rgba(255,255,255,0.9) 50%,rgba(255,255,255,0) 100%);animation:placabrilho 1.2s linear infinite"></div>
+            </div>
+          </div>
+          <div style="font-family:'Archivo Narrow',sans-serif;font-weight:600;font-size:16px;color:#1A1D21">Carregando o sistema…</div>
+          <div style="font-size:12.5px;color:#5C6470;margin-top:-12px">Estampando os dados, um instante</div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ estVazio }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:14px">
+          <dc-import name="PlacaBadge" placa="_______" tam="md" hint-size="86px,38px"></dc-import>
+          <div style="font-family:'Archivo Narrow',sans-serif;font-weight:600;font-size:19px">Nenhum pedido hoje ainda</div>
+          <div style="font-size:13px;color:#5C6470;margin-top:-8px">Quando um cliente chegar, comece por aqui.</div>
+          <button onClick="{{ irNovo }}" style="background:#003399;color:#FFFFFF;border:none;border-radius:6px;height:36px;padding:0 18px;font-size:13px;font-weight:600;cursor:pointer">Criar pedido</button>
+        </div>
+      </sc-if>
+      <sc-if value="{{ estErro }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;justify-content:center;height:100%">
+          <div style="background:#FFFFFF;border:1px solid #ECC9C9;border-radius:8px;padding:22px 26px;max-width:420px;text-align:center">
+            <div style="color:#B91C1C;font-weight:600;font-size:14.5px">Não foi possível carregar os dados</div>
+            <div style="font-size:13px;color:#5C6470;margin-top:6px">A API não respondeu. Verifique a conexão e tente de novo — nada foi perdido.</div>
+            <button onClick="{{ tentarNovamente }}" style="margin-top:14px;background:#FFFFFF;color:#003399;border:1px solid #003399;border-radius:6px;height:34px;padding:0 16px;font-size:13px;font-weight:600;cursor:pointer" style-hover="background:#E8EDF9">Tentar novamente</button>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ estNormal }}" hint-placeholder-val="{{ true }}">
+
+        <sc-if value="{{ telaPedidos }}" hint-placeholder-val="{{ true }}">
+          <div style="padding:18px 20px" data-screen-label="Pedidos">
+            <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">
+              <h1 style="font-family:'Archivo Narrow',sans-serif;font-weight:700;font-size:22px;margin:0">Pedidos</h1>
+              <span style="font-size:12.5px;color:#5C6470;font-variant-numeric:tabular-nums">{{ totalPedidos }} ativos</span>
+              <div style="flex:1"></div>
+              <div style="display:flex;border:1px solid #D4D8DF;border-radius:6px;overflow:hidden">
+                <button onClick="{{ verQuadro }}" style="border:none;padding:6px 14px;font-size:12.5px;font-weight:600;cursor:pointer;background:{{ tabQuadroBg }};color:{{ tabQuadroCor }}">Quadro</button>
+                <button onClick="{{ verTabela }}" style="border:none;padding:6px 14px;font-size:12.5px;font-weight:600;cursor:pointer;border-left:1px solid #D4D8DF;background:{{ tabTabelaBg }};color:{{ tabTabelaCor }}">Tabela</button>
+              </div>
+            </div>
+            <sc-if value="{{ visaoQuadro }}" hint-placeholder-val="{{ true }}">
+              <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;align-items:start">
+                <sc-for list="{{ colunas }}" as="col" hint-placeholder-count="4">
+                  <div onDragOver="{{ permitirDrop }}" onDrop="{{ col.drop }}" style="background:#EBEDF1;border-radius:8px;padding:8px;min-height:340px">
+                    <div style="display:flex;align-items:center;gap:7px;padding:4px 6px 10px 6px">
+                      <span style="width:8px;height:8px;border-radius:2px;background:{{ col.cor }}"></span>
+                      <span style="font-family:'Archivo Narrow',sans-serif;font-weight:700;font-size:13px;letter-spacing:0.8px">{{ col.label }}</span>
+                      <span style="font-size:11.5px;color:#5C6470;font-variant-numeric:tabular-nums">{{ col.qtd }}</span>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:8px">
+                      <sc-for list="{{ col.pedidos }}" as="p" hint-placeholder-count="2">
+                        <div draggable="{{ true }}" onDragStart="{{ p.dragStart }}" onClick="{{ p.abrir }}" style="background:#FFFFFF;border:1px solid #E2E5EA;border-radius:6px;padding:9px 10px;cursor:pointer;transition:box-shadow .15s" style-hover="box-shadow:0 3px 10px rgba(0,27,77,0.12);border-color:#C4CBD6">
+                          <div style="display:flex;align-items:baseline;gap:8px">
+                            <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#5C6470">#{{ p.id }}</span>
+                            <span style="flex:1"></span>
+                            <span style="font-size:11px;color:#5C6470;font-variant-numeric:tabular-nums">{{ p.tempo }}</span>
+                          </div>
+                          <div style="margin:7px 0 6px 0">
+                            <dc-import name="PlacaBadge" placa="{{ p.placa }}" tam="md" hint-size="86px,38px"></dc-import>
+                          </div>
+                          <div style="font-size:13px;font-weight:600;line-height:1.25">{{ p.cliente }}</div>
+                          <div style="font-size:11.5px;color:#5C6470;margin-top:1px">{{ p.servico }}</div>
+                          <div style="display:flex;align-items:center;margin-top:7px">
+                            <span style="font-size:10px;font-weight:600;letter-spacing:0.8px;color:#5C6470;border:1px solid #D4D8DF;border-radius:4px;padding:1px 6px">{{ p.origem }}</span>
+                            <span style="flex:1"></span>
+                            <span style="font-family:'Archivo Narrow',sans-serif;font-weight:600;font-size:13.5px;font-variant-numeric:tabular-nums">{{ p.precoFmt }}</span>
+                          </div>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="font-size:11.5px;color:#5C6470;margin-top:10px">Arraste um card para mudar o status · CANCELADO fica recolhido nesta visão</div>
+            </sc-if>
+            <sc-if value="{{ visaoTabela }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#FFFFFF;border:1px solid #E2E5EA;border-radius:8px;overflow:hidden">
+                <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid #E2E5EA">
+                  <label for="filtro-status" style="font-size:12px;color:#5C6470">Status</label>
+                  <select id="filtro-status" value="{{ filtroStatus }}" onChange="{{ aoFiltrar }}" style="height:30px;border:1px solid #D4D8DF;border-radius:6px;font-size:12.5px;padding:0 8px;background:#FFFFFF;color:#1A1D21">
+                    <option value="TODOS">Todos</option>
+                    <option value="RECEBIDO">Recebido</option>
+                    <option value="EM_PROCESSAMENTO">Em processamento</option>
+                    <option value="PLACA_PRONTA">Placa pronta</option>
+                    <option value="ENTREGUE">Entregue</option>
+                  </select>
+                </div>
+                <div style="overflow-x:auto"><table style="width:100%;min-width:880px;border-collapse:collapse;font-size:12.5px">
+                  <thead>
+                    <tr style="text-align:left;color:#5C6470;font-size:11px;letter-spacing:0.6px">
+                      <th style="padding:8px 12px;font-weight:600;border-bottom:1px solid #E2E5EA">Nº</th>
+                      <th style="padding:8px 12px;font-weight:600;border-bottom:1px solid #E2E5EA">PLACA</th>
+                      <th style="padding:8px 12px;font-weight:600;border-bottom:1px solid #E2E5EA">CLIENTE</th>
+                      <th style="padding:8px 12px;font-weight:600;border-bottom:1px solid #E2E5EA">SERVIÇO</th>
+                      <th style="padding:8px 12px;font-weight:600;border-bottom:1px solid #E2E5EA">STATUS</th>
+                      <th style="padding:8px 12px;font-weight:600;border-bottom:1px solid #E2E5EA">ORIGEM</th>
+                      <th style="padding:8px 12px;font-weight:600;border-bottom:1px solid #E2E5EA">TEMPO</th>
+                      <th style="padding:8px 12px;font-weight:600;border-bottom:1px solid #E2E5EA;text-align:right">VALOR</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <sc-for list="{{ pedidosTabela }}" as="p" hint-placeholder-count="6">
+                      <tr onClick="{{ p.abrir }}" style="cursor:pointer;height:42px" style-hover="background:#F4F5F7">
+                        <td style="padding:4px 12px;border-bottom:1px solid #EFF1F4;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#5C6470">#{{ p.id }}</td>
+                        <td style="padding:4px 12px;border-bottom:1px solid #EFF1F4"><dc-import name="PlacaBadge" placa="{{ p.placa }}" tam="sm" hint-size="58px,26px"></dc-import></td>
+                        <td style="padding:4px 12px;border-bottom:1px solid #EFF1F4;font-weight:500">{{ p.cliente }}</td>
+                        <td style="padding:4px 12px;border-bottom:1px solid #EFF1F4;color:#5C6470">{{ p.servico }}</td>
+                        <td style="padding:4px 12px;border-bottom:1px solid #EFF1F4"><span style="font-size:11px;font-weight:600;border-radius:10px;padding:2px 9px;background:{{ p.stBg }};color:{{ p.stCor }}">{{ p.stLabel }}</span></td>
+                        <td style="padding:4px 12px;border-bottom:1px solid #EFF1F4;font-size:11px;color:#5C6470;letter-spacing:0.5px">{{ p.origem }}</td>
+                        <td style="padding:4px 12px;border-bottom:1px solid #EFF1F4;color:#5C6470;font-variant-numeric:tabular-nums">{{ p.tempo }}</td>
+                        <td style="padding:4px 12px;border-bottom:1px solid #EFF1F4;text-align:right;font-variant-numeric:tabular-nums;font-weight:500">{{ p.precoFmt }}</td>
+                      </tr>
+                    </sc-for>
+                  </tbody>
+                </table></div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ telaNovo }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:18px 20px 90px 20px;max-width:820px" data-screen-label="Novo pedido">
+            <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:14px">
+              <h1 style="font-family:'Archivo Narrow',sans-serif;font-weight:700;font-size:22px;margin:0">Novo pedido</h1>
+              <span style="font-size:12px;color:#5C6470">Tab e Enter percorrem todo o fluxo</span>
+            </div>
+            <section style="background:#FFFFFF;border:1px solid #E2E5EA;border-radius:8px;padding:16px 18px;margin-bottom:12px">
+              <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px">
+                <span style="width:22px;height:22px;border-radius:50%;background:#003399;color:#FFFFFF;font-size:12px;font-weight:600;display:inline-flex;align-items:center;justify-content:center">1</span>
+                <span style="font-family:'Archivo Narrow',sans-serif;font-weight:700;font-size:15px">Cliente</span>
+                <span style="flex:1"></span>
+                <button onClick="{{ abrirNc }}" style="border:1px solid #D4D8DF;background:#FFFFFF;border-radius:6px;height:28px;padding:0 11px;font-size:12px;font-weight:600;color:#003399;cursor:pointer" style-hover="background:#F4F5F7">+ Novo cliente</button>
+              </div>
+              <label for="np-cliente" style="display:block;font-size:12px;color:#5C6470;margin-bottom:4px">Buscar por nome, CPF/CNPJ ou telefone</label>
+              <input id="np-cliente" value="{{ cbVal }}" onChange="{{ aoCb }}" placeholder="Ex: Marcos, 412.688…" style="width:100%;box-sizing:border-box;height:36px;border:1px solid #D4D8DF;border-radius:6px;padding:0 11px;font-size:13px"></input>
+              <sc-if value="{{ ncAberto }}" hint-placeholder-val="{{ false }}">
+                <div style="border:1px solid #C9D4EC;background:#F5F8FE;border-radius:6px;padding:12px;margin-top:10px;display:grid;grid-template-columns:1.4fr 1fr 1fr auto;gap:8px;align-items:end">
+                  <div><label for="nc-nome" style="display:block;font-size:11.5px;color:#5C6470;margin-bottom:3px">Nome completo</label><input id="nc-nome" value="{{ ncNome }}" onChange="{{ aoNcNome }}" style="width:100%;box-sizing:border-box;height:32px;border:1px solid #D4D8DF;border-radius:6px;padding:0 9px;font-size:12.5px"></input></div>
+                  <div><label for="nc-doc" style="display:block;font-size:11.5px;color:#5C6470;margin-bottom:3px">CPF/CNPJ</label><input id="nc-doc" value="{{ ncDoc }}" onChange="{{ aoNcDoc }}" style="width:100%;box-sizing:border-box;height:32px;border:1px solid #D4D8DF;border-radius:6px;padding:0 9px;font-size:12.5px;font-variant-numeric:tabular-nums"></input></div>
+                  <div><label for="nc-tel" style="display:block;font-size:11.5px;color:#5C6470;margin-bottom:3px">Telefone</label><input id="nc-tel" value="{{ ncTel }}" onChange="{{ aoNcTel }}" style="width:100%;box-sizing:border-box;height:32px;border:1px solid #D4D8DF;border-radius:6px;padding:0 9px;font-size:12.5px;font-variant-numeric:tabular-nums"></input></div>
+                  <button onClick="{{ salvarNc }}" style="background:#003399;color:#FFFFFF;border:none;border-radius:6px;height:32px;padding:0 13px;font-size:12.5px;font-weight:600;cursor:pointer">Salvar</button>
+                </div>
+              </sc-if>
+              <div style="display:flex;flex-direction:column;gap:6px;margin-top:10px">
+                <sc-for list="{{ clientesFiltrados }}" as="c" hint-placeholder-count="3">
+                  <button onClick="{{ c.selecionar }}" style="display:flex;align-items:center;gap:12px;border:1px solid {{ c.borda }};background:{{ c.bg }};border-radius:6px;padding:8px 12px;cursor:pointer;text-align:left" style-hover="border-color:#003399">
+                    <span style="flex:1;font-size:13px;font-weight:600">{{ c.nome }}</span>
+                    <span style="font-size:12px;color:#5C6470;font-variant-numeric:tabular-nums">{{ c.doc }}</span>
+                    <span style="font-size:12px;color:#5C6470;font-variant-numeric:tabular-nums">{{ c.tel }}</span>
+                  </button>
+                </sc-for>
+              </div>
+            </section>
+            <section style="background:#FFFFFF;border:1px solid #E2E5EA;border-radius:8px;padding:16px 18px;margin-bottom:12px;opacity:{{ b2Opacidade }}">
+              <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px">
+                <span style="width:22px;height:22px;border-radius:50%;background:#003399;color:#FFFFFF;font-size:12px;font-weight:600;display:inline-flex;align-items:center;justify-content:center">2</span>
+                <span style="font-family:'Archivo Narrow',sans-serif;font-weight:700;font-size:15px">Veículo</span>
+                <span style="font-size:12px;color:#5C6470">{{ b2Dica }}</span>
+                <span style="flex:1"></span>
+                <sc-if value="{{ temClienteSel }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ abrirNv }}" style="border:1px solid #D4D8DF;background:#FFFFFF;border-radius:6px;height:28px;padding:0 11px;font-size:12px;font-weight:600;color:#003399;cursor:pointer" style-hover="background:#F4F5F7">+ Cadastrar veículo</button>
+                </sc-if>
+              </div>
+              <sc-if value="{{ nvAberto }}" hint-placeholder-val="{{ false }}">
+                <div style="border:1px solid #C9D4EC;background:#F5F8FE;border-radius:6px;padding:12px;margin-bottom:10px">
+                  <div style="display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:end">
+                    <div><label for="nv-placa" style="display:block;font-size:11.5px;color:#5C6470;margin-bottom:3px">Placa</label><input id="nv-placa" value="{{ nvPlaca }}" onChange="{{ aoNvPlaca }}" placeholder="ABC1D23" maxLength="{{ sete }}" style="width:110px;box-sizing:border-box;height:32px;border:1px solid #D4D8DF;border-radius:6px;padding:0 9px;font-size:14px;font-family:'Archivo Narrow',sans-serif;font-weight:700;letter-spacing:1.5px;text-transform:uppercase"></input></div>
+                    <div style="font-size:12px;color:#5C6470;padding-bottom:8px">{{ nvDica }}</div>
+                    <button onClick="{{ consultarNv }}" disabled="{{ nvConsultaDesab }}" style="background:{{ nvConsultaBg }};color:#FFFFFF;border:none;border-radius:6px;height:32px;padding:0 13px;font-size:12.5px;font-weight:600;cursor:pointer">{{ nvConsultarLabel }}</button>
+                  </div>
+                  <div style="display:grid;grid-template-columns:1fr 1.4fr auto auto;gap:8px;align-items:end;margin-top:10px">
+                    <div><label for="nv-marca" style="display:block;font-size:11.5px;color:#5C6470;margin-bottom:3px">Marca</label><input id="nv-marca" value="{{ nvMarca }}" onChange="{{ aoNvMarca }}" style="width:100%;box-sizing:border-box;height:32px;border:1px solid #D4D8DF;border-radius:6px;padding:0 9px;font-size:12.5px"></input></div>
+                    <div><label for="nv-modelo" style="display:block;font-size:11.5px;color:#5C6470;margin-bottom:3px">Modelo</label><input id="nv-modelo" value="{{ nvModelo }}" onChange="{{ aoNvModelo }}" style="width:100%;box-sizing:border-box;height:32px;border:1px solid #D4D8DF;border-radius:6px;padding:0 9px;font-size:12.5px"></input></div>
+                    <div><label for="nv-ano" style="display:block;font-size:11.5px;color:#5C6470;margin-bottom:3px">Ano</label><input id="nv-ano" value="{{ nvAno }}" onChange="{{ aoNvAno }}" maxLength="{{ quatro }}" style="width:64px;box-sizing:border-box;height:32px;border:1px solid #D4D8DF;border-radius:6px;padding:0 9px;font-size:12.5px;font-variant-numeric:tabular-nums"></input></div>
+                    <button onClick="{{ salvarNv }}" style="background:#003399;color:#FFFFFF;border:none;border-radius:6px;height:32px;padding:0 13px;font-size:12.5px;font-weight:600;cursor:pointer">Salvar veículo</button>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ clienteSemVeiculo }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;align-items:center;gap:10px;border:1px dashed #D4D8DF;border-radius:6px;padding:12px 14px;font-size:12.5px;color:#5C6470">
+                  Este cliente ainda não tem veículo cadastrado — use o botão "+ Cadastrar veículo" acima.
+                </div>
+              </sc-if>
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <sc-for list="{{ veiculosCliente }}" as="v" hint-placeholder-count="2">
+                  <button onClick="{{ v.selecionar }}" style="display:flex;align-items:center;gap:12px;border:1px solid {{ v.borda }};background:{{ v.bg }};border-radius:6px;padding:8px 12px;cursor:pointer;text-align:left" style-hover="border-color:#003399">
+                    <dc-import name="PlacaBadge" placa="{{ v.placa }}" tam="sm" hint-size="58px,26px"></dc-import>
+                    <span style="flex:1;font-size:13px;font-weight:500">{{ v.descricao }}</span>
+                  </button>
+                </sc-for>
+              </div>
+              <sc-if value="{{ temVeiculoSel }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;align-items:center;gap:12px;margin-top:12px;border-top:1px dashed #E2E5EA;padding-top:12px">
+                  <button onClick="{{ consultar }}" style="background:#003399;color:#FFFFFF;border:none;border-radius:6px;height:32px;padding:0 14px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:#002471">{{ consultarLabel }}</button>
+                  <sc-if value="{{ consultaFeita }}" hint-placeholder-val="{{ false }}">
+                    <span style="font-size:12.5px;color:#1E7F4F;font-weight:500">✓ {{ consultaResumo }}</span>
+                  </sc-if>
+                  <sc-if value="{{ semConsulta }}" hint-placeholder-val="{{ true }}">
+                    <span style="font-size:12px;color:#5C6470">A consulta veicular preenche marca, modelo e ano</span>
+                  </sc-if>
+                </div>
+              </sc-if>
+            </section>
+            <section style="background:#FFFFFF;border:1px solid #E2E5EA;border-radius:8px;padding:16px 18px;opacity:{{ b3Opacidade }}">
+              <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px">
+                <span style="width:22px;height:22px;border-radius:50%;background:#003399;color:#FFFFFF;font-size:12px;font-weight:600;display:inline-flex;align-items:center;justify-content:center">3</span>
+                <span style="font-family:'Archivo Narrow',sans-serif;font-weight:700;font-size:15px">Serviço e pagamento</span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <sc-for list="{{ servicosLista }}" as="s" hint-placeholder-count="4">
+                  <button onClick="{{ s.selecionar }}" style="display:flex;align-items:center;gap:12px;border:1px solid {{ s.borda }};background:{{ s.bg }};border-radius:6px;padding:8px 12px;cursor:pointer;text-align:left" style-hover="border-color:#003399">
+                    <span style="flex:1;font-size:13px;font-weight:500">{{ s.nome }}</span>
+                    <span style="font-size:11px;color:#5C6470;letter-spacing:0.5px">{{ s.cat }}</span>
+                    <span style="font-family:'Archivo Narrow',sans-serif;font-weight:600;font-size:14px;font-variant-numeric:tabular-nums;width:80px;text-align:right">{{ s.precoFmt }}</span>
+                  </button>
+                </sc-for>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;margin-top:14px">
+                <label for="np-pag" style="font-size:12.5px;color:#5C6470">Pagamento (opcional na criação)</label>
+                <select id="np-pag" value="{{ pagamentoVal }}" onChange="{{ aoPagamento }}" style="height:32px;border:1px solid #D4D8DF;border-radius:6px;font-size:12.5px;padding:0 9px;background:#FFFFFF">
+                  <option value="">Registrar depois</option>
+                  <option value="PIX">Pix</option>
+                  <option value="CARTAO">Cartão</option>
+                  <option value="DINHEIRO">Dinheiro</option>
+                </select>
+              </div>
+            </section>
+            <div style="position:sticky;bottom:0;margin-top:14px;background:#FFFFFF;border:1px solid #E2E5EA;border-radius:8px;padding:12px 16px;display:flex;align-items:center;gap:14px;box-shadow:0 -4px 16px rgba(0,27,77,0.07)">
+              <span style="font-size:12.5px;color:#5C6470">{{ resumoNovo }}</span>
+              <span style="flex:1"></span>
+              <span style="font-family:'Archivo Narrow',sans-serif;font-weight:700;font-size:19px;font-variant-numeric:tabular-nums">{{ totalNovoFmt }}</span>
+              <button onClick="{{ criarPedido }}" disabled="{{ criarDesabilitado }}" style="background:{{ criarBg }};color:#FFFFFF;border:none;border-radius:6px;height:38px;padding:0 20px;font-size:13.5px;font-weight:600;cursor:pointer">Criar pedido</button>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ telaDetalhe }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:18px 20px;max-width:1120px" data-screen-label="Detalhe do pedido">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+              <button onClick="{{ voltarPedidos }}" style="border:1px solid #D4D8DF;background:#FFFFFF;border-radius:6px;height:30px;padding:0 11px;font-size:12.5px;font-weight:500;color:#5C6470;cursor:pointer" style-hover="background:#F4F5F7">← Pedidos</button>
+              <h1 style="font-family:'Archivo Narrow',sans-serif;font-weight:700;font-size:22px;margin:0">Pedido #{{ det.id }}</h1>
+              <span style="font-size:11.5px;font-weight:600;border-radius:10px;padding:3px 10px;background:{{ det.stBg }};color:{{ det.stCor }}">{{ det.stLabel }}</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1.25fr 1fr;gap:18px;align-items:start">
+              <div style="display:flex;flex-direction:column;gap:14px">
+                <div style="background:#FFFFFF;border:1px solid #E2E5EA;border-radius:8px;padding:20px;display:flex;flex-direction:column;align-items:center;gap:12px">
+                  <dc-import name="PlacaBadge" placa="{{ det.placa }}" tam="lg" hint-size="248px,104px"></dc-import>
+                  <div style="font-size:13.5px;color:#5C6470">{{ det.veiculoDesc }}</div>
+                </div>
+                <div style="background:#FFFFFF;border:1px solid #E2E5EA;border-radius:8px;padding:16px 18px">
+                  <div style="font-family:'Archivo Narrow',sans-serif;font-weight:700;font-size:14px;letter-spacing:0.5px;color:#5C6470;margin-bottom:10px">CLIENTE</div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;font-size:13px">
+                    <div><span style="color:#5C6470;font-size:11.5px;display:block">Nome</span><span style="font-weight:600">{{ det.cliente }}</span></div>
+                    <div><span style="color:#5C6470;font-size:11.5px;display:block">CPF/CNPJ</span><span style="font-variant-numeric:tabular-nums">{{ det.doc }}</span></div>
+                    <div><span style="color:#5C6470;font-size:11.5px;display:block">Telefone</span><span style="font-variant-numeric:tabular-nums">{{ det.tel }}</span></div>
+                    <div><span style="color:#5C6470;font-size:11.5px;display:block">Origem</span><span>{{ det.origem }}</span></div>
+                  </div>
+                </div>
+                <div style="background:#FFFFFF;border:1px solid #E2E5EA;border-radius:8px;padding:16px 18px">
+                  <div style="font-family:'Archivo Narrow',sans-serif;font-weight:700;font-size:14px;letter-spacing:0.5px;color:#5C6470;margin-bottom:10px">SERVIÇO E PAGAMENTO</div>
+                  <div style="display:flex;align-items:center;gap:12px;font-size:13px">
+                    <span style="flex:1;font-weight:500">{{ det.servico }}</span>
+                    <span style="font-family:'Archivo Narrow',sans-serif;font-weight:700;font-size:17px;font-variant-numeric:tabular-nums">{{ det.precoFmt }}</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:10px;margin-top:12px;border-top:1px dashed #E2E5EA;padding-top:12px">
+                    <span style="font-size:11.5px;font-weight:600;border-radius:10px;padding:2px 9px;background:{{ det.pagoBg }};color:{{ det.pagoCor }}">{{ det.pagoLabel }}</span>
+                    <span style="flex:1"></span>
+                    <sc-if value="{{ det.naoPago }}" hint-placeholder-val="{{ false }}">
+                      <button onClick="{{ registrarPagamento }}" style="border:1px solid #003399;background:#FFFFFF;color:#003399;border-radius:6px;height:30px;padding:0 12px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:#E8EDF9">Registrar pagamento</button>
+                    </sc-if>
+                  </div>
+                </div>
+              </div>
+              <div style="background:#FFFFFF;border:1px solid #E2E5EA;border-radius:8px;padding:16px 18px">
+                <sc-if value="{{ temProx }}" hint-placeholder-val="{{ true }}">
+                  <button onClick="{{ avancar }}" style="width:100%;background:#003399;color:#FFFFFF;border:none;border-radius:6px;height:40px;font-size:13.5px;font-weight:600;cursor:pointer" style-hover="background:#002471">{{ proxLabel }}</button>
+                  <sc-if value="{{ avisoEstoque }}" hint-placeholder-val="{{ false }}">
+                    <div style="font-size:11.5px;color:#B45309;margin-top:7px;text-align:center">Baixa automática de estoque: −1 Placa Mercosul (par)</div>
+                  </sc-if>
+                  <div style="height:14px"></div>
+                </sc-if>
+                <div style="font-family:'Archivo Narrow',sans-serif;font-weight:700;font-size:14px;letter-spacing:0.5px;color:#5C6470;margin-bottom:12px">LINHA DO TEMPO</div>
+                <div style="display:flex;flex-direction:column">
+                  <sc-for list="{{ timeline }}" as="t" hint-placeholder-count="4">
+                    <div style="display:flex;gap:12px">
+                      <div style="display:flex;flex-direction:column;align-items:center">
+                        <span style="width:12px;height:12px;border-radius:50%;background:{{ t.dotBg }};border:2px solid {{ t.dotBorda }};box-sizing:border-box;margin-top:2px"></span>
+                        <sc-if value="{{ t.temLinha }}" hint-placeholder-val="{{ true }}">
+                          <span style="width:2px;flex:1;background:#E2E5EA;min-height:26px"></span>
+                        </sc-if>
+                      </div>
+                      <div style="padding-bottom:16px">
+                        <div style="font-size:13px;font-weight:600;color:{{ t.cor }}">{{ t.label }}</div>
+                        <sc-if value="{{ t.done }}" hint-placeholder-val="{{ true }}">
+                          <div style="font-size:11.5px;color:#5C6470;margin-top:1px">{{ t.quem }} · {{ t.quando }}</div>
+                        </sc-if>
+                        <sc-if value="{{ t.pendente }}" hint-placeholder-val="{{ false }}">
+                          <div style="font-size:11.5px;color:#93A0BC;margin-top:1px">aguardando</div>
+                        </sc-if>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ telaDashboard }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:20px 24px;max-width:1180px" data-screen-label="Dashboard">
+            <h1 style="font-family:'Archivo Narrow',sans-serif;font-weight:700;font-size:22px;margin:0 0 16px 0">Dashboard</h1>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
+              <sc-for list="{{ resumoCards }}" as="c" hint-placeholder-count="4">
+                <div style="background:#FFFFFF;border:2px solid #1A1D21;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,27,77,0.10)">
+                  <div style="background:#003399;color:#FFFFFF;font-family:'Archivo Narrow',sans-serif;font-weight:700;font-size:10px;letter-spacing:1.5px;text-indent:1.5px;line-height:20px;height:20px;text-align:center;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px">{{ c.label }}</div>
+                  <div style="padding:12px 16px 13px 16px;text-align:center">
+                    <div style="font-family:'Archivo Narrow',sans-serif;font-weight:700;font-size:32px;font-variant-numeric:tabular-nums;line-height:1;letter-spacing:1px;color:#1A1D21">{{ c.valor }}</div>
+                    <div style="font-size:11.5px;color:{{ c.subCor }};margin-top:7px;font-weight:500">{{ c.sub }}</div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="display:grid;grid-template-columns:1.7fr 1fr;gap:14px;margin-top:14px;align-items:start">
+              <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+              <div style="background:#FFFFFF;border:2px solid #1A1D21;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,27,77,0.10)">
+                <div style="background:#003399;color:#FFFFFF;font-family:'Archivo Narrow',sans-serif;font-weight:700;font-size:10px;letter-spacing:1.5px;text-indent:1.5px;line-height:20px;height:20px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px">FATURAMENTO · ÚLTIMOS 14 DIAS</div>
+                <div style="padding:12px 16px 14px 16px">
+                <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:8px">
+                  <span style="font-size:11.5px;color:#5C6470">pico {{ chartMaxFmt }}</span>
+                  <span style="flex:1"></span>
+                  <span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#5C6470"><span style="width:14px;border-top:2px dashed #B45309;display:inline-block"></span>meta {{ metaFmt }}</span>
+                </div>
+                <div style="position:relative">
+                <svg viewBox="0 0 560 195" style="width:100%;height:auto;display:block">
+                  <line x1="15" y1="40" x2="545" y2="40" stroke="#EFF1F4" strokeWidth="1"></line>
+                  <line x1="15" y1="105" x2="545" y2="105" stroke="#EFF1F4" strokeWidth="1"></line>
+                  <line x1="15" y1="170" x2="545" y2="170" stroke="#D4D8DF" strokeWidth="1"></line>
+                  <line x1="15" y1="{{ metaY }}" x2="545" y2="{{ metaY }}" stroke="#B45309" strokeWidth="1.5" strokeDasharray="5 4" opacity="0.75"></line>
+                  <polygon points="{{ chartArea }}" fill="#003399" opacity="0.07"></polygon>
+                  <polyline points="{{ chartPts }}" fill="none" stroke="#003399" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round"></polyline>
+                  <sc-for list="{{ chartDots }}" as="d" hint-placeholder-count="3">
+                    <circle cx="{{ d.x }}" cy="{{ d.y }}" r="{{ d.r }}" fill="{{ d.fill }}" stroke="{{ d.stroke }}" strokeWidth="{{ d.sw }}"></circle>
+                  </sc-for>
+                </svg>
+                <div style="position:absolute;left:{{ ultLeft }};top:{{ ultTop }};transform:translate(-100%,-100%);background:#1A1D21;color:#FFFFFF;font-size:11px;font-weight:600;border-radius:4px;padding:2px 8px;white-space:nowrap;font-variant-numeric:tabular-nums">{{ ultFmt }}</div>
+                <sc-for list="{{ chartLabels }}" as="l" hint-placeholder-count="3">
+                  <div style="position:absolute;left:{{ l.left }};top:91.5%;transform:translateX(-50%);font-size:10px;color:#5C6470;font-variant-numeric:tabular-nums">{{ l.t }}</div>
+                </sc-for>
+                </div>
+                </div>
+              </div>
+              <div style="background:#FFFFFF;border:2px solid #1A1D21;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,27,77,0.10)">
+                <div style="background:#B45309;color:#FFFFFF;font-family:'Archivo Narrow',sans-serif;font-weight:700;font-size:10px;letter-spacing:1.5px;text-indent:1.5px;line-height:20px;height:20px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px">FILA DE ATENÇÃO · {{ filaQtd }}</div>
+                <sc-if value="{{ temFila }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;flex-direction:column">
+                    <sc-for list="{{ filaAtencao }}" as="f" hint-placeholder-count="2">
+                      <button onClick="{{ f.abrir }}" style="display:flex;align-items:center;gap:12px;border:none;background:#FFFFFF;padding:8px 14px;cursor:pointer;text-align:left;border-bottom:1px solid #EFF1F4" style-hover="background:#F4F5F7">
+                        <dc-import name="PlacaBadge" placa="{{ f.placa }}" tam="sm" hint-size="58px,26px"></dc-import>
+                        <span style="flex:1;min-width:0">
+                          <span style="display:block;font-size:12.5px;font-weight:600">{{ f.cliente }}</span>
+                          <span style="display:block;font-size:11.5px;color:#B45309;font-weight:500">{{ f.motivo }}</span>
+                        </span>
+                        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#5C6470">#{{ f.id }}</span>
+                        <span style="color:#93A0BC;font-size:13px">→</span>
+                      </button>
+                    </sc-for>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ filaVazia }}" hint-placeholder-val="{{ false }}">
+                  <div style="padding:14px;font-size:12.5px;color:#1E7F4F;font-weight:500;text-align:center">✓ Nenhum pedido precisando de atenção</div>
+                </sc-if>
+              </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:14px">
+                <div style="background:#FFFFFF;border:2px solid #1A1D21;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,27,77,0.10)">
+                  <div style="background:#003399;color:#FFFFFF;font-family:'Archivo Narrow',sans-serif;font-weight:700;font-size:10px;letter-spacing:1.5px;text-indent:1.5px;line-height:20px;height:20px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px">SERVIÇOS MAIS VENDIDOS</div>
+                  <div style="display:flex;flex-direction:column;gap:9px;padding:12px 16px 14px 16px">
+                    <sc-for list="{{ topServicos }}" as="s" hint-placeholder-count="5">
+                      <div>
+                        <div style="display:flex;font-size:12px;margin-bottom:3px">
+                          <span style="flex:1">{{ s.nome }}</span>
+                          <span style="color:#5C6470;font-variant-numeric:tabular-nums">{{ s.qtd }}</span>
+                        </div>
+                        <div style="height:8px;background:#EFF1F4;border-radius:4px;overflow:hidden">
+                          <div style="height:100%;width:{{ s.pct }};background:#003399;border-radius:4px"></div>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+                <div style="background:#FFFFFF;border:2px solid #1A1D21;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,27,77,0.10)">
+                  <div style="background:#003399;color:#FFFFFF;font-family:'Archivo Narrow',sans-serif;font-weight:700;font-size:10px;letter-spacing:1.5px;text-indent:1.5px;line-height:20px;height:20px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px">ORIGEM DOS PEDIDOS · MÊS</div>
+                  <div style="display:flex;flex-direction:column;gap:9px;padding:12px 16px 14px 16px">
+                    <sc-for list="{{ origens }}" as="o" hint-placeholder-count="3">
+                      <div>
+                        <div style="display:flex;font-size:12px;margin-bottom:3px">
+                          <span style="flex:1">{{ o.nome }}</span>
+                          <span style="color:#5C6470;font-variant-numeric:tabular-nums">{{ o.qtd }} · {{ o.share }}</span>
+                        </div>
+                        <div style="height:8px;background:#EFF1F4;border-radius:4px;overflow:hidden">
+                          <div style="height:100%;width:{{ o.pct }};background:{{ o.cor }};border-radius:4px"></div>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+                <div style="background:#FFFFFF;border:2px solid #1A1D21;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,27,77,0.10)">
+                  <div style="background:#003399;color:#FFFFFF;font-family:'Archivo Narrow',sans-serif;font-weight:700;font-size:10px;letter-spacing:1.5px;text-indent:1.5px;line-height:20px;height:20px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px">TEMPO MÉDIO DE PRODUÇÃO</div>
+                  <div style="padding:12px 16px 13px 16px;text-align:center">
+                    <div style="font-family:'Archivo Narrow',sans-serif;font-weight:700;font-size:36px;line-height:1;letter-spacing:1px;color:#1A1D21">3h 42min</div>
+                    <div style="font-size:11.5px;color:#1E7F4F;margin-top:7px;font-weight:500">▾ 18 min vs. semana anterior</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ telaEstoque }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:18px 20px;max-width:960px;margin:0 auto" data-screen-label="Estoque">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+              <h1 style="font-family:'Archivo Narrow',sans-serif;font-weight:700;font-size:22px;margin:0">Estoque</h1>
+              <span style="font-size:11.5px;font-weight:600;border-radius:10px;padding:3px 10px;background:#FBF0E4;color:#B45309">{{ baixoCount }} abaixo do mínimo</span>
+            </div>
+            <div style="background:#FFFFFF;border:1.5px solid #0F2C6B;border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,27,77,0.08)">
+              <div style="display:flex;align-items:center;justify-content:space-between;background:#003399;padding:5px 14px">
+                <span style="font-family:'Archivo Narrow',sans-serif;font-weight:700;font-size:11px;letter-spacing:2px;color:#FFFFFF">BRASIL</span>
+                <span style="font-family:'Archivo Narrow',sans-serif;font-weight:600;font-size:10.5px;letter-spacing:1.2px;color:#B9C8E8">CONTROLE DE ESTOQUE · SP</span>
+              </div>
+              <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+                <thead>
+                  <tr style="text-align:left;color:#5C6470;font-size:11px;letter-spacing:0.6px;background:#F4F5F7">
+                    <th style="padding:9px 14px;font-weight:600;border-bottom:1px solid #E2E5EA">ITEM</th>
+                    <th style="padding:9px 14px;font-weight:600;border-bottom:1px solid #E2E5EA">SKU</th>
+                    <th style="padding:9px 14px;font-weight:600;border-bottom:1px solid #E2E5EA;text-align:right">QUANTIDADE</th>
+                    <th style="padding:9px 14px;font-weight:600;border-bottom:1px solid #E2E5EA;text-align:right">MÍNIMO</th>
+                    <th style="padding:9px 14px;font-weight:600;border-bottom:1px solid #E2E5EA">SITUAÇÃO</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <sc-for list="{{ estoqueItens }}" as="i" hint-placeholder-count="6">
+                    <tr style="height:42px;background:{{ i.bg }}">
+                      <td style="padding:5px 14px;border-bottom:1px solid #EFF1F4;font-weight:500">{{ i.nome }}</td>
+                      <td style="padding:5px 14px;border-bottom:1px solid #EFF1F4;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#5C6470">{{ i.sku }}</td>
+                      <td style="padding:5px 14px;border-bottom:1px solid #EFF1F4;text-align:right;font-variant-numeric:tabular-nums;font-weight:600;color:{{ i.qtdCor }}">{{ i.qtd }} {{ i.un }}</td>
+                      <td style="padding:5px 14px;border-bottom:1px solid #EFF1F4;text-align:right;font-variant-numeric:tabular-nums;color:#5C6470">{{ i.min }} {{ i.un }}</td>
+                      <td style="padding:5px 14px;border-bottom:1px solid #EFF1F4"><span style="font-size:11px;font-weight:600;border-radius:10px;padding:2px 9px;background:{{ i.tagBg }};color:{{ i.tagCor }}">{{ i.tag }}</span></td>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ telaClientes }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:18px 20px;max-width:1060px;margin:0 auto" data-screen-label="Clientes">
+            <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">
+              <h1 style="font-family:'Archivo Narrow',sans-serif;font-weight:700;font-size:22px;margin:0">Clientes</h1>
+              <span style="font-size:12.5px;color:#5C6470;font-variant-numeric:tabular-nums">{{ totalClientes }} cadastrados</span>
+              <div style="flex:1"></div>
+              <input aria-label="Buscar clientes" placeholder="Filtrar por nome, CPF/CNPJ ou telefone" value="{{ bcVal }}" onChange="{{ aoBc }}" style="width:300px;box-sizing:border-box;height:32px;border:1px solid #D4D8DF;border-radius:6px;padding:0 11px;font-size:12.5px;background:#FFFFFF;color:#1A1D21"></input>
+            </div>
+            <sc-if value="{{ semClienteDet }}" hint-placeholder-val="{{ true }}">
+              <div style="background:#FFFFFF;border:1.5px solid #0F2C6B;border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,27,77,0.08)">
+                <div style="display:flex;align-items:center;justify-content:space-between;background:#003399;padding:5px 14px">
+                  <span style="font-family:'Archivo Narrow',sans-serif;font-weight:700;font-size:11px;letter-spacing:2px;color:#FFFFFF">BRASIL</span>
+                  <span style="font-family:'Archivo Narrow',sans-serif;font-weight:600;font-size:10.5px;letter-spacing:1.2px;color:#B9C8E8">CADASTRO DE CLIENTES · SP</span>
+                </div>
+                <div style="overflow-x:auto"><table style="width:100%;min-width:820px;border-collapse:collapse;font-size:12.5px">
+                  <thead>
+                    <tr style="text-align:left;color:#5C6470;font-size:11px;letter-spacing:0.6px;background:#F4F5F7">
+                      <th style="padding:9px 14px;font-weight:600;border-bottom:1px solid #E2E5EA">NOME</th>
+                      <th style="padding:9px 14px;font-weight:600;border-bottom:1px solid #E2E5EA">TIPO</th>
+                      <th style="padding:9px 14px;font-weight:600;border-bottom:1px solid #E2E5EA">CPF/CNPJ</th>
+                      <th style="padding:9px 14px;font-weight:600;border-bottom:1px solid #E2E5EA">TELEFONE</th>
+                      <th style="padding:9px 14px;font-weight:600;border-bottom:1px solid #E2E5EA;text-align:right">VEÍCULOS</th>
+                      <th style="padding:9px 14px;font-weight:600;border-bottom:1px solid #E2E5EA;text-align:right">PEDIDOS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <sc-for list="{{ clientesLista }}" as="c" hint-placeholder-count="6">
+                      <tr onClick="{{ c.abrir }}" style="cursor:pointer;height:42px" style-hover="background:#F4F5F7">
+                        <td style="padding:5px 14px;border-bottom:1px solid #EFF1F4;font-weight:600">{{ c.nome }}</td>
+                        <td style="padding:5px 14px;border-bottom:1px solid #EFF1F4"><span style="font-size:10.5px;font-weight:600;letter-spacing:0.6px;border:1px solid #D4D8DF;border-radius:4px;padding:1px 6px;color:#5C6470">{{ c.tipo }}</span></td>
+                        <td style="padding:5px 14px;border-bottom:1px solid #EFF1F4;font-variant-numeric:tabular-nums;color:#5C6470">{{ c.doc }}</td>
+                        <td style="padding:5px 14px;border-bottom:1px solid #EFF1F4;font-variant-numeric:tabular-nums;color:#5C6470">{{ c.tel }}</td>
+                        <td style="padding:5px 14px;border-bottom:1px solid #EFF1F4;text-align:right;font-variant-numeric:tabular-nums">{{ c.qtdVeic }}</td>
+                        <td style="padding:5px 14px;border-bottom:1px solid #EFF1F4;text-align:right;font-variant-numeric:tabular-nums">{{ c.qtdPed }}</td>
+                      </tr>
+                    </sc-for>
+                  </tbody>
+                </table></div>
+                <sc-if value="{{ clientesVazio }}" hint-placeholder-val="{{ false }}">
+                  <div style="padding:26px;text-align:center;font-size:13px;color:#5C6470">Nenhum cliente encontrado para "{{ bcVal }}".</div>
+                </sc-if>
+              </div>
+            </sc-if>
+            <sc-if value="{{ temClienteDet }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+                <button onClick="{{ fecharCliente }}" style="border:1px solid #D4D8DF;background:#FFFFFF;border-radius:6px;height:30px;padding:0 11px;font-size:12.5px;font-weight:500;color:#5C6470;cursor:pointer" style-hover="background:#F4F5F7">← Lista</button>
+                <span style="font-family:'Archivo Narrow',sans-serif;font-weight:700;font-size:18px">{{ cd.nome }}</span>
+                <span style="font-size:10.5px;font-weight:600;letter-spacing:0.6px;border:1px solid #D4D8DF;border-radius:4px;padding:1px 6px;color:#5C6470">{{ cd.tipo }}</span>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:14px;align-items:start">
+                <div style="background:#FFFFFF;border:1px solid #E2E5EA;border-radius:8px;padding:16px 18px">
+                  <div style="font-family:'Archivo Narrow',sans-serif;font-weight:700;font-size:14px;letter-spacing:0.5px;color:#5C6470;margin-bottom:10px">DADOS</div>
+                  <div style="display:flex;flex-direction:column;gap:9px;font-size:13px">
+                    <div><span style="color:#5C6470;font-size:11.5px;display:block">CPF/CNPJ</span><span style="font-variant-numeric:tabular-nums">{{ cd.doc }}</span></div>
+                    <div><span style="color:#5C6470;font-size:11.5px;display:block">Telefone</span><span style="font-variant-numeric:tabular-nums">{{ cd.tel }}</span></div>
+                  </div>
+                  <button onClick="{{ novoPedidoCliente }}" style="margin-top:14px;width:100%;background:#003399;color:#FFFFFF;border:none;border-radius:6px;height:34px;font-size:13px;font-weight:600;cursor:pointer" style-hover="background:#002471">+ Novo pedido para este cliente</button>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:14px">
+                  <div style="background:#FFFFFF;border:1px solid #E2E5EA;border-radius:8px;padding:16px 18px">
+                    <div style="font-family:'Archivo Narrow',sans-serif;font-weight:700;font-size:14px;letter-spacing:0.5px;color:#5C6470;margin-bottom:10px">VEÍCULOS · {{ cd.qtdVeic }}</div>
+                    <div style="display:flex;flex-direction:column;gap:6px">
+                      <sc-for list="{{ cd.veiculosLista }}" as="v" hint-placeholder-count="2">
+                        <div style="display:flex;align-items:center;gap:12px;border:1px solid #E2E5EA;border-radius:6px;padding:8px 12px">
+                          <dc-import name="PlacaBadge" placa="{{ v.placa }}" tam="sm" hint-size="58px,26px"></dc-import>
+                          <span style="flex:1;font-size:13px;font-weight:500">{{ v.descricao }}</span>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+                  <div style="background:#FFFFFF;border:1px solid #E2E5EA;border-radius:8px;padding:16px 18px">
+                    <div style="font-family:'Archivo Narrow',sans-serif;font-weight:700;font-size:14px;letter-spacing:0.5px;color:#5C6470;margin-bottom:10px">HISTÓRICO DE PEDIDOS · {{ cd.qtdPed }}</div>
+                    <sc-if value="{{ cd.temPedidos }}" hint-placeholder-val="{{ true }}">
+                      <div style="display:flex;flex-direction:column;gap:6px">
+                        <sc-for list="{{ cd.pedidosLista }}" as="p" hint-placeholder-count="2">
+                          <button onClick="{{ p.abrir }}" style="display:flex;align-items:center;gap:10px;border:1px solid #E2E5EA;background:#FFFFFF;border-radius:6px;padding:7px 12px;cursor:pointer;text-align:left" style-hover="border-color:#003399">
+                            <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#5C6470">#{{ p.id }}</span>
+                            <span style="flex:1;font-size:12.5px;font-weight:500">{{ p.servico }}</span>
+                            <span style="font-size:11px;font-weight:600;border-radius:10px;padding:2px 9px;background:{{ p.stBg }};color:{{ p.stCor }}">{{ p.stLabel }}</span>
+                            <span style="font-size:12.5px;font-variant-numeric:tabular-nums;font-weight:500">{{ p.precoFmt }}</span>
+                          </button>
+                        </sc-for>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ cd.semPedidos }}" hint-placeholder-val="{{ false }}">
+                      <div style="font-size:12.5px;color:#5C6470">Nenhum pedido registrado para este cliente.</div>
+                    </sc-if>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ telaVeiculos }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:18px 20px;max-width:1060px;margin:0 auto" data-screen-label="Veículos">
+            <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">
+              <h1 style="font-family:'Archivo Narrow',sans-serif;font-weight:700;font-size:22px;margin:0">Veículos</h1>
+              <span style="font-size:12.5px;color:#5C6470;font-variant-numeric:tabular-nums">{{ totalVeiculos }} cadastrados</span>
+              <div style="flex:1"></div>
+              <input aria-label="Buscar veículos" placeholder="Filtrar por placa, marca ou modelo" value="{{ bvVal }}" onChange="{{ aoBv }}" style="width:300px;box-sizing:border-box;height:32px;border:1px solid #D4D8DF;border-radius:6px;padding:0 11px;font-size:12.5px;background:#FFFFFF;color:#1A1D21"></input>
+            </div>
+            <div style="background:#FFFFFF;border:1.5px solid #0F2C6B;border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,27,77,0.08)">
+              <div style="display:flex;align-items:center;justify-content:space-between;background:#003399;padding:5px 14px">
+                <span style="font-family:'Archivo Narrow',sans-serif;font-weight:700;font-size:11px;letter-spacing:2px;color:#FFFFFF">BRASIL</span>
+                <span style="font-family:'Archivo Narrow',sans-serif;font-weight:600;font-size:10.5px;letter-spacing:1.2px;color:#B9C8E8">FROTA CADASTRADA · SP</span>
+              </div>
+              <div style="overflow-x:auto"><table style="width:100%;min-width:860px;border-collapse:collapse;font-size:12.5px">
+                <thead>
+                  <tr style="text-align:left;color:#5C6470;font-size:11px;letter-spacing:0.6px;background:#F4F5F7">
+                    <th style="padding:9px 14px;font-weight:600;border-bottom:1px solid #E2E5EA">PLACA</th>
+                    <th style="padding:9px 14px;font-weight:600;border-bottom:1px solid #E2E5EA">MARCA / MODELO</th>
+                    <th style="padding:9px 14px;font-weight:600;border-bottom:1px solid #E2E5EA;text-align:right">ANO</th>
+                    <th style="padding:9px 14px;font-weight:600;border-bottom:1px solid #E2E5EA">PROPRIETÁRIO</th>
+                    <th style="padding:9px 14px;font-weight:600;border-bottom:1px solid #E2E5EA">ÚLTIMO PEDIDO</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <sc-for list="{{ veiculosLista2 }}" as="v" hint-placeholder-count="6">
+                    <tr onClick="{{ v.abrirCliente }}" style="cursor:pointer;height:44px" style-hover="background:#F4F5F7">
+                      <td style="padding:5px 14px;border-bottom:1px solid #EFF1F4"><dc-import name="PlacaBadge" placa="{{ v.placa }}" tam="sm" hint-size="58px,26px"></dc-import></td>
+                      <td style="padding:5px 14px;border-bottom:1px solid #EFF1F4;font-weight:500">{{ v.marcaModelo }}</td>
+                      <td style="padding:5px 14px;border-bottom:1px solid #EFF1F4;text-align:right;font-variant-numeric:tabular-nums;color:#5C6470">{{ v.ano }}</td>
+                      <td style="padding:5px 14px;border-bottom:1px solid #EFF1F4;color:#5C6470">{{ v.dono }}</td>
+                      <td style="padding:5px 14px;border-bottom:1px solid #EFF1F4">
+                        <sc-if value="{{ v.temPedido }}" hint-placeholder-val="{{ true }}">
+                          <span style="display:inline-flex;align-items:center;gap:7px">
+                            <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#5C6470">#{{ v.pedId }}</span>
+                            <span style="font-size:11px;font-weight:600;border-radius:10px;padding:2px 9px;background:{{ v.pedBg }};color:{{ v.pedCor }}">{{ v.pedLabel }}</span>
+                          </span>
+                        </sc-if>
+                        <sc-if value="{{ v.semPedido }}" hint-placeholder-val="{{ false }}">
+                          <span style="font-size:12px;color:#93A0BC">—</span>
+                        </sc-if>
+                      </td>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table></div>
+              <sc-if value="{{ veiculosVazio }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:26px;text-align:center;font-size:13px;color:#5C6470">Nenhum veículo encontrado para "{{ bvVal }}".</div>
+              </sc-if>
+            </div>
+            <div style="font-size:11.5px;color:#5C6470;margin-top:10px">Clique em um veículo para abrir a ficha do proprietário</div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ telaServicos }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:18px 20px;max-width:920px;margin:0 auto" data-screen-label="Serviços">
+            <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">
+              <h1 style="font-family:'Archivo Narrow',sans-serif;font-weight:700;font-size:22px;margin:0">Serviços</h1>
+              <span style="font-size:12.5px;color:#5C6470;font-variant-numeric:tabular-nums">{{ totalServicos }}</span>
+              <div style="flex:1"></div>
+              <button onClick="{{ abrirNs }}" style="background:#003399;color:#FFFFFF;border:none;border-radius:6px;height:32px;padding:0 14px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:#002573">+ Novo serviço</button>
+            </div>
+            <sc-if value="{{ nsAberto }}" hint-placeholder-val="{{ false }}">
+              <div style="border:1px solid #C9D4EC;background:#F5F8FE;border-radius:6px;padding:12px;margin-bottom:14px;display:grid;grid-template-columns:1.6fr 1fr 1fr auto;gap:8px;align-items:end">
+                <div><label for="ns-nome" style="display:block;font-size:11.5px;color:#5C6470;margin-bottom:3px">Nome do serviço</label><input id="ns-nome" value="{{ nsNome }}" onChange="{{ aoNsNome }}" style="width:100%;box-sizing:border-box;height:32px;border:1px solid #D4D8DF;border-radius:6px;padding:0 9px;font-size:12.5px"></input></div>
+                <div><label for="ns-cat" style="display:block;font-size:11.5px;color:#5C6470;margin-bottom:3px">Categoria</label><select id="ns-cat" value="{{ nsCat }}" onChange="{{ aoNsCat }}" style="width:100%;box-sizing:border-box;height:32px;border:1px solid #D4D8DF;border-radius:6px;padding:0 6px;font-size:12.5px;background:#FFFFFF"><option value="EMPLACAMENTO">EMPLACAMENTO</option><option value="SEGUNDA VIA">SEGUNDA VIA</option><option value="DOCUMENTAÇÃO">DOCUMENTAÇÃO</option><option value="SERVIÇOS">SERVIÇOS</option></select></div>
+                <div><label for="ns-preco" style="display:block;font-size:11.5px;color:#5C6470;margin-bottom:3px">Preço</label><input id="ns-preco" value="{{ nsPreco }}" onChange="{{ aoNsPreco }}" placeholder="R$ 0,00" style="width:100%;box-sizing:border-box;height:32px;border:1px solid #D4D8DF;border-radius:6px;padding:0 9px;font-size:12.5px;font-variant-numeric:tabular-nums"></input></div>
+                <button onClick="{{ salvarNs }}" style="background:#003399;color:#FFFFFF;border:none;border-radius:6px;height:32px;padding:0 13px;font-size:12.5px;font-weight:600;cursor:pointer">Salvar</button>
+              </div>
+            </sc-if>
+            <div style="background:#FFFFFF;border:1.5px solid #0F2C6B;border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,27,77,0.08)">
+              <div style="display:flex;align-items:center;justify-content:space-between;background:#003399;padding:5px 14px">
+                <span style="font-family:'Archivo Narrow',sans-serif;font-weight:700;font-size:11px;letter-spacing:2px;color:#FFFFFF">BRASIL</span>
+                <span style="font-family:'Archivo Narrow',sans-serif;font-weight:600;font-size:10.5px;letter-spacing:1.2px;color:#B9C8E8">TABELA DE SERVIÇOS · SP</span>
+              </div>
+              <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+                <thead>
+                  <tr style="text-align:left;color:#5C6470;font-size:11px;letter-spacing:0.6px;background:#F4F5F7">
+                    <th style="padding:9px 14px;font-weight:600;border-bottom:1px solid #E2E5EA">SERVIÇO</th>
+                    <th style="padding:9px 14px;font-weight:600;border-bottom:1px solid #E2E5EA">CATEGORIA</th>
+                    <th style="padding:9px 14px;font-weight:600;border-bottom:1px solid #E2E5EA;text-align:right">PREÇO</th>
+                    <th style="padding:9px 14px;font-weight:600;border-bottom:1px solid #E2E5EA;text-align:right">PEDIDOS NO MÊS</th>
+                    <th style="padding:9px 14px;font-weight:600;border-bottom:1px solid #E2E5EA;text-align:right">STATUS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <sc-for list="{{ svLista }}" as="sv" hint-placeholder-count="5">
+                    <tr style="height:42px;opacity:{{ sv.op }}">
+                      <td style="padding:5px 14px;border-bottom:1px solid #EFF1F4;font-weight:600">{{ sv.nome }}</td>
+                      <td style="padding:5px 14px;border-bottom:1px solid #EFF1F4"><span style="font-size:10.5px;font-weight:600;letter-spacing:0.6px;border:1px solid #D4D8DF;border-radius:4px;padding:1px 6px;color:#5C6470">{{ sv.cat }}</span></td>
+                      <td style="padding:5px 14px;border-bottom:1px solid #EFF1F4;text-align:right;font-family:'Archivo Narrow',sans-serif;font-weight:700;font-size:13.5px;font-variant-numeric:tabular-nums">{{ sv.precoFmt }}</td>
+                      <td style="padding:5px 14px;border-bottom:1px solid #EFF1F4;text-align:right;font-variant-numeric:tabular-nums;color:#5C6470">{{ sv.qtdPed }}</td>
+                      <td style="padding:5px 14px;border-bottom:1px solid #EFF1F4;text-align:right"><button onClick="{{ sv.alternar }}" style="font-size:10.5px;font-weight:700;letter-spacing:0.5px;border:1px solid {{ sv.stBorda }};border-radius:10px;padding:2px 10px;background:{{ sv.stBg }};color:{{ sv.stCor }};cursor:pointer">{{ sv.stTxt }}</button></td>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+            </div>
+            <div style="font-size:11.5px;color:#5C6470;margin-top:10px">Serviços inativos não aparecem na criação de novos pedidos</div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ telaOutro }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px" data-screen-label="Módulo em construção">
+            <div style="font-family:'Archivo Narrow',sans-serif;font-weight:700;font-size:20px">{{ outroNome }}</div>
+            <div style="font-size:13px;color:#5C6470">Módulo previsto na Fase 1 — próximo na ordem de construção.</div>
+            <button onClick="{{ voltarPedidos }}" style="border:1px solid #003399;background:#FFFFFF;color:#003399;border-radius:6px;height:34px;padding:0 16px;font-size:13px;font-weight:600;cursor:pointer" style-hover="background:#E8EDF9">Voltar para Pedidos</button>
+          </div>
+        </sc-if>
+
+      </sc-if>
+    </main>
+  </div>
+  <sc-if value="{{ temToast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;bottom:20px;right:20px;z-index:100;background:#1A1D21;color:#FFFFFF;border-radius:8px;padding:10px 16px;font-size:13px;display:flex;align-items:center;gap:9px;box-shadow:0 8px 24px rgba(0,0,0,0.25);animation:toastin .15s ease-out">
+      <span style="width:8px;height:8px;border-radius:50%;background:{{ toastCor }}"></span>
+      {{ toastMsg }}
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;papel&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;GERENTE&quot;,&quot;options&quot;:[&quot;ATENDENTE&quot;,&quot;GERENTE&quot;,&quot;ADMIN&quot;],&quot;tsType&quot;:&quot;'ATENDENTE' | 'GERENTE' | 'ADMIN'&quot;,&quot;section&quot;:&quot;Sessão&quot;},&quot;estadoDemo&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;normal&quot;,&quot;options&quot;:[&quot;normal&quot;,&quot;carregando&quot;,&quot;vazio&quot;,&quot;erro&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Estados de tela&quot;}}">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.ST = {
+      RECEBIDO: { label: 'Recebido', cor: '#003399', bg: '#E8EDF9' },
+      EM_PROCESSAMENTO: { label: 'Em processamento', cor: '#003399', bg: '#E8EDF9' },
+      PLACA_PRONTA: { label: 'Placa pronta', cor: '#B45309', bg: '#FBF0E4' },
+      ENTREGUE: { label: 'Entregue', cor: '#1E7F4F', bg: '#E7F3ED' },
+      CANCELADO: { label: 'Cancelado', cor: '#B91C1C', bg: '#FBEAEA' }
+    };
+    this.SERVICOS = [
+      { id: 1, nome: 'Par de placas Mercosul (carro)', cat: 'EMPLACAMENTO', preco: 31690 },
+      { id: 2, nome: 'Placa Mercosul (moto)', cat: 'EMPLACAMENTO', preco: 19890 },
+      { id: 3, nome: 'Segunda via de placa', cat: 'SEGUNDA VIA', preco: 24900 },
+      { id: 4, nome: 'Transferência + emplacamento', cat: 'DOCUMENTAÇÃO', preco: 44900 },
+      { id: 5, nome: 'Lacre / desamassamento', cat: 'SERVIÇOS', preco: 8900 }
+    ];
+    this.ESTOQUE = [
+      { nome: 'Placa Mercosul carro (par)', sku: 'PLC-CAR-PAR', qtd: 34, min: 20, un: 'par' },
+      { nome: 'Placa Mercosul moto', sku: 'PLC-MOT-UNI', qtd: 12, min: 15, un: 'un' },
+      { nome: 'Lacre inviolável', sku: 'LAC-STD', qtd: 8, min: 25, un: 'un' },
+      { nome: 'Suporte de placa (moldura)', sku: 'SUP-MOLD', qtd: 57, min: 30, un: 'un' },
+      { nome: 'Parafuso anti-furto (kit)', sku: 'PAR-KIT4', qtd: 22, min: 20, un: 'kit' },
+      { nome: 'Película refletiva', sku: 'PEL-REF', qtd: 3, min: 10, un: 'rolo' }
+    ];
+    const P = (id, placa, cliente, doc, tel, servico, preco, origem, status, tempo, pago, marca, modelo, ano) =>
+      ({ id, placa, cliente, doc, tel, servico, preco, origem, status, tempo, pago, marca, modelo, ano });
+    this.state = {
+      tela: 'pedidos', visao: 'quadro', pedidoSel: null, busca: '', toast: null, estadoOverride: null,
+      dragId: null, filtroStatus: 'TODOS',
+      clientes: [
+        { id: 1, nome: 'Marcos Vilela', doc: '412.688.301-20', tel: '(11) 98877-1234', veiculos: [{ placa: 'FZR4C71', marca: 'Fiat', modelo: 'Argo Drive 1.0', ano: 2022 }, { placa: 'EBX9A55', marca: 'Honda', modelo: 'CG 160 Fan', ano: 2019 }] },
+        { id: 2, nome: 'Auto Escola Horizonte LTDA', doc: '12.345.678/0001-90', tel: '(11) 4433-2210', veiculos: [{ placa: 'GHK2D18', marca: 'Chevrolet', modelo: 'Onix LT 1.0', ano: 2023 }] },
+        { id: 3, nome: 'Renata Sampaio', doc: '318.554.902-88', tel: '(11) 97712-0983', veiculos: [{ placa: 'DPT7B02', marca: 'Volkswagen', modelo: 'T-Cross 200 TSI', ano: 2021 }] },
+        { id: 4, nome: 'José Aparecido Nunes', doc: '201.377.415-04', tel: '(11) 96401-5520', veiculos: [{ placa: 'BRA2E19', marca: 'Toyota', modelo: 'Corolla XEi', ano: 2020 }] },
+        { id: 5, nome: 'Transportes Iguaçu ME', doc: '23.980.114/0001-55', tel: '(11) 4002-8933', veiculos: [{ placa: 'JKL3F44', marca: 'Mercedes-Benz', modelo: 'Sprinter 314', ano: 2018 }] },
+        { id: 6, nome: 'Célia Regina Prado', doc: '287.410.663-71', tel: '(11) 95530-4417', veiculos: [{ placa: 'MNO5G88', marca: 'Hyundai', modelo: 'HB20 Sense', ano: 2020 }] },
+        { id: 7, nome: 'Douglas Ferreira', doc: '354.902.118-30', tel: '(11) 98104-7762', veiculos: [{ placa: 'PQR8H21', marca: 'Yamaha', modelo: 'Fazer 250', ano: 2021 }] },
+        { id: 8, nome: 'Locadora Drive+ LTDA', doc: '44.120.907/0001-12', tel: '(11) 3311-9080', veiculos: [{ placa: 'VWX6K33', marca: 'Renault', modelo: 'Kwid Zen', ano: 2023 }] }
+      ],
+      buscaClientes: '', buscaVeiculos: '', clienteDet: null,
+      servicos: this.SERVICOS.map(sv => Object.assign({ ativo: true }, sv)),
+      ns: { aberto: false, nome: '', cat: 'EMPLACAMENTO', preco: 0 },
+      np: this.npVazio(),
+      pedidos: [
+        P(1058, 'FZR4C71', 'Marcos Vilela', '412.688.301-20', '(11) 98877-1234', 'Par de placas Mercosul (carro)', 31690, 'WHATSAPP', 'RECEBIDO', '12 min', false, 'Fiat', 'Argo Drive 1.0', 2022),
+        P(1057, 'GHK2D18', 'Auto Escola Horizonte LTDA', '12.345.678/0001-90', '(11) 4433-2210', 'Transferência + emplacamento', 44900, 'TELEFONE', 'RECEBIDO', '38 min', false, 'Chevrolet', 'Onix LT 1.0', 2023),
+        P(1056, 'DPT7B02', 'Renata Sampaio', '318.554.902-88', '(11) 97712-0983', 'Segunda via de placa', 24900, 'BALCÃO', 'RECEBIDO', '1h 05min', true, 'Volkswagen', 'T-Cross 200 TSI', 2021),
+        P(1055, 'EBX9A55', 'Marcos Vilela', '412.688.301-20', '(11) 98877-1234', 'Placa Mercosul (moto)', 19890, 'BALCÃO', 'EM_PROCESSAMENTO', '2h 10min', false, 'Honda', 'CG 160 Fan', 2019),
+        P(1054, 'BRA2E19', 'José Aparecido Nunes', '201.377.415-04', '(11) 96401-5520', 'Par de placas Mercosul (carro)', 31690, 'WHATSAPP', 'EM_PROCESSAMENTO', '3h 25min', true, 'Toyota', 'Corolla XEi', 2020),
+        P(1053, 'JKL3F44', 'Transportes Iguaçu ME', '23.980.114/0001-55', '(11) 4002-8933', 'Par de placas Mercosul (carro)', 31690, 'TELEFONE', 'EM_PROCESSAMENTO', '4h 02min', false, 'Mercedes-Benz', 'Sprinter 314', 2018),
+        P(1052, 'MNO5G88', 'Célia Regina Prado', '287.410.663-71', '(11) 95530-4417', 'Segunda via de placa', 24900, 'WHATSAPP', 'PLACA_PRONTA', '5h 40min', true, 'Hyundai', 'HB20 Sense', 2020),
+        P(1051, 'PQR8H21', 'Douglas Ferreira', '354.902.118-30', '(11) 98104-7762', 'Placa Mercosul (moto)', 19890, 'BALCÃO', 'PLACA_PRONTA', '6h 15min', false, 'Yamaha', 'Fazer 250', 2021),
+        P(1050, 'STU1J09', 'Vanessa Okamoto', '390.114.552-09', '(11) 99218-3345', 'Par de placas Mercosul (carro)', 31690, 'BALCÃO', 'ENTREGUE', 'ontem', true, 'Jeep', 'Renegade Sport', 2022),
+        P(1049, 'VWX6K33', 'Locadora Drive+ LTDA', '44.120.907/0001-12', '(11) 3311-9080', 'Transferência + emplacamento', 44900, 'WHATSAPP', 'ENTREGUE', 'ontem', true, 'Renault', 'Kwid Zen', 2023),
+        P(1048, 'YZA9L77', 'Paulo Sérgio Lima', '150.336.481-66', '(11) 97460-2291', 'Lacre / desamassamento', 8900, 'BALCÃO', 'ENTREGUE', 'ontem', true, 'Ford', 'Ka SE 1.0', 2017)
+      ]
+    };
+  }
+  npVazio() { return { cb: '', clienteSel: null, nc: false, ncNome: '', ncDoc: '', ncTel: '', veiculoSel: null, consultando: false, consulta: null, servicoSel: null, pagamento: '', nv: false, nvPlaca: '', nvMarca: '', nvModelo: '', nvAno: '', nvConsultando: false }; }
+  money(c) { return 'R$ ' + (c / 100).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+  maskDoc(v) {
+    const d = (v || '').replace(/\D/g, '').slice(0, 14);
+    if (d.length <= 11) return d.replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})\.(\d{3})(\d)/, '$1.$2.$3').replace(/(\d{3})\.(\d{3})\.(\d{3})(\d)/, '$1.$2.$3-$4');
+    return d.replace(/(\d{2})(\d)/, '$1.$2').replace(/(\d{2})\.(\d{3})(\d)/, '$1.$2.$3').replace(/(\d{2})\.(\d{3})\.(\d{3})(\d)/, '$1.$2.$3/$4').replace(/(\/\d{4})(\d)/, '$1-$2');
+  }
+  toastar(msg, tipo) { clearTimeout(this._tt); this.setState({ toast: { msg, tipo: tipo || 'ok' } }); this._tt = setTimeout(() => this.setState({ toast: null }), 2600); }
+  componentDidMount() {
+    this._kd = (e) => {
+      if (e.key === '/' && !/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) {
+        e.preventDefault();
+        const el = document.getElementById('busca-global'); if (el) el.focus();
+      }
+      if (e.key === 'Escape') this.setState({ busca: '' });
+    };
+    window.addEventListener('keydown', this._kd);
+    const CH = 'ABCDEFGHJKLMNPQRSTUVWXYZ', NU = '0123456789';
+    const rnd = (str) => str[Math.floor(Math.random() * str.length)];
+    this._pl = setInterval(() => {
+      const estado = this.state.estadoOverride ?? (this.props.estadoDemo ?? 'normal');
+      if (estado !== 'carregando') return;
+      this.setState({ placaAnim: rnd(CH) + rnd(CH) + rnd(CH) + rnd(NU) + rnd(CH) + rnd(NU) + rnd(NU) });
+    }, 140);
+  }
+  componentWillUnmount() { window.removeEventListener('keydown', this._kd); clearTimeout(this._tt); clearTimeout(this._ct); clearInterval(this._pl); }
+  ir(tela, extra) { this.setState(Object.assign({ tela, busca: '' }, extra || {})); }
+  mudarStatus(id, novo) {
+    const p = this.state.pedidos.find(x => x.id === id); if (!p || p.status === novo) return;
+    if (novo === 'ENTREGUE' && !p.pago && !window.confirm('Pedido #' + id + ' ainda não foi pago. Confirmar entrega mesmo assim?')) return;
+    this.setState({ pedidos: this.state.pedidos.map(x => x.id === id ? Object.assign({}, x, { status: novo }) : x) });
+    this.toastar('Pedido #' + id + ' movido para ' + this.ST[novo].label);
+  }
+  renderVals() {
+    const s = this.state;
+    const papel = this.props.papel ?? 'GERENTE';
+    const rank = { ATENDENTE: 0, GERENTE: 1, ADMIN: 2 }[papel] ?? 1;
+    const estado = s.estadoOverride ?? (this.props.estadoDemo ?? 'normal');
+    const svg = (kids) => React.createElement('svg', { width: 15, height: 15, viewBox: '0 0 15 15', fill: 'none', stroke: 'currentColor', strokeWidth: 1.4, key: 'i' }, kids);
+    const r = (x, y, w, h, k) => React.createElement('rect', { x, y, width: w, height: h, rx: 1, key: k });
+    const c = (cx, cy, rr, k) => React.createElement('circle', { cx, cy, r: rr, key: k });
+    const l = (x1, y1, x2, y2, k) => React.createElement('line', { x1, y1, x2, y2, key: k });
+    const ICONES = {
+      dashboard: svg([r(1.5, 1.5, 5, 5, 'a'), r(8.5, 1.5, 5, 5, 'b'), r(1.5, 8.5, 5, 5, 'c'), r(8.5, 8.5, 5, 5, 'd')]),
+      pedidos: svg([r(1.5, 2, 12, 11, 'a'), l(4, 5.5, 11, 5.5, 'b'), l(4, 8.5, 11, 8.5, 'c'), l(4, 11.5, 8, 11.5, 'd')]),
+      clientes: svg([c(7.5, 4.5, 2.6, 'a'), React.createElement('path', { d: 'M2.5 13c.6-3 2.6-4.4 5-4.4s4.4 1.4 5 4.4', key: 'b' })]),
+      veiculos: svg([r(1.5, 3.5, 12, 8, 'a'), l(1.5, 6.2, 13.5, 6.2, 'b')]),
+      servicos: svg([r(2.8, 2.8, 9.4, 9.4, 'a'), c(7.5, 7.5, 1.8, 'b')]),
+      estoque: svg([r(1.5, 4.5, 12, 9, 'a'), l(1.5, 8, 13.5, 8, 'b'), l(7.5, 1.5, 7.5, 4.5, 'c')]),
+      financeiro: svg([c(7.5, 7.5, 6, 'a'), l(7.5, 4.5, 7.5, 10.5, 'b'), l(5.2, 6.2, 9.8, 6.2, 'c')]),
+      usuarios: svg([c(5.2, 5, 2.2, 'a'), c(10.2, 5.6, 1.8, 'b'), React.createElement('path', { d: 'M1.8 12.8c.5-2.5 2-3.6 3.9-3.6s3.4 1.1 3.9 3.6M9.8 9.4c1.8.1 3 1.2 3.4 3.4', key: 'c' })])
+    };
+    const baixoCount = this.ESTOQUE.filter(i => i.qtd <= i.min).length;
+    const MODS = [
+      { id: 'dashboard', nome: 'Dashboard', min: 1 }, { id: 'pedidos', nome: 'Pedidos', min: 0, badge: null },
+      { id: 'clientes', nome: 'Clientes', min: 0 }, { id: 'veiculos', nome: 'Veículos', min: 0 },
+      { id: 'servicos', nome: 'Serviços', min: 1 }, { id: 'estoque', nome: 'Estoque', min: 0 },
+      { id: 'financeiro', nome: 'Financeiro', min: 1 }, { id: 'usuarios', nome: 'Usuários', min: 2 }
+    ];
+    const TELAS_REAIS = ['dashboard', 'pedidos', 'estoque', 'clientes', 'veiculos', 'servicos'];
+    const telaAtiva = ['novo', 'detalhe'].includes(s.tela) ? 'pedidos' : s.tela;
+    const modulos = MODS.filter(m => rank >= m.min).map(m => ({
+      nome: m.nome, icone: ICONES[m.id],
+      ativo: telaAtiva === m.id,
+      bg: telaAtiva === m.id ? 'rgba(255,255,255,0.09)' : 'transparent',
+      cor: telaAtiva === m.id ? '#FFFFFF' : '#93A0BC',
+      barra: telaAtiva === m.id ? '#3B6FE0' : 'transparent',
+      badge: m.id === 'estoque' && baixoCount > 0 ? String(baixoCount) : null,
+      ir: () => this.ir(TELAS_REAIS.includes(m.id) ? m.id : 'outro', { outroNome: m.nome, pedidoSel: null, clienteDet: null })
+    }));
+    const usuarioNome = { ATENDENTE: 'Bruna Costa', GERENTE: 'Ricardo Tanaka', ADMIN: 'Sueli Andrade' }[papel];
+    const mk = (p) => Object.assign({}, p, {
+      precoFmt: this.money(p.preco),
+      stLabel: this.ST[p.status].label, stCor: this.ST[p.status].cor, stBg: this.ST[p.status].bg,
+      abrir: () => this.ir('detalhe', { pedidoSel: p.id }),
+      dragStart: (e) => { e.dataTransfer.setData('text/plain', String(p.id)); this.setState({ dragId: p.id }); }
+    });
+    const ORDEM = ['RECEBIDO', 'EM_PROCESSAMENTO', 'PLACA_PRONTA', 'ENTREGUE'];
+    const CORES_COL = { RECEBIDO: '#5C6470', EM_PROCESSAMENTO: '#003399', PLACA_PRONTA: '#B45309', ENTREGUE: '#1E7F4F' };
+    const colunas = ORDEM.map(st => {
+      const lista = s.pedidos.filter(p => p.status === st).map(mk);
+      return {
+        label: this.ST[st].label.toUpperCase(), cor: CORES_COL[st], qtd: String(lista.length), pedidos: lista,
+        drop: (e) => { e.preventDefault(); if (s.dragId != null) this.mudarStatus(s.dragId, st); }
+      };
+    });
+    const pedidosTabela = s.pedidos.filter(p => s.filtroStatus === 'TODOS' || p.status === s.filtroStatus).map(mk);
+    // busca global
+    const q = s.busca.trim().toLowerCase();
+    const resultados = q ? s.pedidos.filter(p =>
+      p.placa.toLowerCase().includes(q) || p.cliente.toLowerCase().includes(q) || String(p.id).includes(q.replace('#', ''))
+    ).slice(0, 5).map(mk) : [];
+    // novo pedido
+    const np = s.np;
+    const cq = np.cb.trim().toLowerCase();
+    const clientesFiltrados = s.clientes.filter(cl => !cq || cl.nome.toLowerCase().includes(cq) || cl.doc.includes(cq) || cl.tel.includes(cq))
+      .slice(0, 4).map(cl => ({
+        nome: cl.nome, doc: cl.doc, tel: cl.tel,
+        borda: np.clienteSel === cl.id ? '#003399' : '#E2E5EA', bg: np.clienteSel === cl.id ? '#E8EDF9' : '#FFFFFF',
+        selecionar: () => this.setState({ np: Object.assign({}, np, { clienteSel: cl.id, veiculoSel: null, consulta: null }) })
+      }));
+    const clienteSel = s.clientes.find(cl => cl.id === np.clienteSel) || null;
+    const veiculosCliente = (clienteSel ? clienteSel.veiculos : []).map(v => ({
+      placa: v.placa, descricao: v.marca + ' ' + v.modelo + ' · ' + v.ano,
+      borda: np.veiculoSel === v.placa ? '#003399' : '#E2E5EA', bg: np.veiculoSel === v.placa ? '#E8EDF9' : '#FFFFFF',
+      selecionar: () => this.setState({ np: Object.assign({}, s.np, { veiculoSel: v.placa, consulta: null }) })
+    }));
+    const veiculoSel = clienteSel ? clienteSel.veiculos.find(v => v.placa === np.veiculoSel) : null;
+    const servicosLista = s.servicos.filter(sv => sv.ativo).map(sv => ({
+      nome: sv.nome, cat: sv.cat, precoFmt: this.money(sv.preco),
+      borda: np.servicoSel === sv.id ? '#003399' : '#E2E5EA', bg: np.servicoSel === sv.id ? '#E8EDF9' : '#FFFFFF',
+      selecionar: () => this.setState({ np: Object.assign({}, s.np, { servicoSel: sv.id }) })
+    }));
+    const servicoSel = s.servicos.find(sv => sv.id === np.servicoSel) || null;
+    const podeCriar = clienteSel && veiculoSel && servicoSel;
+    // detalhe
+    const det0 = s.pedidos.find(p => p.id === s.pedidoSel) || s.pedidos[0];
+    const det = Object.assign(mk(det0), {
+      veiculoDesc: det0.marca + ' ' + det0.modelo + ' · ' + det0.ano,
+      pagoLabel: det0.pago ? 'Pago' : 'Pagamento pendente',
+      pagoBg: det0.pago ? '#E7F3ED' : '#FBF0E4', pagoCor: det0.pago ? '#1E7F4F' : '#B45309',
+      naoPago: !det0.pago
+    });
+    const idx = ORDEM.indexOf(det0.status);
+    const QUEM = ['Bruna Costa', 'Carlão (produção)', 'Carlão (produção)', 'Bruna Costa'];
+    const QUANDO = ['hoje 08:47', 'hoje 09:30', 'hoje 11:12', 'hoje 12:05'];
+    const timeline = ORDEM.map((st, i) => ({
+      label: this.ST[st].label, done: i <= idx, pendente: i > idx,
+      cor: i <= idx ? '#1A1D21' : '#93A0BC',
+      dotBg: i < idx ? '#1E7F4F' : (i === idx ? '#003399' : '#FFFFFF'),
+      dotBorda: i < idx ? '#1E7F4F' : (i === idx ? '#003399' : '#C9CED6'),
+      quem: QUEM[i], quando: QUANDO[i], temLinha: i < ORDEM.length - 1
+    }));
+    const PROX = { RECEBIDO: 'Iniciar processamento', EM_PROCESSAMENTO: 'Marcar placa pronta', PLACA_PRONTA: 'Registrar entrega' };
+    const proxLabel = PROX[det0.status] || (det0.pago ? null : 'Registrar pagamento');
+    // dashboard
+    const FAT = [214000, 268000, 198000, 312000, 289000, 156000, 98000, 342000, 361000, 295000, 274000, 318000, 226000, 384210];
+    const max = Math.max.apply(null, FAT);
+    const pts = FAT.map((v, i) => ({ x: Math.round(15 + i * (530 / 13)), y: Math.round(168 - (v / max) * 125) }));
+    const DIAS = ['18/08', '19/08', '20/08', '21/08', '22/08', '23/08', '24/08', '25/08', '26/08', '27/08', '28/08', '29/08', '30/08', '31/08'];
+    const TOPS = [['Par de placas (carro)', 96], ['Segunda via de placa', 41], ['Placa Mercosul (moto)', 38], ['Transferência + emplac.', 22], ['Lacre / desamass.', 17]];
+    return {
+      papelLabel: papel, usuarioNome, usuarioIniciais: usuarioNome.split(' ').map(n => n[0]).slice(0, 2).join(''),
+      modulos,
+      estNormal: estado === 'normal', estCarregando: estado === 'carregando', estVazio: estado === 'vazio', estErro: estado === 'erro',
+      placaCarregando: s.placaAnim || 'ABC1D23',
+      tentarNovamente: () => { this.setState({ estadoOverride: 'normal' }); this.toastar('Dados recarregados'); },
+      telaPedidos: s.tela === 'pedidos', telaNovo: s.tela === 'novo', telaDetalhe: s.tela === 'detalhe',
+      telaDashboard: s.tela === 'dashboard', telaEstoque: s.tela === 'estoque', telaOutro: s.tela === 'outro',
+      telaClientes: s.tela === 'clientes', telaVeiculos: s.tela === 'veiculos', telaServicos: s.tela === 'servicos',
+      outroNome: s.outroNome || '', voltarPedidos: () => this.ir('pedidos'),
+      irNovo: () => this.setState({ tela: 'novo', np: this.npVazio(), busca: '' }),
+      buscaVal: s.busca, aoBuscar: (e) => this.setState({ busca: e.target.value }),
+      buscaKey: (e) => { if (e.key === 'Enter' && resultados.length) resultados[0].abrir(); if (e.key === 'Escape') { this.setState({ busca: '' }); e.target.blur(); } },
+      mostrarResultados: q.length > 0, resultados, semResultados: q.length > 0 && resultados.length === 0,
+      totalPedidos: String(s.pedidos.filter(p => p.status !== 'ENTREGUE').length),
+      visaoQuadro: s.visao === 'quadro', visaoTabela: s.visao === 'tabela',
+      verQuadro: () => this.setState({ visao: 'quadro' }), verTabela: () => this.setState({ visao: 'tabela' }),
+      tabQuadroBg: s.visao === 'quadro' ? '#003399' : '#FFFFFF', tabQuadroCor: s.visao === 'quadro' ? '#FFFFFF' : '#5C6470',
+      tabTabelaBg: s.visao === 'tabela' ? '#003399' : '#FFFFFF', tabTabelaCor: s.visao === 'tabela' ? '#FFFFFF' : '#5C6470',
+      colunas, permitirDrop: (e) => e.preventDefault(),
+      pedidosTabela, filtroStatus: s.filtroStatus, aoFiltrar: (e) => this.setState({ filtroStatus: e.target.value }),
+      // novo pedido
+      cbVal: np.cb, aoCb: (e) => this.setState({ np: Object.assign({}, s.np, { cb: e.target.value }) }),
+      clientesFiltrados,
+      ncAberto: np.nc, abrirNc: () => this.setState({ np: Object.assign({}, s.np, { nc: !np.nc }) }),
+      ncNome: np.ncNome, aoNcNome: (e) => this.setState({ np: Object.assign({}, s.np, { ncNome: e.target.value }) }),
+      ncDoc: np.ncDoc, aoNcDoc: (e) => this.setState({ np: Object.assign({}, s.np, { ncDoc: this.maskDoc(e.target.value) }) }),
+      ncTel: np.ncTel, aoNcTel: (e) => this.setState({ np: Object.assign({}, s.np, { ncTel: e.target.value }) }),
+      salvarNc: () => {
+        if (!s.np.ncNome.trim()) { this.toastar('Informe o nome do cliente', 'erro'); return; }
+        const novo = { id: Date.now(), nome: s.np.ncNome, doc: s.np.ncDoc || '—', tel: s.np.ncTel || '—', veiculos: [] };
+        this.setState({ clientes: [novo].concat(s.clientes), np: Object.assign({}, s.np, { nc: false, clienteSel: novo.id, cb: '' }) });
+        this.toastar('Cliente criado');
+      },
+      b2Opacidade: clienteSel ? '1' : '0.45', b2Dica: clienteSel ? '' : 'Selecione um cliente primeiro',
+      veiculosCliente, temVeiculoSel: !!veiculoSel,
+      temClienteSel: !!clienteSel, clienteSemVeiculo: !!clienteSel && clienteSel.veiculos.length === 0 && !np.nv,
+      nvAberto: np.nv, abrirNv: () => this.setState({ np: Object.assign({}, s.np, { nv: !np.nv }) }),
+      sete: 7, quatro: 4,
+      nvPlaca: np.nvPlaca, aoNvPlaca: (e) => this.setState({ np: Object.assign({}, s.np, { nvPlaca: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') }) }),
+      nvMarca: np.nvMarca, aoNvMarca: (e) => this.setState({ np: Object.assign({}, s.np, { nvMarca: e.target.value }) }),
+      nvModelo: np.nvModelo, aoNvModelo: (e) => this.setState({ np: Object.assign({}, s.np, { nvModelo: e.target.value }) }),
+      nvAno: np.nvAno, aoNvAno: (e) => this.setState({ np: Object.assign({}, s.np, { nvAno: e.target.value.replace(/\D/g, '') }) }),
+      nvDica: /^[A-Z]{3}\d[A-Z0-9]\d{2}$/.test(np.nvPlaca) ? '✓ Formato Mercosul válido' : 'Formato: 3 letras + número + letra + 2 números',
+      nvConsultaDesab: !/^[A-Z]{3}\d[A-Z0-9]\d{2}$/.test(np.nvPlaca) || np.nvConsultando,
+      nvConsultaBg: /^[A-Z]{3}\d[A-Z0-9]\d{2}$/.test(np.nvPlaca) && !np.nvConsultando ? '#003399' : '#AEB5C0',
+      nvConsultarLabel: np.nvConsultando ? 'Consultando…' : 'Consultar placa',
+      consultarNv: () => {
+        if (np.nvConsultando) return;
+        this.setState({ np: Object.assign({}, s.np, { nvConsultando: true }) });
+        this._ct = setTimeout(() => {
+          const BASE = [['Fiat', 'Mobi Like 1.0', '2023'], ['Volkswagen', 'Polo TSI', '2022'], ['Chevrolet', 'Tracker LT', '2024'], ['Honda', 'Biz 125', '2021']];
+          const pick = BASE[this.state.np.nvPlaca.charCodeAt(0) % BASE.length];
+          this.setState({ np: Object.assign({}, this.state.np, { nvConsultando: false, nvMarca: pick[0], nvModelo: pick[1], nvAno: pick[2] }) });
+          this.toastar('Consulta veicular concluída — dados preenchidos');
+        }, 700);
+      },
+      salvarNv: () => {
+        const n = this.state.np;
+        if (!/^[A-Z]{3}\d[A-Z0-9]\d{2}$/.test(n.nvPlaca)) { this.toastar('Placa inválida — confira o formato Mercosul', 'erro'); return; }
+        if (!n.nvMarca.trim() || !n.nvModelo.trim()) { this.toastar('Informe marca e modelo (ou use a consulta)', 'erro'); return; }
+        if (s.clientes.some(cl => cl.veiculos.some(v => v.placa === n.nvPlaca))) { this.toastar('Esta placa já está cadastrada', 'erro'); return; }
+        const veic = { placa: n.nvPlaca, marca: n.nvMarca.trim(), modelo: n.nvModelo.trim(), ano: parseInt(n.nvAno) || new Date().getFullYear() };
+        this.setState({
+          clientes: s.clientes.map(cl => cl.id === n.clienteSel ? Object.assign({}, cl, { veiculos: cl.veiculos.concat([veic]) }) : cl),
+          np: Object.assign({}, n, { nv: false, nvPlaca: '', nvMarca: '', nvModelo: '', nvAno: '', veiculoSel: veic.placa, consulta: null })
+        });
+        this.toastar('Veículo ' + veic.placa + ' cadastrado e selecionado');
+      },
+      consultar: () => {
+        if (s.np.consultando) return;
+        this.setState({ np: Object.assign({}, s.np, { consultando: true }) });
+        this._ct = setTimeout(() => {
+          this.setState({ np: Object.assign({}, this.state.np, { consultando: false, consulta: veiculoSel }) });
+          this.toastar('Consulta veicular concluída');
+        }, 700);
+      },
+      consultarLabel: np.consultando ? 'Consultando…' : 'Consultar placa',
+      consultaFeita: !!np.consulta, semConsulta: !np.consulta && !np.consultando,
+      consultaResumo: np.consulta ? 'Preenchido: ' + np.consulta.marca + ' ' + np.consulta.modelo + ' · ' + np.consulta.ano : '',
+      b3Opacidade: veiculoSel ? '1' : '0.45',
+      servicosLista, pagamentoVal: np.pagamento, aoPagamento: (e) => this.setState({ np: Object.assign({}, s.np, { pagamento: e.target.value }) }),
+      resumoNovo: podeCriar ? (clienteSel.nome + ' · ' + veiculoSel.placa + ' · ' + servicoSel.nome) : 'Selecione cliente, veículo e serviço',
+      totalNovoFmt: servicoSel ? this.money(servicoSel.preco) : 'R$ 0,00',
+      criarDesabilitado: !podeCriar, criarBg: podeCriar ? '#003399' : '#AEB5C0',
+      criarPedido: () => {
+        if (!podeCriar) return;
+        const id = Math.max.apply(null, s.pedidos.map(p => p.id)) + 1;
+        const novo = {
+          id, placa: veiculoSel.placa, cliente: clienteSel.nome, doc: clienteSel.doc, tel: clienteSel.tel,
+          servico: servicoSel.nome, preco: servicoSel.preco, origem: 'BALCÃO', status: 'RECEBIDO', tempo: 'agora',
+          pago: !!np.pagamento, marca: veiculoSel.marca, modelo: veiculoSel.modelo, ano: veiculoSel.ano
+        };
+        this.setState({ pedidos: [novo].concat(s.pedidos), tela: 'pedidos', visao: 'quadro', np: this.npVazio() });
+        this.toastar('Pedido #' + id + ' criado' + (np.pagamento ? ' · pagamento registrado' : ''));
+      },
+      // detalhe
+      det, timeline, temProx: !!proxLabel, proxLabel: proxLabel || '',
+      avisoEstoque: det0.status === 'RECEBIDO',
+      avancar: () => {
+        if (det0.status === 'ENTREGUE') { this.setState({ pedidos: s.pedidos.map(p => p.id === det0.id ? Object.assign({}, p, { pago: true }) : p) }); this.toastar('Pagamento registrado'); return; }
+        this.mudarStatus(det0.id, ORDEM[idx + 1]);
+      },
+      registrarPagamento: () => { this.setState({ pedidos: s.pedidos.map(p => p.id === det0.id ? Object.assign({}, p, { pago: true }) : p) }); this.toastar('Pagamento registrado — ' + this.money(det0.preco)); },
+      // dashboard
+      resumoCards: [
+        { label: 'Pedidos hoje', valor: '14', sub: '+3 vs. ontem', subCor: '#1E7F4F' },
+        { label: 'Em produção', valor: '3', sub: '1 há mais de 4h', subCor: '#B45309' },
+        { label: 'Prontos para entrega', valor: '2', sub: '1 com pagamento pendente', subCor: '#B45309' },
+        { label: 'Faturamento do dia', valor: this.money(384210), sub: 'meta diária: ' + this.money(350000), subCor: '#5C6470' }
+      ],
+      chartPts: pts.map(p => p.x + ',' + p.y).join(' '),
+      chartArea: pts.map(p => p.x + ',' + p.y).join(' ') + ' 545,170 15,170',
+      chartDots: pts.map((p, i) => {
+        const acima = FAT[i] >= 350000, ult = i === pts.length - 1;
+        return { x: p.x, y: p.y, r: ult ? 4.5 : 3, fill: ult ? '#FFFFFF' : (acima ? '#1E7F4F' : '#003399'), stroke: ult ? '#003399' : 'none', sw: ult ? 2.5 : 0 };
+      }),
+      chartMaxFmt: this.money(max),
+      metaY: Math.round(168 - (350000 / max) * 125), metaFmt: this.money(350000),
+      ultLeft: (pts[pts.length - 1].x / 560 * 100 - 1.5).toFixed(1) + '%',
+      ultTop: (pts[pts.length - 1].y / 195 * 100 - 4).toFixed(1) + '%',
+      ultFmt: 'R$ ' + (FAT[FAT.length - 1] / 100 / 1000).toFixed(1).replace('.', ',') + ' mil',
+      chartLabels: [0, 3, 6, 9, 13].map(i => ({ left: (pts[i].x / 560 * 100).toFixed(1) + '%', t: DIAS[i] })),
+      topServicos: TOPS.map(t => ({ nome: t[0], qtd: String(t[1]), pct: Math.round(t[1] / TOPS[0][1] * 100) + '%' })),
+      filaAtencao: (() => {
+        const fila = s.pedidos.filter(p =>
+          (p.status === 'EM_PROCESSAMENTO' && p.tempo.includes('h') && parseInt(p.tempo) >= 4) ||
+          (p.status === 'PLACA_PRONTA' && !p.pago)
+        ).map(p => Object.assign(mk(p), {
+          motivo: p.status === 'PLACA_PRONTA' ? 'Pronta há ' + p.tempo + ' · pagamento pendente' : 'Em produção há ' + p.tempo
+        }));
+        this._fila = fila; return fila;
+      })(),
+      filaQtd: String((this._fila || []).length), temFila: (this._fila || []).length > 0, filaVazia: (this._fila || []).length === 0,
+      origens: (() => {
+        const ORIG = [['WHATSAPP', 'WhatsApp', 87, '#1E7F4F'], ['BALCÃO', 'Balcão', 64, '#003399'], ['TELEFONE', 'Telefone', 31, '#5C6470']];
+        const tot = ORIG.reduce((a, o) => a + o[2], 0);
+        return ORIG.map(o => ({ nome: o[1], qtd: String(o[2]), share: Math.round(o[2] / tot * 100) + '%', pct: Math.round(o[2] / ORIG[0][2] * 100) + '%', cor: o[3] }));
+      })(),
+      // estoque
+      baixoCount: String(baixoCount),
+      estoqueItens: this.ESTOQUE.map(i => {
+        const baixo = i.qtd <= i.min;
+        return Object.assign({}, i, {
+          qtd: String(i.qtd), min: String(i.min), baixo,
+          bg: baixo ? '#FDF6EC' : '#FFFFFF', qtdCor: baixo ? '#B45309' : '#1A1D21',
+          tag: baixo ? 'ABAIXO DO MÍNIMO' : 'OK', tagBg: baixo ? '#FBF0E4' : '#E7F3ED', tagCor: baixo ? '#B45309' : '#1E7F4F'
+        });
+      }),
+      // serviços
+      totalServicos: s.servicos.filter(v => v.ativo).length + ' ativos · ' + s.servicos.length + ' no total',
+      svLista: s.servicos.map(sv => ({
+        nome: sv.nome, cat: sv.cat, precoFmt: this.money(sv.preco),
+        qtdPed: String(s.pedidos.filter(p => p.servico === sv.nome).length),
+        op: sv.ativo ? '1' : '0.55',
+        stTxt: sv.ativo ? 'ATIVO' : 'INATIVO',
+        stCor: sv.ativo ? '#166534' : '#5C6470', stBg: sv.ativo ? '#E7F4EA' : '#F4F5F7', stBorda: sv.ativo ? '#BFE3C8' : '#D4D8DF',
+        alternar: () => {
+          this.setState({ servicos: s.servicos.map(x => x.id === sv.id ? Object.assign({}, x, { ativo: !x.ativo }) : x) });
+          this.toastar(sv.nome + (sv.ativo ? ' desativado' : ' reativado'));
+        }
+      })),
+      nsAberto: s.ns.aberto, abrirNs: () => this.setState({ ns: Object.assign({}, s.ns, { aberto: !s.ns.aberto }) }),
+      nsNome: s.ns.nome, aoNsNome: (e) => this.setState({ ns: Object.assign({}, s.ns, { nome: e.target.value }) }),
+      nsCat: s.ns.cat, aoNsCat: (e) => this.setState({ ns: Object.assign({}, s.ns, { cat: e.target.value }) }),
+      nsPreco: s.ns.preco ? this.money(s.ns.preco) : '',
+      aoNsPreco: (e) => this.setState({ ns: Object.assign({}, s.ns, { preco: parseInt(e.target.value.replace(/\D/g, '') || '0', 10) }) }),
+      salvarNs: () => {
+        if (!s.ns.nome.trim()) { this.toastar('Informe o nome do serviço', 'erro'); return; }
+        if (!s.ns.preco) { this.toastar('Informe o preço', 'erro'); return; }
+        const novo = { id: Date.now(), nome: s.ns.nome.trim(), cat: s.ns.cat, preco: s.ns.preco, ativo: true };
+        this.setState({ servicos: [novo].concat(s.servicos), ns: { aberto: false, nome: '', cat: 'EMPLACAMENTO', preco: 0 } });
+        this.toastar('Serviço criado');
+      },
+      // clientes
+      totalClientes: String(s.clientes.length),
+      bcVal: s.buscaClientes, aoBc: (e) => this.setState({ buscaClientes: e.target.value }),
+      clientesLista: (() => {
+        const q2 = (s.buscaClientes || '').trim().toLowerCase();
+        const lista = s.clientes.filter(cl => !q2 || cl.nome.toLowerCase().includes(q2) || cl.doc.includes(q2) || cl.tel.includes(q2))
+          .map(cl => ({
+            nome: cl.nome, doc: cl.doc, tel: cl.tel,
+            tipo: cl.doc.includes('/') ? 'PJ' : 'PF',
+            qtdVeic: String(cl.veiculos.length),
+            qtdPed: String(s.pedidos.filter(p => p.doc === cl.doc).length),
+            abrir: () => this.setState({ clienteDet: cl.id })
+          }));
+        this._cl = lista; return lista;
+      })(),
+      clientesVazio: (this._cl || []).length === 0,
+      semClienteDet: !s.clienteDet, temClienteDet: !!s.clienteDet,
+      fecharCliente: () => this.setState({ clienteDet: null }),
+      cd: (() => {
+        const cl = s.clientes.find(x => x.id === s.clienteDet) || s.clientes[0];
+        const peds = s.pedidos.filter(p => p.doc === cl.doc).map(mk);
+        return {
+          nome: cl.nome, doc: cl.doc, tel: cl.tel, tipo: cl.doc.includes('/') ? 'PESSOA JURÍDICA' : 'PESSOA FÍSICA',
+          qtdVeic: String(cl.veiculos.length),
+          veiculosLista: cl.veiculos.map(v => ({ placa: v.placa, descricao: v.marca + ' ' + v.modelo + ' · ' + v.ano })),
+          qtdPed: String(peds.length), pedidosLista: peds, temPedidos: peds.length > 0, semPedidos: peds.length === 0,
+          _id: cl.id
+        };
+      })(),
+      novoPedidoCliente: () => {
+        const cl = s.clientes.find(x => x.id === s.clienteDet);
+        this.setState({ tela: 'novo', np: Object.assign(this.npVazio(), { clienteSel: cl ? cl.id : null }), clienteDet: null });
+      },
+      // veículos
+      totalVeiculos: String(s.clientes.reduce((a, cl) => a + cl.veiculos.length, 0)),
+      bvVal: s.buscaVeiculos, aoBv: (e) => this.setState({ buscaVeiculos: e.target.value }),
+      veiculosLista2: (() => {
+        const q3 = (s.buscaVeiculos || '').trim().toLowerCase();
+        const todos = [];
+        s.clientes.forEach(cl => cl.veiculos.forEach(v => {
+          const mm = v.marca + ' ' + v.modelo;
+          if (q3 && !v.placa.toLowerCase().includes(q3) && !mm.toLowerCase().includes(q3)) return;
+          const ped = s.pedidos.find(p => p.placa === v.placa);
+          todos.push({
+            placa: v.placa, marcaModelo: mm, ano: String(v.ano), dono: cl.nome,
+            temPedido: !!ped, semPedido: !ped,
+            pedId: ped ? String(ped.id) : '', pedLabel: ped ? this.ST[ped.status].label : '',
+            pedBg: ped ? this.ST[ped.status].bg : '', pedCor: ped ? this.ST[ped.status].cor : '',
+            abrirCliente: () => this.setState({ tela: 'clientes', clienteDet: cl.id })
+          });
+        }));
+        this._vl = todos; return todos;
+      })(),
+      veiculosVazio: (this._vl || []).length === 0,
+      // toast
+      temToast: !!s.toast, toastMsg: s.toast ? s.toast.msg : '',
+      toastCor: s.toast && s.toast.tipo === 'erro' ? '#B91C1C' : '#1E7F4F'
+    };
+  }
+}
+</script>
+</body>
+</html>
