@@ -8,6 +8,10 @@ import { LoginPage } from '@/features/login/LoginPage';
 import { PedidosPage } from '@/features/pedidos/PedidosPage';
 import { PedidoDetalhePage } from '@/features/pedidos/PedidoDetalhePage';
 import { NovoPedidoPage } from '@/features/pedidos/NovoPedidoPage';
+import { ClientesPage } from '@/features/clientes/ClientesPage';
+import { ClienteDetalhePage } from '@/features/clientes/ClienteDetalhePage';
+import { VeiculosPage } from '@/features/veiculos/VeiculosPage';
+import { VeiculoDetalhePage } from '@/features/veiculos/VeiculoDetalhePage';
 import { EmConstrucao } from '@/components/EmConstrucao';
 import { NaoEncontrado } from '@/components/NaoEncontrado';
 
@@ -24,10 +28,10 @@ export const rotas: RouteObject[] = [
       { path: 'pedidos', element: <PedidosPage /> },
       { path: 'pedidos/novo', element: <NovoPedidoPage /> },
       { path: 'pedidos/:id', element: <PedidoDetalhePage /> },
-      { path: 'clientes', element: P('Clientes') },
-      { path: 'clientes/:id', element: P('Cliente') },
-      { path: 'veiculos', element: P('Veículos') },
-      { path: 'veiculos/:id', element: P('Veículo') },
+      { path: 'clientes', element: <ClientesPage /> },
+      { path: 'clientes/:id', element: <ClienteDetalhePage /> },
+      { path: 'veiculos', element: <VeiculosPage /> },
+      { path: 'veiculos/:id', element: <VeiculoDetalhePage /> },
       { path: 'servicos', element: <RequirePapel min="GERENTE">{P('Serviços')}</RequirePapel> },
       { path: 'estoque', element: P('Estoque') },
       { path: 'financeiro', element: <RequirePapel min="GERENTE">{P('Financeiro')}</RequirePapel> },

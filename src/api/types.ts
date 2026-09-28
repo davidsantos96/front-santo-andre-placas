@@ -76,3 +76,6 @@ export type NovoVeiculoRequest = {
   placa: string; marcaModelo: string; anoFabricacao: number; anoModelo: number; chassi: string; clienteId: number;
 };
 export type PagamentoRequest = { valorCentavos: number; formaPagamento: import('@/components/status').FormaPagamento };
+
+/** Histórico de consultas veiculares (sempre vazio até haver provedor). Formato assumido — ver PENDENCIAS.md. */
+export type ConsultaHistorico = { id: number; consultadoEm: string; fonte: string; resultado: string };

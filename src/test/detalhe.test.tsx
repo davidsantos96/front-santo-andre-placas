@@ -16,7 +16,7 @@ describe('Detalhe do pedido', () => {
     expect(screen.getByRole('img', { name: 'Placa FZR4C71' })).toBeInTheDocument();
     expect(screen.getByText('Fiat Argo Drive 1.0')).toBeInTheDocument();
     expect(screen.getByText('2022/2023')).toBeInTheDocument();
-    expect(screen.getByText('412.688.301-20')).toBeInTheDocument();
+    expect(screen.getByText('412.688.301-00')).toBeInTheDocument();
     expect(screen.getByText('Par de placas Mercosul (carro)')).toBeInTheDocument();
     const linha = screen.getByRole('list', { name: 'Histórico do pedido' });
     expect(within(linha).getByText(/Bruna Costa/)).toBeInTheDocument();

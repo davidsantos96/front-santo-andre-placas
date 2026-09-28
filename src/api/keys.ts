@@ -7,6 +7,8 @@ export const qk = {
   pagamentosDoPedido: (id: number) => ['pedido', id, 'pagamentos'] as const,
   clientes: (busca?: string) => ['clientes', busca] as const,
   cliente: (id: number) => ['cliente', id] as const,
+  veiculo: (id: number) => ['veiculo', id] as const,
+  consultas: (id: number) => ['veiculo', id, 'consultas'] as const,
   veiculos: (f?: { placa?: string; clienteId?: number }) => ['veiculos', f] as const,
   servicos: ['servicos'] as const,
   estoque: ['estoque'] as const,

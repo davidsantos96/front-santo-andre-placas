@@ -28,7 +28,7 @@ describe('Novo pedido', () => {
     await userEvent.keyboard('Marcos');
     await screen.findByRole('option', { name: /Marcos Vilela/ });
     await userEvent.keyboard('{Enter}');
-    expect(await screen.findByText('412.688.301-20 · (11) 98877-1234')).toBeInTheDocument();
+    expect(await screen.findByText('412.688.301-00 · (11) 98877-1234')).toBeInTheDocument();
 
     await tabAte(radio(/FZR4C71/));
     await userEvent.keyboard('{Enter}');
@@ -93,10 +93,10 @@ describe('Novo pedido', () => {
     await userEvent.click(await screen.findByRole('option', { name: '+ Cadastrar novo cliente' }));
     const painel = await screen.findByRole('dialog', { name: 'Novo cliente' });
     await userEvent.type(within(painel).getByLabelText('Nome'), 'Duplicado');
-    await userEvent.type(within(painel).getByLabelText('CPF/CNPJ'), '41268830120'); // já é do Marcos Vilela? (mock compara dígitos)
+    await userEvent.type(within(painel).getByLabelText('CPF/CNPJ'), '41268830100'); // já é do Marcos Vilela
     await userEvent.type(within(painel).getByLabelText('Telefone'), '11912345678');
     await userEvent.click(within(painel).getByRole('button', { name: 'Salvar cliente' }));
-    // CPF 412.688.301-20 do protótipo pode não ter dígito verificador válido; qualquer um dos dois erros prova o caminho
+    // CPF 412.688.301-00 do protótipo pode não ter dígito verificador válido; qualquer um dos dois erros prova o caminho
     expect(await within(painel).findByText(/CPF ou CNPJ inválido|CPF\/CNPJ já cadastrado/)).toBeInTheDocument();
   });
 

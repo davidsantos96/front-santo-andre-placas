@@ -5,7 +5,7 @@ import type { ApiError, Cliente } from '@/api/types';
 import { cpfCnpjValido, mascararCpfCnpj } from '@/lib/documento';
 import { aplicarErrosDeCampos } from '@/lib/erros';
 import { mascararTelefone, telefoneValido } from '@/lib/telefone';
-import { useCriarCliente } from './api';
+import { useAtualizarCliente, useCriarCliente } from './api';
 
 const schema = z.object({
   nome: z.string().trim().min(2, 'Informe o nome'),
@@ -18,16 +18,20 @@ type Dados = z.infer<typeof schema>;
 const campo = 'mt-1 block h-9 w-full rounded border border-linha-forte bg-white px-2.5 text-base';
 
 /** Formulário de cliente — compartilhado entre o painel do Novo pedido e a tela de Clientes. */
-export function ClienteForm({ onSalvo, onCancelar }: { onSalvo: (c: Cliente) => void; onCancelar?: () => void }) {
+export function ClienteForm({ inicial, onSalvo, onCancelar }: { inicial?: Cliente; onSalvo: (c: Cliente) => void; onCancelar?: () => void }) {
   const criar = useCriarCliente();
+  const atualizar = useAtualizarCliente(inicial?.id ?? 0);
+  const mutacao = inicial ? atualizar : criar;
   const { register, control, handleSubmit, setError, formState: { errors } } = useForm<Dados>({
     resolver: zodResolver(schema),
-    defaultValues: { nome: '', cpfCnpj: '', telefone: '', email: '' },
+    defaultValues: inicial
+      ? { nome: inicial.nome, cpfCnpj: inicial.cpfCnpj, telefone: inicial.telefone, email: inicial.email ?? '' }
+      : { nome: '', cpfCnpj: '', telefone: '', email: '' },
   });
 
   const enviar = handleSubmit(async (d) => {
     try {
-      onSalvo(await criar.mutateAsync(d));
+      onSalvo(await mutacao.mutateAsync(d));
     } catch (e) {
       const erro = e as ApiError;
       if (!aplicarErrosDeCampos(erro, setError)) setError('root', { message: erro.mensagem });
@@ -38,7 +42,7 @@ export function ClienteForm({ onSalvo, onCancelar }: { onSalvo: (c: Cliente) => 
     <form onSubmit={enviar} noValidate className="flex flex-col gap-3">
       <label className="text-xs font-semibold text-aco">
         Nome
-        <input {...register('nome')} autoFocus aria-invalid={!!errors.nome} className={campo} />
+        <input {...register('nome')} autoFocus={!inicial} aria-invalid={!!errors.nome} className={campo} />
       </label>
       {errors.nome && <p role="alert" className="-mt-2 text-xs text-erro">{errors.nome.message}</p>}
 
@@ -76,8 +80,8 @@ export function ClienteForm({ onSalvo, onCancelar }: { onSalvo: (c: Cliente) => 
         {onCancelar && (
           <button type="button" onClick={onCancelar} className="h-[30px] rounded border border-linha-forte bg-white px-3 text-sm font-medium text-aco hover:bg-fundo">Cancelar</button>
         )}
-        <button type="submit" disabled={criar.isPending} className="h-8 rounded bg-mercosul px-3.5 text-sm font-semibold text-white hover:bg-mercosul-hover disabled:opacity-60">
-          {criar.isPending ? 'Salvando…' : 'Salvar cliente'}
+        <button type="submit" disabled={mutacao.isPending} className="h-8 rounded bg-mercosul px-3.5 text-sm font-semibold text-white hover:bg-mercosul-hover disabled:opacity-60">
+          {mutacao.isPending ? 'Salvando…' : inicial ? 'Salvar alterações' : 'Salvar cliente'}
         </button>
       </div>
     </form>

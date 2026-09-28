@@ -199,4 +199,35 @@ export const handlers = [
     if (!autenticado(request)) return naoAutorizado();
     return HttpResponse.json(db.servicos.filter((s) => s.ativo));
   }),
+
+  http.get(url('/clientes/:id'), ({ request, params }) => {
+    if (!autenticado(request)) return naoAutorizado();
+    const c = db.clientes.find((x) => x.id === Number(params.id));
+    return c ? HttpResponse.json(c) : HttpResponse.json({ mensagem: 'Cliente não encontrado' }, { status: 404 });
+  }),
+
+  http.put(url('/clientes/:id'), async ({ request, params }) => {
+    if (!autenticado(request)) return naoAutorizado();
+    const c = db.clientes.find((x) => x.id === Number(params.id));
+    if (!c) return HttpResponse.json({ mensagem: 'Cliente não encontrado' }, { status: 404 });
+    const d = (await request.json()) as NovoClienteRequest;
+    const igual = (a: string, b: string) => a.replace(/\D/g, '') === b.replace(/\D/g, '');
+    if (db.clientes.some((x) => x.id !== c.id && igual(x.cpfCnpj, d.cpfCnpj))) {
+      return HttpResponse.json({ mensagem: 'Dados inválidos', campos: { cpfCnpj: 'CPF/CNPJ já cadastrado' } }, { status: 400 });
+    }
+    Object.assign(c, d); // pedidos e veículos referenciam o mesmo objeto
+    db.veiculos.filter((v) => v.clienteId === c.id).forEach((v) => { v.clienteNome = c.nome; });
+    return HttpResponse.json(c);
+  }),
+
+  http.get(url('/veiculos/:id'), ({ request, params }) => {
+    if (!autenticado(request)) return naoAutorizado();
+    const v = db.veiculos.find((x) => x.id === Number(params.id));
+    return v ? HttpResponse.json(v) : HttpResponse.json({ mensagem: 'Veículo não encontrado' }, { status: 404 });
+  }),
+
+  http.get(url('/veiculos/:id/historico-consultas'), ({ request }) => {
+    if (!autenticado(request)) return naoAutorizado();
+    return HttpResponse.json([]);
+  }),
 ];

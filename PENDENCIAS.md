@@ -30,3 +30,12 @@ Legenda: **Backend** = depende de mudança/confirmação na API · **Front** = d
 - [ ] **P12 · Backend — transições de status.** O front permite soltar o card em qualquer coluna (inclusive voltar de status). Se o backend rejeitar certas transições, o card volta (rollback) com o toast do erro. Definir as transições válidas para poder bloquear antes no front.
 - [ ] **P13 · Produto — pagamento no Novo pedido.** Ao escolher a forma, registra-se o valor cheio do serviço (não há pagamento parcial). A opção "Depois" deixa o pedido pendente.
 - [ ] **P14 · Front — teclado em selects.** O fluxo "só teclado" do Novo pedido é testado com Tab/setas/Enter/Ctrl+Enter; os `<select>` nativos (origem e forma) são operáveis por teclado no navegador, mas o jsdom não simula isso e o teste usa `selectOptions` neles.
+
+## Fase 6 — Clientes e Veículos
+
+- [ ] **P15 · Backend — total de pedidos por cliente.** A coluna "Pedidos" da lista de clientes faz uma chamada `GET /pedidos?clienteId=&size=1` **por cliente** (N+1; lê `page.totalElements`). Funciona para poucas dezenas de clientes, mas não escala. Sugestão: campo `totalPedidos` (e talvez `veiculos`) no `ClienteResponse`.
+- [ ] **P16 · Backend — endpoints e DTOs não listados no §14.** Assumidos: `GET /clientes/{id}`, `GET /veiculos/{id}` e `GET /veiculos/{id}/historico-consultas` → `{id, consultadoEm, fonte, resultado}[]` (formato inventado; hoje sempre `[]`). Confirmar existência e formato.
+- [ ] **P17 · Backend — listas sem paginação.** `GET /clientes` e `GET /veiculos` são tratados como arrays completos, e a lista de clientes chama `GET /veiculos` **sem filtro** para mostrar as placas de cada um. Com base grande isso precisa de paginação e/ou de trazer as placas no cliente.
+- [ ] **P18 · Produto — extras fora da spec.** A spec (§7.5) não descreve edição de cliente, mas o `PUT /clientes/{id}` existe: adicionei "Editar" na aba Dados. Também adicionei "+ Novo veículo" na aba Veículos do cliente (reaproveita o formulário do Novo pedido). Confirmar se ficam.
+- [ ] **P19 · Produto — documentos legados inválidos.** O formulário valida CPF/CNPJ pelo dígito verificador também na edição. Se o cadastro real tiver documentos legados inválidos, o usuário não conseguirá salvar outras alterações do cliente sem corrigir o documento. Decidir se a edição deve ser mais tolerante.
+- [ ] **P20 · Front — fixtures.** Os CPFs/CNPJs fictícios do protótipo não passavam na validação, então as fixtures do MSW usam documentos válidos equivalentes (mesmos 9/12 primeiros dígitos, dígitos verificadores corretos).

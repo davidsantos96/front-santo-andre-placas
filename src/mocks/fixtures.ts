@@ -38,17 +38,17 @@ export const USUARIOS: (Usuario & { senha: string })[] = [
 // [id, placa, cliente, cpfCnpj, tel, servicoId, origem, status, tempo, pago, marca+modelo, ano, forma]
 type Linha = [number, string, string, string, string, number, string, StatusPedido, string, boolean, string, number, FormaPagamento?];
 const LINHAS: Linha[] = [
-  [1058, 'FZR4C71', 'Marcos Vilela', '412.688.301-20', '(11) 98877-1234', 1, 'WHATSAPP', 'RECEBIDO', '12 min', false, 'Fiat Argo Drive 1.0', 2022],
-  [1057, 'GHK2D18', 'Auto Escola Horizonte LTDA', '12.345.678/0001-90', '(11) 4433-2210', 4, 'TELEFONE', 'RECEBIDO', '38 min', false, 'Chevrolet Onix LT 1.0', 2023],
-  [1056, 'DPT7B02', 'Renata Sampaio', '318.554.902-88', '(11) 97712-0983', 3, 'BALCAO', 'RECEBIDO', '1h 05min', true, 'Volkswagen T-Cross 200 TSI', 2021, 'PIX'],
-  [1055, 'EBX9A55', 'Marcos Vilela', '412.688.301-20', '(11) 98877-1234', 2, 'BALCAO', 'EM_PROCESSAMENTO', '2h 10min', false, 'Honda CG 160 Fan', 2019],
-  [1054, 'BRA2E19', 'José Aparecido Nunes', '201.377.415-04', '(11) 96401-5520', 1, 'WHATSAPP', 'EM_PROCESSAMENTO', '3h 25min', true, 'Toyota Corolla XEi', 2020, 'CARTAO_CREDITO'],
-  [1053, 'JKL3F44', 'Transportes Iguaçu ME', '23.980.114/0001-55', '(11) 4002-8933', 1, 'TELEFONE', 'EM_PROCESSAMENTO', '4h 02min', false, 'Mercedes-Benz Sprinter 314', 2018],
-  [1052, 'MNO5G88', 'Célia Regina Prado', '287.410.663-71', '(11) 95530-4417', 3, 'WHATSAPP', 'PLACA_PRONTA', '5h 40min', true, 'Hyundai HB20 Sense', 2020, 'PIX'],
-  [1051, 'PQR8H21', 'Douglas Ferreira', '354.902.118-30', '(11) 98104-7762', 2, 'BALCAO', 'PLACA_PRONTA', '6h 15min', false, 'Yamaha Fazer 250', 2021],
-  [1050, 'STU1J09', 'Vanessa Okamoto', '390.114.552-09', '(11) 99218-3345', 1, 'BALCAO', 'ENTREGUE', 'ontem', true, 'Jeep Renegade Sport', 2022, 'CARTAO_DEBITO'],
-  [1049, 'VWX6K33', 'Locadora Drive+ LTDA', '44.120.907/0001-12', '(11) 3311-9080', 4, 'WHATSAPP', 'ENTREGUE', 'ontem', true, 'Renault Kwid Zen', 2023, 'BOLETO'],
-  [1048, 'YZA9L77', 'Paulo Sérgio Lima', '150.336.481-66', '(11) 97460-2291', 5, 'BALCAO', 'ENTREGUE', 'ontem', true, 'Ford Ka SE 1.0', 2017, 'DINHEIRO'],
+  [1058, 'FZR4C71', 'Marcos Vilela', '412.688.301-00', '(11) 98877-1234', 1, 'WHATSAPP', 'RECEBIDO', '12 min', false, 'Fiat Argo Drive 1.0', 2022],
+  [1057, 'GHK2D18', 'Auto Escola Horizonte LTDA', '12.345.678/0001-95', '(11) 4433-2210', 4, 'TELEFONE', 'RECEBIDO', '38 min', false, 'Chevrolet Onix LT 1.0', 2023],
+  [1056, 'DPT7B02', 'Renata Sampaio', '318.554.902-34', '(11) 97712-0983', 3, 'BALCAO', 'RECEBIDO', '1h 05min', true, 'Volkswagen T-Cross 200 TSI', 2021, 'PIX'],
+  [1055, 'EBX9A55', 'Marcos Vilela', '412.688.301-00', '(11) 98877-1234', 2, 'BALCAO', 'EM_PROCESSAMENTO', '2h 10min', false, 'Honda CG 160 Fan', 2019],
+  [1054, 'BRA2E19', 'José Aparecido Nunes', '201.377.415-02', '(11) 96401-5520', 1, 'WHATSAPP', 'EM_PROCESSAMENTO', '3h 25min', true, 'Toyota Corolla XEi', 2020, 'CARTAO_CREDITO'],
+  [1053, 'JKL3F44', 'Transportes Iguaçu ME', '23.980.114/0001-40', '(11) 4002-8933', 1, 'TELEFONE', 'EM_PROCESSAMENTO', '4h 02min', false, 'Mercedes-Benz Sprinter 314', 2018],
+  [1052, 'MNO5G88', 'Célia Regina Prado', '287.410.663-16', '(11) 95530-4417', 3, 'WHATSAPP', 'PLACA_PRONTA', '5h 40min', true, 'Hyundai HB20 Sense', 2020, 'PIX'],
+  [1051, 'PQR8H21', 'Douglas Ferreira', '354.902.118-65', '(11) 98104-7762', 2, 'BALCAO', 'PLACA_PRONTA', '6h 15min', false, 'Yamaha Fazer 250', 2021],
+  [1050, 'STU1J09', 'Vanessa Okamoto', '390.114.552-40', '(11) 99218-3345', 1, 'BALCAO', 'ENTREGUE', 'ontem', true, 'Jeep Renegade Sport', 2022, 'CARTAO_DEBITO'],
+  [1049, 'VWX6K33', 'Locadora Drive+ LTDA', '44.120.907/0001-60', '(11) 3311-9080', 4, 'WHATSAPP', 'ENTREGUE', 'ontem', true, 'Renault Kwid Zen', 2023, 'BOLETO'],
+  [1048, 'YZA9L77', 'Paulo Sérgio Lima', '150.336.481-01', '(11) 97460-2291', 5, 'BALCAO', 'ENTREGUE', 'ontem', true, 'Ford Ka SE 1.0', 2017, 'DINHEIRO'],
 ];
 
 const ORDEM: StatusPedido[] = ['RECEBIDO', 'EM_PROCESSAMENTO', 'PLACA_PRONTA', 'ENTREGUE'];
