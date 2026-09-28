@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 /** Container e cabeçalho padrão de toda tela (spec §7). */
 export function Pagina({ titulo, contagem, acoes, children }: {
-  titulo: string; contagem?: ReactNode; acoes?: ReactNode; children?: ReactNode;
+  titulo: ReactNode; contagem?: ReactNode; acoes?: ReactNode; children?: ReactNode;
 }) {
   return (
     <div className="max-w-[1200px] px-6 py-5">

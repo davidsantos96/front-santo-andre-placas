@@ -6,6 +6,8 @@ import { RequirePapel } from '@/auth/RequirePapel';
 import { RedirectInicial } from '@/auth/RedirectInicial';
 import { LoginPage } from '@/features/login/LoginPage';
 import { PedidosPage } from '@/features/pedidos/PedidosPage';
+import { PedidoDetalhePage } from '@/features/pedidos/PedidoDetalhePage';
+import { NovoPedidoPage } from '@/features/pedidos/NovoPedidoPage';
 import { EmConstrucao } from '@/components/EmConstrucao';
 import { NaoEncontrado } from '@/components/NaoEncontrado';
 
@@ -20,8 +22,8 @@ export const rotas: RouteObject[] = [
       { index: true, element: <RedirectInicial /> },
       { path: 'dashboard', element: <RequirePapel min="GERENTE">{P('Dashboard')}</RequirePapel> },
       { path: 'pedidos', element: <PedidosPage /> },
-      { path: 'pedidos/novo', element: P('Novo pedido') },
-      { path: 'pedidos/:id', element: P('Detalhe do pedido') },
+      { path: 'pedidos/novo', element: <NovoPedidoPage /> },
+      { path: 'pedidos/:id', element: <PedidoDetalhePage /> },
       { path: 'clientes', element: P('Clientes') },
       { path: 'clientes/:id', element: P('Cliente') },
       { path: 'veiculos', element: P('Veículos') },

@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw';
-import type { LoginRequest, LoginResponse, Paginado, Pedido } from '@/api/types';
+import type { Cliente, LoginRequest, LoginResponse, NovoClienteRequest, NovoPedidoRequest, NovoVeiculoRequest, Pagamento, PagamentoRequest, Paginado, Pedido, Veiculo } from '@/api/types';
 import type { StatusPedido } from '@/components/status';
 import { db } from './db';
 
@@ -92,5 +92,111 @@ export const handlers = [
       if (item) item.quantidade = Math.max(0, item.quantidade - 1);
     }
     return HttpResponse.json(p);
+  }),
+
+  http.get(url('/pedidos/:id/historico'), ({ request, params }) => {
+    if (!autenticado(request)) return naoAutorizado();
+    return HttpResponse.json(
+      db.historico.filter((h) => h.pedidoId === Number(params.id)).sort((a, b) => a.id - b.id)
+        .map(({ pedidoId: _p, ...h }) => h),
+    );
+  }),
+
+  http.get(url('/pedidos/:id/pagamentos'), ({ request, params }) => {
+    if (!autenticado(request)) return naoAutorizado();
+    return HttpResponse.json(db.pagamentos.filter((p) => p.pedidoId === Number(params.id)));
+  }),
+
+  http.post(url('/pedidos/:id/pagamento'), async ({ request, params }) => {
+    const u = autenticado(request);
+    if (!u) return naoAutorizado();
+    const pedido = db.pedidos.find((x) => x.id === Number(params.id));
+    if (!pedido) return HttpResponse.json({ mensagem: 'Pedido não encontrado' }, { status: 404 });
+    const dados = (await request.json()) as PagamentoRequest;
+    if (db.pagamentos.some((p) => p.pedidoId === pedido.id && p.status === 'PAGO')) {
+      return HttpResponse.json({ mensagem: 'Pedido já possui pagamento registrado' }, { status: 400 });
+    }
+    const pg: Pagamento = {
+      id: db.pagamentos.length + 1, pedidoId: pedido.id, valorCentavos: dados.valorCentavos,
+      formaPagamento: dados.formaPagamento, status: 'PAGO', pagoEm: new Date().toISOString(), registradoPor: u.nome,
+    };
+    db.pagamentos.push(pg);
+    pedido.pago = true;
+    return HttpResponse.json(pg, { status: 201 });
+  }),
+
+  http.post(url('/pedidos'), async ({ request }) => {
+    const u = autenticado(request);
+    if (!u) return naoAutorizado();
+    const d = (await request.json()) as NovoPedidoRequest;
+    const cliente = db.clientes.find((c) => c.id === d.clienteId);
+    const veiculo = db.veiculos.find((v) => v.id === d.veiculoId);
+    const servico = db.servicos.find((s) => s.id === d.servicoId && s.ativo);
+    if (!cliente) return HttpResponse.json({ mensagem: 'Cliente não encontrado' }, { status: 400 });
+    if (!veiculo) return HttpResponse.json({ mensagem: 'Veículo não encontrado' }, { status: 400 });
+    if (!servico) return HttpResponse.json({ mensagem: 'Serviço não encontrado' }, { status: 400 });
+    const agora = new Date().toISOString();
+    const pedido: Pedido = {
+      id: Math.max(...db.pedidos.map((p) => p.id)) + 1, status: 'RECEBIDO', origem: d.origem, criadoEm: agora,
+      atualizadoEm: agora, cliente, veiculo, servico, pago: false,
+    };
+    db.pedidos.push(pedido);
+    db.historico.push({ id: db.historico.length + 1, pedidoId: pedido.id, statusAnterior: null, statusNovo: 'RECEBIDO', alteradoPor: u.nome, alteradoEm: agora });
+    return HttpResponse.json(pedido, { status: 201 });
+  }),
+
+  http.get(url('/clientes'), ({ request }) => {
+    if (!autenticado(request)) return naoAutorizado();
+    const busca = new URL(request.url).searchParams.get('busca')?.trim().toLowerCase();
+    const digitos = busca?.replace(/\D/g, '');
+    const lista = !busca ? db.clientes : db.clientes.filter((c) =>
+      c.nome.toLowerCase().includes(busca) ||
+      (!!digitos && (c.telefone.replace(/\D/g, '').includes(digitos) || c.cpfCnpj.replace(/\D/g, '').includes(digitos))));
+    return HttpResponse.json(lista);
+  }),
+
+  http.post(url('/clientes'), async ({ request }) => {
+    if (!autenticado(request)) return naoAutorizado();
+    const d = (await request.json()) as NovoClienteRequest;
+    const igual = (a: string, b: string) => a.replace(/\D/g, '') === b.replace(/\D/g, '');
+    if (db.clientes.some((c) => igual(c.cpfCnpj, d.cpfCnpj))) {
+      return HttpResponse.json({ mensagem: 'Dados inválidos', campos: { cpfCnpj: 'CPF/CNPJ já cadastrado' } }, { status: 400 });
+    }
+    const c: Cliente = { id: Math.max(0, ...db.clientes.map((x) => x.id)) + 1, ...d, criadoEm: new Date().toISOString() };
+    db.clientes.push(c);
+    return HttpResponse.json(c, { status: 201 });
+  }),
+
+  http.get(url('/veiculos'), ({ request }) => {
+    if (!autenticado(request)) return naoAutorizado();
+    const q = new URL(request.url).searchParams;
+    const placa = q.get('placa')?.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const clienteId = q.get('clienteId');
+    return HttpResponse.json(
+      db.veiculos.filter((v) => (!placa || v.placa.includes(placa)) && (!clienteId || v.clienteId === Number(clienteId))),
+    );
+  }),
+
+  http.post(url('/veiculos'), async ({ request }) => {
+    if (!autenticado(request)) return naoAutorizado();
+    const d = (await request.json()) as NovoVeiculoRequest;
+    const cliente = db.clientes.find((c) => c.id === d.clienteId);
+    if (!cliente) return HttpResponse.json({ mensagem: 'Cliente não encontrado' }, { status: 400 });
+    if (db.veiculos.some((v) => v.placa === d.placa)) {
+      return HttpResponse.json({ mensagem: 'Dados inválidos', campos: { placa: 'Placa já cadastrada' } }, { status: 400 });
+    }
+    const v: Veiculo = { id: Math.max(0, ...db.veiculos.map((x) => x.id)) + 1, ...d, clienteNome: cliente.nome };
+    db.veiculos.push(v);
+    return HttpResponse.json(v, { status: 201 });
+  }),
+
+  http.post(url('/veiculos/:id/consultar'), ({ request }) => {
+    if (!autenticado(request)) return naoAutorizado();
+    return HttpResponse.json({ mensagem: 'Consulta veicular ainda não está disponível.' }, { status: 400 });
+  }),
+
+  http.get(url('/servicos'), ({ request }) => {
+    if (!autenticado(request)) return naoAutorizado();
+    return HttpResponse.json(db.servicos.filter((s) => s.ativo));
   }),
 ];

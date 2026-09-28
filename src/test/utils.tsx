@@ -22,3 +22,15 @@ export function renderApp(inicial = '/') {
   );
   return { ...utils, router, qc };
 }
+
+import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+
+/** Abre o app já autenticado na rota `inicial` (passa pelo login real, via ?next=). */
+export async function entrarComo(inicial: string, email = 'atendente@sap.com') {
+  const app = renderApp(`/login?next=${encodeURIComponent(inicial)}`);
+  await userEvent.type(await screen.findByLabelText('E-mail'), email);
+  await userEvent.type(screen.getByLabelText('Senha'), '123456');
+  await userEvent.click(screen.getByRole('button', { name: 'Entrar' }));
+  return app;
+}

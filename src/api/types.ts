@@ -69,3 +69,10 @@ export type FiltroPagamentos = { de: string; ate: string; forma?: FormaPagamento
 
 /** Erro normalizado que sai do cliente HTTP. */
 export type ApiError = { status: number; mensagem: string; campos?: Record<string, string> };
+
+/** Corpos de POST assumidos (o backend ainda usa a entidade crua — ver PENDENCIAS.md). */
+export type NovoClienteRequest = { nome: string; telefone: string; cpfCnpj: string; email: string };
+export type NovoVeiculoRequest = {
+  placa: string; marcaModelo: string; anoFabricacao: number; anoModelo: number; chassi: string; clienteId: number;
+};
+export type PagamentoRequest = { valorCentavos: number; formaPagamento: import('@/components/status').FormaPagamento };
