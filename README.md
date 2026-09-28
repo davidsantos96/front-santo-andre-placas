@@ -1,27 +1,23 @@
-# Front Santo André Placas — Protótipo navegável
+# Painel Santo André Placas (front)
 
-## O que é
-Protótipo em HTML único (`Painel Santo André Placas.dc.html`) do painel de gestão de emplacamento Mercosul. Serve para o usuário sentir a experiência real do sistema — telas, navegação, estados de carregamento e interações — antes da implementação em produção.
+Painel interno de gestão de emplacamento Mercosul. Vite + React 18 + TypeScript (strict), React Router 6, TanStack Query, RHF + Zod, Tailwind, Radix.
 
-**Isto não é código de produção.** É um arquivo HTML autocontido para visualização/demo. Ao implementar de verdade, recrie as telas na stack que for usada (React, etc.), usando este arquivo como referência de layout, cores, tipografia e comportamento.
+## Rodando
 
-## Como subir no GitHub (sem linha de comando)
-1. Abra o repositório `front-santo-andre-placas` no GitHub.
-2. Clique em **Add file → Upload files**.
-3. Arraste os arquivos desta pasta (`Painel Santo André Placas.dc.html`, `PlacaBadge.dc.html`, `support.js`, `index.html`).
-4. Commit direto na branch principal.
-5. Para ver funcionando publicamente: **Settings → Pages → Deploy from a branch → main / (root)**. Em 1-2 min o link fica disponível em algo como `https://SEU_USUARIO.github.io/front-santo-andre-placas/`.
+```bash
+npm install
+cp .env.example .env   # VITE_API_URL e VITE_USE_MOCKS
+npm run dev            # http://localhost:5173
+npm test               # Vitest
+npm run build
+```
 
-## Telas incluídas
-Dashboard, Pedidos (Kanban/tabela), Novo Pedido, Detalhe do Pedido, Estoque, Clientes, Veículos, Serviços. Financeiro, Usuários, Fechamento de caixa e Login ainda são placeholders/pendentes.
+Com `VITE_USE_MOCKS=true` o app usa MSW (dados fictícios em `src/mocks/`); com `false` chama a API em `VITE_API_URL`.
 
-## Paleta e tipografia
-- Azul Mercosul `#003399`, sidebar `#001B4D`, cinza frio `#F4F5F7`
-- Semântica: verde `#166534`/`#E7F4EA`, âmbar, vermelho
-- Tipografia: Archivo Narrow (títulos/números/placa) + IBM Plex Sans (UI)
+## Protótipo de referência
 
-## Arquivos
-- `index.html` — abre o protótipo direto (redirect)
-- `Painel Santo André Placas.dc.html` — arquivo principal
-- `PlacaBadge.dc.html` — componente de placa reutilizável
-- `support.js` — runtime necessário para o arquivo `.dc.html` rodar no navegador
+O protótipo HTML navegável está em [`prototipo/`](prototipo/) (abrir `prototipo/index.html`). É a fonte da verdade visual; não é código de produção.
+
+## Estrutura
+
+Ver a spec de implementação: `src/api`, `src/auth`, `src/components`, `src/features/*`, `src/layouts`, `src/lib`, `src/mocks`.
