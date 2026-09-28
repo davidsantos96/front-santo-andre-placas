@@ -13,6 +13,11 @@ export type Servico = { id: number; nome: string; descricao: string; precoCentav
 export type Pedido = {
   id: number; status: StatusPedido; origem: string; criadoEm: string; atualizadoEm: string;
   cliente: Cliente; veiculo: Veiculo; servico: Servico;
+  /**
+   * NÃO existe no PedidoResponse atual (spec §11) — o Kanban precisa dele para o
+   * "$ pendente" sem N+1. Opcional: se o backend não enviar, a tag simplesmente não aparece.
+   */
+  pago?: boolean;
 };
 
 export type Pagamento = {

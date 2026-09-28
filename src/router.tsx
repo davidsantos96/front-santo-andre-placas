@@ -5,6 +5,7 @@ import { RequireAuth } from '@/auth/RequireAuth';
 import { RequirePapel } from '@/auth/RequirePapel';
 import { RedirectInicial } from '@/auth/RedirectInicial';
 import { LoginPage } from '@/features/login/LoginPage';
+import { PedidosPage } from '@/features/pedidos/PedidosPage';
 import { EmConstrucao } from '@/components/EmConstrucao';
 import { NaoEncontrado } from '@/components/NaoEncontrado';
 
@@ -18,7 +19,7 @@ export const rotas: RouteObject[] = [
     children: [
       { index: true, element: <RedirectInicial /> },
       { path: 'dashboard', element: <RequirePapel min="GERENTE">{P('Dashboard')}</RequirePapel> },
-      { path: 'pedidos', element: P('Pedidos') },
+      { path: 'pedidos', element: <PedidosPage /> },
       { path: 'pedidos/novo', element: P('Novo pedido') },
       { path: 'pedidos/:id', element: P('Detalhe do pedido') },
       { path: 'clientes', element: P('Clientes') },

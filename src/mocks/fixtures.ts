@@ -76,7 +76,7 @@ export function criarBanco(agora = Date.now()) {
 
     const criado = iso(minutos(tempo), agora);
     pedidos.push({
-      id, status, origem, criadoEm: criado, atualizadoEm: criado, cliente, veiculo,
+      id, status, origem, criadoEm: criado, atualizadoEm: criado, cliente, veiculo, pago,
       servico: SERVICOS.find((s) => s.id === servicoId)!,
     });
 
@@ -103,7 +103,7 @@ export function criarBanco(agora = Date.now()) {
     servicos: structuredClone(SERVICOS),
     estoque: structuredClone(ESTOQUE),
     usuarios: structuredClone(USUARIOS),
-    tokens: new Map<string, Papel>(),
+    tokens: new Map<string, { papel: Papel; nome: string }>(),
   };
 }
 
