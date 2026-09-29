@@ -6,3 +6,6 @@ import { resetarBanco } from '@/mocks/db';
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => { server.resetHandlers(); resetarBanco(); });
 afterAll(() => server.close());
+
+// jsdom não tem ResizeObserver (o Recharts precisa dele).
+globalThis.ResizeObserver ??= class { observe() {} unobserve() {} disconnect() {} };

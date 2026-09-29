@@ -83,3 +83,7 @@ export type ConsultaHistorico = { id: number; consultadoEm: string; fonte: strin
 /** Corpos assumidos (contratos ainda não documentados — ver PENDENCIAS.md). */
 export type NovoServicoRequest = { nome: string; descricao: string; categoria: string; precoCentavos: number; ativo: boolean };
 export type MovimentacaoRequest = { itemId: number; tipo: 'ENTRADA' | 'SAIDA'; quantidade: number; observacao: string };
+
+/** Contratos do dashboard ainda não documentados (formatos assumidos — ver PENDENCIAS.md). */
+export type FaturamentoDia = { data: string; valorCentavos: number };
+export type ServicoMaisVendido = { servicoId: number; servicoNome: string; quantidadePedidos: number; faturamentoNominalCentavos: number };

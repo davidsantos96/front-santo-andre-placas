@@ -15,6 +15,7 @@ import { VeiculoDetalhePage } from '@/features/veiculos/VeiculoDetalhePage';
 import { ServicosPage } from '@/features/servicos/ServicosPage';
 import { EstoquePage } from '@/features/estoque/EstoquePage';
 import { FinanceiroPage } from '@/features/financeiro/FinanceiroPage';
+import { DashboardPage } from '@/features/dashboard/DashboardPage';
 import { EmConstrucao } from '@/components/EmConstrucao';
 import { NaoEncontrado } from '@/components/NaoEncontrado';
 
@@ -27,7 +28,7 @@ export const rotas: RouteObject[] = [
     element: <RequireAuth><AppShell /></RequireAuth>,
     children: [
       { index: true, element: <RedirectInicial /> },
-      { path: 'dashboard', element: <RequirePapel min="GERENTE">{P('Dashboard')}</RequirePapel> },
+      { path: 'dashboard', element: <RequirePapel min="GERENTE"><DashboardPage /></RequirePapel> },
       { path: 'pedidos', element: <PedidosPage /> },
       { path: 'pedidos/novo', element: <NovoPedidoPage /> },
       { path: 'pedidos/:id', element: <PedidoDetalhePage /> },

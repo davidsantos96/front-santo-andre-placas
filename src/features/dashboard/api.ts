@@ -1,0 +1,53 @@
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { api } from '@/api/client';
+import { qk } from '@/api/keys';
+import type { FaturamentoDia, ResumoDashboard, ServicoMaisVendido, TempoMedioProducao } from '@/api/types';
+import { intervaloUltimosDias } from '@/lib/datas';
+import { usePedidos } from '@/features/pedidos/api';
+
+export type DiasFaturamento = 7 | 14 | 30;
+
+export const useResumo = () =>
+  useQuery({ queryKey: qk.dashboard.resumo, queryFn: async () => (await api.get<ResumoDashboard>('/dashboard/resumo')).data });
+
+/** `GET /dashboard/faturamento?de=&ate=` — o front calcula `de`/`ate` a partir de 7, 14 ou 30 dias. */
+export function useFaturamento(dias: DiasFaturamento) {
+  const { de, ate } = intervaloUltimosDias(dias);
+  return useQuery({
+    queryKey: qk.dashboard.faturamento(String(dias)),
+    placeholderData: keepPreviousData, // troca de período mantém o gráfico anterior (esmaecido) em vez de piscar
+    queryFn: async () => ({ de, ate, dias: (await api.get<FaturamentoDia[]>('/dashboard/faturamento', { params: { de, ate } })).data }),
+  });
+}
+
+export const useServicosMaisVendidos = () =>
+  useQuery({
+    queryKey: qk.dashboard.servicos,
+    queryFn: async () => (await api.get<ServicoMaisVendido[]>('/dashboard/servicos-mais-vendidos')).data,
+  });
+
+/** Em **horas** (não minutos), sem comparação com o período anterior. */
+export const useTempoMedio = () =>
+  useQuery({
+    queryKey: qk.dashboard.tempoMedio,
+    queryFn: async () => (await api.get<TempoMedioProducao>('/dashboard/tempo-medio-producao')).data,
+  });
+
+/** Origem dos pedidos: sem endpoint de dashboard, agrega no front os pedidos dos últimos 7 dias. */
+export function useOrigemDosPedidos() {
+  const { de } = intervaloUltimosDias(7);
+  return usePedidos({ de, size: 500 });
+}
+
+/** Fila de produção: pedidos RECEBIDO + EM_PROCESSAMENTO (o filtro `status` só aceita um valor → duas chamadas). */
+export function useFilaDeProducao() {
+  const recebidos = usePedidos({ status: 'RECEBIDO', size: 50 });
+  const emProcessamento = usePedidos({ status: 'EM_PROCESSAMENTO', size: 50 });
+  return {
+    isPending: recebidos.isPending || emProcessamento.isPending,
+    isError: recebidos.isError || emProcessamento.isError,
+    refetch: () => { void recebidos.refetch(); void emProcessamento.refetch(); },
+    pedidos: [...(recebidos.data?.content ?? []), ...(emProcessamento.data?.content ?? [])]
+      .sort((a, b) => a.criadoEm.localeCompare(b.criadoEm)),
+  };
+}

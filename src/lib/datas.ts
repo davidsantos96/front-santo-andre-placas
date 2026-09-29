@@ -50,3 +50,27 @@ export function intervaloDoPeriodo(p: Periodo, hoje = new Date()): { de: string;
     case '30': return { de: dia(29), ate: dia(0) };
   }
 }
+
+/** Duração em horas (decimal) → "45 min" ou "2h 10min". */
+export function duracaoHoras(horas: number): string {
+  const min = Math.round(horas * 60);
+  if (min < 60) return `${min} min`;
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return m ? `${h}h ${String(m).padStart(2, '0')}min` : `${h}h`;
+}
+
+/** Lista de dias `yyyy-MM-dd` de `de` até `ate` (inclusive). */
+export function diasDoIntervalo(de: string, ate: string): string[] {
+  const dias: string[] = [];
+  const fim = new Date(`${ate}T12:00:00`);
+  for (let d = new Date(`${de}T12:00:00`); d <= fim; d.setDate(d.getDate() + 1)) dias.push(paraISOData(d));
+  return dias;
+}
+
+/** Últimos `n` dias incluindo hoje, como `de`/`ate` (yyyy-MM-dd). */
+export function intervaloUltimosDias(n: number, hoje = new Date()): { de: string; ate: string } {
+  const de = new Date(hoje);
+  de.setDate(de.getDate() - (n - 1));
+  return { de: paraISOData(de), ate: paraISOData(hoje) };
+}

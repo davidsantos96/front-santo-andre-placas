@@ -51,6 +51,16 @@ Marque `[x]` quando o backend estiver ajustado **e** o front testado contra a AP
 - [ ] **Baixa — categoria (§14.5).** `categoria` é `String` livre; validar contra `EMPLACAMENTO | SEGUNDA VIA | DOCUMENTAÇÃO | SERVIÇOS` (o front só envia esses).
 - [ ] **Baixa — estoque.** `GET /estoque/itens` e `GET /estoque/itens/baixo-estoque` com `{ id, nome, sku|null, unidade|null, quantidade, quantidadeMinima }`. "Abaixo do mínimo" no front é `quantidade <= quantidadeMinima` — o `baixo-estoque` do backend deve usar o **mesmo critério** (senão o badge da sidebar diverge da tabela).
 
+## Fase 8 — Dashboard
+
+- [ ] **Alta — `GET /dashboard/faturamento?de=&ate=` (GERENTE+).** O §14.8 só cita os parâmetros; o **formato da resposta não está documentado**. Assumido: `[{ data: 'yyyy-MM-dd', valorCentavos }]`, ordenado por dia. Pode omitir dias sem faturamento (o front completa o intervalo com R$ 0,00). O front pede 7, 14 ou 30 dias.
+- [ ] **Alta — `GET /dashboard/resumo` (GERENTE+).** Confirmar a semântica: `pedidosHoje` = pedidos **criados hoje** (fuso de SP); `pedidosPorStatus` = contagem **atual** por status (o front mostra "Em produção" = `EM_PROCESSAMENTO` e "Prontos para entrega" = `PLACA_PRONTA`, sem limitar a hoje); `faturamentoHojeCentavos` = soma dos pagamentos `PAGO` de hoje. Se algum status não tiver pedidos, o front trata a chave ausente como 0.
+- [ ] **Média — origem dos pedidos.** Não há endpoint. O front agrega `GET /pedidos?de=<7 dias>&size=500` (conta por `origem`). Sugestão: `GET /dashboard/origem-pedidos?de=&ate=` → `[{ origem, quantidade }]`.
+- [ ] **Média — fila de produção.** O filtro `status` de `GET /pedidos` só aceita um valor, então o front faz **duas chamadas** (`RECEBIDO` e `EM_PROCESSAMENTO`) e ordena por `criadoEm`. Sugestão: aceitar lista (`status=RECEBIDO,EM_PROCESSAMENTO`) e um parâmetro de ordenação.
+- [ ] **Média — tempo médio de produção.** `GET /dashboard/tempo-medio-producao` → `{ horasMedia, pedidosConsiderados }` (em **horas**). Confirmar o que é medido (o front escreve "Recebido → placa pronta") e o período considerado. A tendência "▼ 12 min vs semana passada" **não está implementada** porque o endpoint não tem período nem valor anterior: sugestão de campo `horasMediaPeriodoAnterior` (ou parâmetros `de`/`ate`).
+- [ ] **Baixa — serviços mais vendidos.** `GET /dashboard/servicos-mais-vendidos` não recebe período (hoje o front mostra o acumulado total, top 5). Sugestão: `de`/`ate`. Lembrete: `faturamentoNominalCentavos` usa o preço **atual** (não é usado na tela).
+- [ ] **Baixa — permissões.** Todos os endpoints `/dashboard/*` devem ser GERENTE+ (o front redireciona ATENDENTE, mas a API precisa responder `403`).
+
 ---
 
 # Pendências por fase (detalhe e decisões)
@@ -101,3 +111,12 @@ Marque `[x]` quando o backend estiver ajustado **e** o front testado contra a AP
 - [ ] **P26 · Produto — barra de nível do estoque.** Escala definida por mim: o mínimo fica na metade da barra (100% = 2× o mínimo), com marca no mínimo; laranja quando abaixo/igual ao mínimo. A spec só pede "Nível (barra)".
 - [ ] **P27 · Front — extras da tela de Serviços.** Clicar na linha abre a edição (a spec só cita "edição em modal"); o título do cartão ("TABELA DE SERVIÇOS · SP") foi escolhido por mim; a descrição do serviço não tem campo na UI (é preservada ao editar e vai vazia ao criar).
 - [ ] **P28 · Produto — Estoque sem cadastro de item.** A spec da Fase 1 não inclui criar item de estoque nem o vínculo serviço↔item (só ADMIN/GERENTE no backend). Não há UI para isso.
+
+## Fase 8 — Dashboard
+
+- [ ] **P29 · Produto — tendência do tempo médio.** A spec pede "▼ 12 min vs semana passada" (verde/vermelho), mas o backend não fornece o período anterior. O cartão mostra só o número. Decidir: pedir o campo ao backend (preferível) ou calcular no front com duas chamadas (exigiria parâmetros de período no endpoint).
+- [ ] **P30 · Produto — períodos dos cartões.** Só o Faturamento tem seletor (7/14/30 dias, como na spec). "Origem dos pedidos" usa **últimos 7 dias** fixos (a spec não define) e "Serviços mais vendidos" o acumulado total. Decidir se os cartões devem seguir um filtro de período único.
+- [ ] **P31 · Produto — contraste da paleta nos gráficos.** As cores da spec para origem (`#003399`, `#4C6EB0`, `#93A9D1`) não passam no validador de paleta categórica de dataviz (luminosidade/croma; o azul claro tem contraste 2,31:1 com o fundo). Mitigação aplicada: cada barra tem **rótulo, contagem e % em texto** (identidade nunca só por cor). Decidir se vale escurecer o tom claro para ganhar contraste.
+- [ ] **P32 · Front — extras acessíveis no gráfico.** Adicionei "Ver como tabela" (valores por dia) e um `aria-label` com o resumo do gráfico, que a spec não pede; o gráfico usa **linhas retas entre os dias** (sem suavização, para não sugerir valores entre dias) e a unidade "R$ mil" vai numa legenda acima do eixo. Tooltip conferido manualmente (o jsdom não simula o hover do Recharts).
+- [ ] **P33 · Front — flag de metas.** O espaço de "progresso de metas" (Fase 2 do produto) só aparece com `VITE_FEATURE_METAS=true`; hoje é só um cartão "Em breve".
+- [ ] **P34 · Front — fila de produção.** Mostra os 6 mais antigos (RECEBIDO + EM_PROCESSAMENTO) com "+ N na fila"; a spec só cita "Fila de produção". Confirmar o tamanho e a ordenação (mais antigo primeiro).

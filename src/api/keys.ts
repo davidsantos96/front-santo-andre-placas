@@ -19,5 +19,7 @@ export const qk = {
   dashboard: {
     resumo: ['dash', 'resumo'] as const,
     faturamento: (p: string) => ['dash', 'fat', p] as const,
+    servicos: ['dash', 'servicos'] as const,
+    tempoMedio: ['dash', 'tempo'] as const,
   },
 };

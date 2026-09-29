@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw';
-import type { FechamentoCaixa, MovimentacaoRequest, NovoServicoRequest, PagamentoListagem, Servico, Cliente, LoginRequest, LoginResponse, NovoClienteRequest, NovoPedidoRequest, NovoVeiculoRequest, Pagamento, PagamentoRequest, Paginado, Pedido, Veiculo } from '@/api/types';
+import type { FaturamentoDia, ResumoDashboard, ServicoMaisVendido, TempoMedioProducao, FechamentoCaixa, MovimentacaoRequest, NovoServicoRequest, PagamentoListagem, Servico, Cliente, LoginRequest, LoginResponse, NovoClienteRequest, NovoPedidoRequest, NovoVeiculoRequest, Pagamento, PagamentoRequest, Paginado, Pedido, Veiculo } from '@/api/types';
 import type { StatusPedido } from '@/components/status';
 import { db } from './db';
 
@@ -288,6 +288,68 @@ export const handlers = [
       totalGeral: lista.reduce((t, p) => t + p.valorCentavos, 0),
       quantidadePagamentos: lista.length,
       porFormaPagamento: [...porForma].map(([formaPagamento, v]) => ({ formaPagamento: formaPagamento as FechamentoCaixa['porFormaPagamento'][number]['formaPagamento'], ...v })),
+    };
+    return HttpResponse.json(corpo);
+  }),
+
+  http.get(url('/dashboard/resumo'), ({ request }) => {
+    const u = autenticado(request);
+    if (!u) return naoAutorizado();
+    if (u.papel === 'ATENDENTE') return HttpResponse.json({ mensagem: 'Acesso negado' }, { status: 403 });
+    const hoje = dia(new Date().toISOString());
+    const porStatus: Record<StatusPedido, number> = { RECEBIDO: 0, EM_PROCESSAMENTO: 0, PLACA_PRONTA: 0, ENTREGUE: 0, CANCELADO: 0 };
+    db.pedidos.forEach((p) => { porStatus[p.status] += 1; });
+    const corpo: ResumoDashboard = {
+      pedidosHoje: db.pedidos.filter((p) => dia(p.criadoEm) === hoje).length,
+      pedidosPorStatus: porStatus,
+      faturamentoHojeCentavos: db.pagamentos.filter((p) => p.status === 'PAGO' && dia(p.pagoEm) === hoje).reduce((t, p) => t + p.valorCentavos, 0),
+      itensBaixoEstoque: db.estoque.filter((i) => i.quantidade <= i.quantidadeMinima).length,
+    };
+    return HttpResponse.json(corpo);
+  }),
+
+  http.get(url('/dashboard/faturamento'), ({ request }) => {
+    const u = autenticado(request);
+    if (!u) return naoAutorizado();
+    if (u.papel === 'ATENDENTE') return HttpResponse.json({ mensagem: 'Acesso negado' }, { status: 403 });
+    const q = new URL(request.url).searchParams;
+    const de = q.get('de') ?? '0000-00-00';
+    const ate = q.get('ate') ?? '9999-99-99';
+    const porDia = new Map<string, number>(); // só dias com pagamento (o front completa os dias sem faturamento)
+    db.pagamentos.filter((p) => p.status === 'PAGO' && dia(p.pagoEm) >= de && dia(p.pagoEm) <= ate)
+      .forEach((p) => porDia.set(dia(p.pagoEm), (porDia.get(dia(p.pagoEm)) ?? 0) + p.valorCentavos));
+    const corpo: FaturamentoDia[] = [...porDia].sort(([a], [b]) => a.localeCompare(b)).map(([data, valorCentavos]) => ({ data, valorCentavos }));
+    return HttpResponse.json(corpo);
+  }),
+
+  http.get(url('/dashboard/servicos-mais-vendidos'), ({ request }) => {
+    const u = autenticado(request);
+    if (!u) return naoAutorizado();
+    if (u.papel === 'ATENDENTE') return HttpResponse.json({ mensagem: 'Acesso negado' }, { status: 403 });
+    const mapa = new Map<number, ServicoMaisVendido>();
+    db.pedidos.filter((p) => p.status !== 'CANCELADO').forEach((p) => {
+      const a = mapa.get(p.servico.id) ?? { servicoId: p.servico.id, servicoNome: p.servico.nome, quantidadePedidos: 0, faturamentoNominalCentavos: 0 };
+      a.quantidadePedidos += 1;
+      a.faturamentoNominalCentavos += p.servico.precoCentavos; // preço ATUAL do serviço, como o backend
+      mapa.set(p.servico.id, a);
+    });
+    return HttpResponse.json([...mapa.values()].sort((a, b) => b.quantidadePedidos - a.quantidadePedidos));
+  }),
+
+  http.get(url('/dashboard/tempo-medio-producao'), ({ request }) => {
+    const u = autenticado(request);
+    if (!u) return naoAutorizado();
+    if (u.papel === 'ATENDENTE') return HttpResponse.json({ mensagem: 'Acesso negado' }, { status: 403 });
+    const duracoes: number[] = [];
+    db.pedidos.forEach((p) => {
+      const h = db.historico.filter((x) => x.pedidoId === p.id);
+      const ini = h.find((x) => x.statusNovo === 'RECEBIDO');
+      const fim = h.find((x) => x.statusNovo === 'PLACA_PRONTA');
+      if (ini && fim) duracoes.push((new Date(fim.alteradoEm).getTime() - new Date(ini.alteradoEm).getTime()) / 3_600_000);
+    });
+    const corpo: TempoMedioProducao = {
+      horasMedia: duracoes.length ? duracoes.reduce((a, b) => a + b, 0) / duracoes.length : 0,
+      pedidosConsiderados: duracoes.length,
     };
     return HttpResponse.json(corpo);
   }),
