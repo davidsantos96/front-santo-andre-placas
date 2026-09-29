@@ -59,8 +59,10 @@ describe('datas', () => {
     expect(tempoDecorrido(new Date(2026, 8, 28, 9, 50).toISOString(), agora)).toBe('2h 10min');
     expect(tempoDecorrido(new Date(2026, 8, 27, 16, 0).toISOString(), agora)).toBe('ontem');
   });
-  it('dataHora formata dd/MM', () => {
-    expect(dataHora(new Date(2020, 0, 5, 9, 3).toISOString())).toBe('05/01 · 09:03');
+  it('dataHora: hoje, ontem e dd/MM (relativo ao `agora`, não ao relógio do sistema)', () => {
+    expect(dataHora(new Date(2026, 8, 28, 9, 3).toISOString(), agora)).toBe('Hoje · 09:03');
+    expect(dataHora(new Date(2026, 8, 27, 16, 40).toISOString(), agora)).toBe('Ontem · 16:40');
+    expect(dataHora(new Date(2020, 0, 5, 9, 3).toISOString(), agora)).toBe('05/01 · 09:03');
   });
   it('intervalo do período', () => {
     expect(intervaloDoPeriodo('7', agora)).toEqual({ de: '2026-09-22', ate: '2026-09-28' });

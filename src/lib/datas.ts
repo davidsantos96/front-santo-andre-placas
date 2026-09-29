@@ -1,4 +1,4 @@
-import { differenceInCalendarDays, format, formatDistanceToNowStrict, isToday, isYesterday } from 'date-fns';
+import { differenceInCalendarDays, format, formatDistanceToNowStrict, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 /** Tempo decorrido do card: "12 min", "2h 10min" ou "ontem"/"3 dias". */
@@ -7,21 +7,22 @@ export function tempoDecorrido(iso: string, agora = new Date()): string {
   const min = Math.max(0, Math.floor((agora.getTime() - d.getTime()) / 60_000));
   if (min < 1) return 'agora';
   if (min < 60) return `${min} min`;
-  if (isToday(d)) {
+  const dias = differenceInCalendarDays(agora, d); // relativo ao `agora` recebido, não ao relógio do sistema
+  if (dias === 0) {
     const h = Math.floor(min / 60);
     const m = min % 60;
     return m ? `${h}h ${m}min` : `${h}h`;
   }
-  if (isYesterday(d)) return 'ontem';
-  return `${differenceInCalendarDays(agora, d)} dias`;
+  if (dias === 1) return 'ontem';
+  return `${dias} dias`;
 }
 
 /** "Hoje · 10:15", "Ontem · 16:40" ou "dd/MM · HH:mm". */
-export function dataHora(iso: string): string {
+export function dataHora(iso: string, agora = new Date()): string {
   const d = new Date(iso);
   const hora = format(d, 'HH:mm');
-  if (isToday(d)) return `Hoje · ${hora}`;
-  if (isYesterday(d)) return `Ontem · ${hora}`;
+  if (isSameDay(d, agora)) return `Hoje · ${hora}`;
+  if (differenceInCalendarDays(agora, d) === 1) return `Ontem · ${hora}`;
   return `${format(d, 'dd/MM')} · ${hora}`;
 }
 

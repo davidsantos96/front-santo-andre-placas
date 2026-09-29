@@ -12,6 +12,9 @@ import { ClientesPage } from '@/features/clientes/ClientesPage';
 import { ClienteDetalhePage } from '@/features/clientes/ClienteDetalhePage';
 import { VeiculosPage } from '@/features/veiculos/VeiculosPage';
 import { VeiculoDetalhePage } from '@/features/veiculos/VeiculoDetalhePage';
+import { ServicosPage } from '@/features/servicos/ServicosPage';
+import { EstoquePage } from '@/features/estoque/EstoquePage';
+import { FinanceiroPage } from '@/features/financeiro/FinanceiroPage';
 import { EmConstrucao } from '@/components/EmConstrucao';
 import { NaoEncontrado } from '@/components/NaoEncontrado';
 
@@ -32,9 +35,9 @@ export const rotas: RouteObject[] = [
       { path: 'clientes/:id', element: <ClienteDetalhePage /> },
       { path: 'veiculos', element: <VeiculosPage /> },
       { path: 'veiculos/:id', element: <VeiculoDetalhePage /> },
-      { path: 'servicos', element: <RequirePapel min="GERENTE">{P('Serviços')}</RequirePapel> },
-      { path: 'estoque', element: P('Estoque') },
-      { path: 'financeiro', element: <RequirePapel min="GERENTE">{P('Financeiro')}</RequirePapel> },
+      { path: 'servicos', element: <RequirePapel min="GERENTE"><ServicosPage /></RequirePapel> },
+      { path: 'estoque', element: <EstoquePage /> },
+      { path: 'financeiro', element: <RequirePapel min="GERENTE"><FinanceiroPage /></RequirePapel> },
       { path: 'usuarios', element: <RequirePapel min="ADMIN">{P('Usuários')}</RequirePapel> },
       { path: '*', element: <NaoEncontrado /> },
     ],

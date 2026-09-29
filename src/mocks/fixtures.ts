@@ -4,11 +4,20 @@ import type { FormaPagamento, StatusPedido } from '@/components/status';
 
 /** Dados do protótipo (pedidos 1048–1058, clientes, serviços, estoque) como fixtures do MSW. */
 
-const minutos = (t: string): number => {
-  if (t === 'ontem') return 26 * 60;
+/**
+ * "12 min", "2h 10min" → minutos atrás, mas nunca antes da meia-noite local (senão, de madrugada,
+ * pedidos "de hoje" cairiam em ontem). "ontem" = ontem às 14h, sempre.
+ */
+const minutos = (t: string, agora: number): number => {
+  const d = new Date(agora);
+  if (t === 'ontem') {
+    const ontem14 = new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1, 14, 0, 0).getTime();
+    return Math.round((agora - ontem14) / 60_000);
+  }
+  const desdeMeiaNoite = Math.max(2, Math.floor((agora - new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()) / 60_000));
   const h = /(\d+)h/.exec(t);
   const m = /(\d+)\s*min/.exec(t);
-  return (h ? Number(h[1]) * 60 : 0) + (m ? Number(m[1]) : 0);
+  return Math.min((h ? Number(h[1]) * 60 : 0) + (m ? Number(m[1]) : 0), desdeMeiaNoite - 1);
 };
 const iso = (minAtras: number, agora: number) => new Date(agora - minAtras * 60_000).toISOString();
 
@@ -74,7 +83,7 @@ export function criarBanco(agora = Date.now()) {
     };
     veiculos.push(veiculo);
 
-    const criado = iso(minutos(tempo), agora);
+    const criado = iso(minutos(tempo, agora), agora);
     pedidos.push({
       id, status, origem, criadoEm: criado, atualizadoEm: criado, cliente, veiculo, pago,
       servico: SERVICOS.find((s) => s.id === servicoId)!,
@@ -85,7 +94,7 @@ export function criarBanco(agora = Date.now()) {
     ORDEM.slice(0, ate + 1).forEach((s, i) => {
       historico.push({
         id: historico.length + 1, pedidoId: id, statusAnterior: i === 0 ? null : ORDEM[i - 1], statusNovo: s,
-        alteradoPor: 'Bruna Costa', alteradoEm: iso(Math.max(minutos(tempo) - i * 25, 1), agora),
+        alteradoPor: 'Bruna Costa', alteradoEm: iso(Math.max(minutos(tempo, agora) - i * 25, 1), agora),
       });
     });
 
@@ -93,7 +102,7 @@ export function criarBanco(agora = Date.now()) {
       const servico = SERVICOS.find((s) => s.id === servicoId)!;
       pagamentos.push({
         id: pagamentos.length + 1, pedidoId: id, valorCentavos: servico.precoCentavos, formaPagamento: forma,
-        status: 'PAGO', pagoEm: iso(Math.max(minutos(tempo) - 5, 1), agora), registradoPor: 'Bruna Costa',
+        status: 'PAGO', pagoEm: iso(Math.max(minutos(tempo, agora) - 5, 1), agora), registradoPor: 'Bruna Costa',
       });
     }
   }

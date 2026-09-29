@@ -79,3 +79,7 @@ export type PagamentoRequest = { valorCentavos: number; formaPagamento: import('
 
 /** Histórico de consultas veiculares (sempre vazio até haver provedor). Formato assumido — ver PENDENCIAS.md. */
 export type ConsultaHistorico = { id: number; consultadoEm: string; fonte: string; resultado: string };
+
+/** Corpos assumidos (contratos ainda não documentados — ver PENDENCIAS.md). */
+export type NovoServicoRequest = { nome: string; descricao: string; categoria: string; precoCentavos: number; ativo: boolean };
+export type MovimentacaoRequest = { itemId: number; tipo: 'ENTRADA' | 'SAIDA'; quantidade: number; observacao: string };

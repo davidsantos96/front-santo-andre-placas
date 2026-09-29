@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw';
-import type { Cliente, LoginRequest, LoginResponse, NovoClienteRequest, NovoPedidoRequest, NovoVeiculoRequest, Pagamento, PagamentoRequest, Paginado, Pedido, Veiculo } from '@/api/types';
+import type { FechamentoCaixa, MovimentacaoRequest, NovoServicoRequest, PagamentoListagem, Servico, Cliente, LoginRequest, LoginResponse, NovoClienteRequest, NovoPedidoRequest, NovoVeiculoRequest, Pagamento, PagamentoRequest, Paginado, Pedido, Veiculo } from '@/api/types';
 import type { StatusPedido } from '@/components/status';
 import { db } from './db';
 
@@ -230,4 +230,84 @@ export const handlers = [
     if (!autenticado(request)) return naoAutorizado();
     return HttpResponse.json([]);
   }),
+
+  http.post(url('/servicos'), async ({ request }) => {
+    const u = autenticado(request);
+    if (!u) return naoAutorizado();
+    if (u.papel === 'ATENDENTE') return HttpResponse.json({ mensagem: 'Acesso negado' }, { status: 403 });
+    const d = (await request.json()) as NovoServicoRequest;
+    const s: Servico = { id: Math.max(0, ...db.servicos.map((x) => x.id)) + 1, ...d };
+    db.servicos.push(s);
+    return HttpResponse.json(s, { status: 201 });
+  }),
+
+  http.put(url('/servicos/:id'), async ({ request, params }) => {
+    const u = autenticado(request);
+    if (!u) return naoAutorizado();
+    if (u.papel === 'ATENDENTE') return HttpResponse.json({ mensagem: 'Acesso negado' }, { status: 403 });
+    const s = db.servicos.find((x) => x.id === Number(params.id));
+    if (!s) return HttpResponse.json({ mensagem: 'Serviço não encontrado' }, { status: 404 });
+    Object.assign(s, (await request.json()) as NovoServicoRequest);
+    return HttpResponse.json(s);
+  }),
+
+  http.post(url('/estoque/movimentacoes'), async ({ request }) => {
+    if (!autenticado(request)) return naoAutorizado();
+    const d = (await request.json()) as MovimentacaoRequest;
+    const item = db.estoque.find((i) => i.id === d.itemId);
+    if (!item) return HttpResponse.json({ mensagem: 'Item não encontrado' }, { status: 400 });
+    if (!Number.isInteger(d.quantidade) || d.quantidade <= 0) return HttpResponse.json({ mensagem: 'Quantidade inválida' }, { status: 400 });
+    if (d.tipo === 'SAIDA' && d.quantidade > item.quantidade) return HttpResponse.json({ mensagem: 'Saldo insuficiente' }, { status: 400 });
+    item.quantidade += d.tipo === 'ENTRADA' ? d.quantidade : -d.quantidade;
+    return HttpResponse.json(item, { status: 201 });
+  }),
+
+  http.get(url('/pagamentos'), ({ request }) => {
+    const u = autenticado(request);
+    if (!u) return naoAutorizado();
+    if (u.papel === 'ATENDENTE') return HttpResponse.json({ mensagem: 'Acesso negado' }, { status: 403 });
+    return HttpResponse.json(listarPagamentos(new URL(request.url).searchParams));
+  }),
+
+  http.get(url('/financeiro/fechamento-caixa'), ({ request }) => {
+    const u = autenticado(request);
+    if (!u) return naoAutorizado();
+    if (u.papel === 'ATENDENTE') return HttpResponse.json({ mensagem: 'Acesso negado' }, { status: 403 });
+    const q = new URL(request.url).searchParams;
+    const hoje = dia(new Date().toISOString());
+    const de = q.get('de') ?? hoje;
+    const ate = q.get('ate') ?? hoje;
+    const lista = listarPagamentos(new URLSearchParams({ de, ate }));
+    const porForma = new Map<string, { totalCentavos: number; quantidade: number }>();
+    lista.forEach((p) => {
+      const a = porForma.get(p.formaPagamento) ?? { totalCentavos: 0, quantidade: 0 };
+      porForma.set(p.formaPagamento, { totalCentavos: a.totalCentavos + p.valorCentavos, quantidade: a.quantidade + 1 });
+    });
+    const corpo: FechamentoCaixa = {
+      de, ate,
+      totalGeral: lista.reduce((t, p) => t + p.valorCentavos, 0),
+      quantidadePagamentos: lista.length,
+      porFormaPagamento: [...porForma].map(([formaPagamento, v]) => ({ formaPagamento: formaPagamento as FechamentoCaixa['porFormaPagamento'][number]['formaPagamento'], ...v })),
+    };
+    return HttpResponse.json(corpo);
+  }),
 ];
+
+function listarPagamentos(q: URLSearchParams): PagamentoListagem[] {
+  const de = q.get('de');
+  const ate = q.get('ate');
+  const forma = q.get('forma');
+  return db.pagamentos
+    .filter((p) => p.status === 'PAGO')
+    .filter((p) => !de || dia(p.pagoEm) >= de)
+    .filter((p) => !ate || dia(p.pagoEm) <= ate)
+    .filter((p) => !forma || p.formaPagamento === forma)
+    .sort((a, b) => b.pagoEm.localeCompare(a.pagoEm))
+    .map((p) => {
+      const ped = db.pedidos.find((x) => x.id === p.pedidoId)!;
+      return {
+        id: p.id, pedidoId: p.pedidoId, placa: ped.veiculo.placa, clienteNome: ped.cliente.nome, servicoNome: ped.servico.nome,
+        formaPagamento: p.formaPagamento, valorCentavos: p.valorCentavos, pagoEm: p.pagoEm, registradoPor: p.registradoPor,
+      };
+    });
+}

@@ -215,7 +215,7 @@ export function NovoPedidoPage() {
 
         <Bloco n={3} titulo="Serviço e pagamento" habilitado={!!veiculo} erro={errors.servicoId?.message}>
           <div role="radiogroup" aria-label="Serviço" className="flex flex-col gap-2">
-            {(servicosQ.data ?? []).map((s) => {
+            {(servicosQ.data ?? []).filter((s) => s.ativo).map((s) => {
               const sel = servico?.id === s.id;
               return (
                 <button
