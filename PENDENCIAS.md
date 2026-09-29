@@ -4,6 +4,57 @@ Lista viva. Cada item foi assumido de forma provisória para não travar a imple
 
 Legenda: **Backend** = depende de mudança/confirmação na API · **Front** = decisão só do front · **Produto** = decisão de negócio/UX.
 
+---
+
+# Checklist do backend (por fase)
+
+Tudo o que o front **assume** hoje (e roda contra o MSW) e que o backend precisa confirmar ou ajustar. Cada linha diz o que o front envia/espera. Prioridade: **Alta** = a funcionalidade não opera de verdade sem isso · **Média** = opera, mas degradada · **Baixa** = melhoria. O detalhe de cada item (`Pn`) está nas seções por fase mais abaixo. As Fases 8–10 acrescentam itens aqui quando forem implementadas.
+
+Marque `[x]` quando o backend estiver ajustado **e** o front testado contra a API real (desligar o mock: `VITE_USE_MOCKS=false`).
+
+## Transversal (vale para todas as fases)
+
+- [ ] **Alta — formato de erro.** O front lê `mensagem` (ou `message`/`erro`) e, para validação, `campos: { campo: "mensagem" }` (ou `errors`). Erros de campo viram mensagem no input; sem `campos`, viram aviso no formulário/toast. Padronizar.
+- [ ] **Alta — códigos HTTP.** `401` = token ausente/expirado (abre o modal de re-login e refaz a requisição); `403` = papel sem permissão; `400` = validação/regra (com `mensagem`); `404` = não encontrado. IDs inválidos devem ser `400`, nunca `500`.
+- [ ] **Alta — paginação de pedidos.** `GET /pedidos` → `{ content: [...], page: { size, number, totalElements, totalPages } }` (`page` começa em 0; `size` padrão 50). Confirmar se há **teto de `size`** (o front pede até 500 no quadro/contagens).
+- [ ] **Média — fuso horário (P24).** Datas `de`/`ate` chegam como `yyyy-MM-dd` calculadas no navegador; interpretar no fuso de São Paulo. Timestamps (`criadoEm`, `pagoEm`, `alteradoEm`) em ISO-8601 com fuso/UTC.
+- [ ] **Média — mascarar ou não (P7).** `cpfCnpj` e `telefone` chegam **mascarados** (`123.456.789-09`, `(11) 98877-1234`). Decidir: aceitar mascarado, ou o front passa a enviar só dígitos. A busca `?busca=` do front envia o texto como digitado.
+- [ ] **Média — CORS.** Liberar a origem onde o front for hospedado (hoje só `http://localhost:5173`).
+
+## Fase 5 — Pedidos
+
+- [ ] **Alta — `pago` no pedido (P1).** `PedidoResponse` precisa de `pago: boolean` (o Kanban mostra "$ pendente" e decide a confirmação "entregar sem pagamento"). Sem isso a tag simplesmente não aparece. Alternativa/extra: filtro `pago=false` em `GET /pedidos` (destrava também as pendências do Caixa).
+- [ ] **Alta — `GET /pedidos/{id}/pagamentos` (P8).** O detalhe do pedido usa esse endpoint para saber se está pago e mostrar "Pago via … · quando · quem". Retorna `Pagamento[] { id, pedidoId, valorCentavos, formaPagamento, status: 'PAGO'|'CANCELADO', pagoEm, registradoPor }`. Confirmar que existe (a spec §11 cita, o §14 não lista).
+- [ ] **Alta — `PATCH /pedidos/{id}/status` (P12).** Corpo `{ novoStatus }`; devolver o `PedidoResponse` atualizado. O front permite soltar em qualquer coluna (inclusive voltar); se houver transições inválidas, responder `400` com `mensagem` (o card volta e o toast mostra o texto). **Definir a matriz de transições válidas** para o front poder bloquear antes.
+- [ ] **Alta — `POST /pedidos/{id}/pagamento`.** Corpo `{ valorCentavos, formaPagamento }` (forma = um dos 5 valores do enum); `400` se o pedido já estiver pago; devolver o `Pagamento` criado.
+- [ ] **Média — busca de texto em pedidos (P2).** Parâmetro (ex.: `busca`) que filtre por placa, nome do cliente e nº do pedido. Hoje a busca da tabela só filtra a página já carregada.
+- [ ] **Média — item de estoque do aviso de baixa automática (P6).** Endpoint ou campo (no serviço ou no pedido) com o **nome do item e a quantidade** que serão baixados ao entrar em `EM_PROCESSAMENTO`. Hoje o aviso é genérico.
+- [ ] **Média — `POST /pedidos` (P9).** Confirmar o corpo `{ clienteId, veiculoId, servicoId, origem }` com `origem ∈ BALCAO|WHATSAPP|TELEFONE`; ids inexistentes → `400`. (`POST /pedidos/completo` não é usado; corpo não documentado.)
+- [ ] **Baixa — histórico.** `GET /pedidos/{id}/historico` com `{ id, statusAnterior, statusNovo, alteradoPor, alteradoEm }`, ordenado do mais antigo ao mais novo (o front assume essa ordem).
+
+## Fase 6 — Clientes e Veículos
+
+- [ ] **Alta — contratos de entrada (P7).** `POST /clientes` e `PUT /clientes/{id}` com `{ nome, telefone, cpfCnpj, email }`; `POST /veiculos` com `{ placa, marcaModelo, anoFabricacao, anoModelo, chassi, clienteId }`. Duplicidade (CPF/CNPJ ou placa) → `400` com `campos: { cpfCnpj: "..." }` / `{ placa: "..." }`. Idealmente DTOs de entrada dedicados (hoje entidade crua).
+- [ ] **Alta — endpoints por id (P16).** `GET /clientes/{id}` e `GET /veiculos/{id}` (a spec não lista). `404` com `mensagem` quando não existir.
+- [ ] **Alta — formato das listas (P7/P17).** `GET /clientes?busca=` e `GET /veiculos?placa=&clienteId=` devolvem **array simples** (`Cliente[]`, `Veiculo[]`). `Veiculo` inclui `clienteId` e `clienteNome`. Busca de clientes por nome, telefone ou CPF/CNPJ (substring, sem diferenciar maiúsculas; documento/telefone comparados só pelos dígitos).
+- [ ] **Média — total de pedidos por cliente (P15).** Campo `totalPedidos` no cliente (hoje o front faz 1 chamada `GET /pedidos?clienteId=&size=1` **por cliente**, N+1).
+- [ ] **Média — paginação (P17).** Se a base crescer, paginar `GET /clientes` e `GET /veiculos` — e trazer as placas junto do cliente (a lista de clientes hoje chama `GET /veiculos` sem filtro).
+- [ ] **Baixa — histórico de consultas (P16).** `GET /veiculos/{id}/historico-consultas` → `[]` por enquanto; formato assumido `{ id, consultadoEm, fonte, resultado }`. `POST /veiculos/{id}/consultar` deve continuar respondendo `400` "Consulta veicular ainda não está disponível." até haver provedor (o front trata como aviso, não como erro).
+
+## Fase 7 — Serviços, Estoque e Financeiro
+
+- [ ] **Alta — `POST /estoque/movimentacoes` (P23).** Corpo `{ itemId, tipo: 'ENTRADA'|'SAIDA', quantidade (inteiro > 0), observacao }`; saída maior que o saldo → `400` "Saldo insuficiente". Liberado para ATENDENTE/GERENTE/ADMIN. Resposta pode ser o item atualizado.
+- [ ] **Alta — `GET /pagamentos?de=&ate=&forma=` (GERENTE+).** Array de `{ id, pedidoId, placa, clienteNome, servicoNome, formaPagamento, valorCentavos, pagoEm, registradoPor }`; `de`/`ate` inclusivos por dia (fuso de SP, P24); `forma` opcional. Só pagamentos com status `PAGO`.
+- [ ] **Alta — `GET /financeiro/fechamento-caixa?de=&ate=` (GERENTE+).** `{ de, ate, totalGeral, quantidadePagamentos, porFormaPagamento: [{ formaPagamento, totalCentavos, quantidade }] }`. Só devem vir as formas com pelo menos 1 pagamento no período (o front não completa com zeros). `totalGeral` (em centavos) deve bater com a soma de `GET /pagamentos` do mesmo período.
+- [ ] **Média — desativar/reativar serviço (P22).** O front usa `PUT /servicos/{id}` com o corpo completo `{ nome, descricao, categoria, precoCentavos, ativo }`. Confirmar que `ativo` é aceito no `PUT`. Para **reativar** de verdade é preciso listar inativos: ex. `GET /servicos?incluirInativos=true` (hoje a UI só reativa dentro da mesma sessão).
+- [ ] **Média — "Pedidos no mês" por serviço (P21).** Campo `pedidosNoMes` (não cancelados) no serviço, ou período em `GET /dashboard/servicos-mais-vendidos`. Hoje o front conta a partir de `GET /pedidos?de=&size=500`.
+- [ ] **Baixa — categoria (§14.5).** `categoria` é `String` livre; validar contra `EMPLACAMENTO | SEGUNDA VIA | DOCUMENTAÇÃO | SERVIÇOS` (o front só envia esses).
+- [ ] **Baixa — estoque.** `GET /estoque/itens` e `GET /estoque/itens/baixo-estoque` com `{ id, nome, sku|null, unidade|null, quantidade, quantidadeMinima }`. "Abaixo do mínimo" no front é `quantidade <= quantidadeMinima` — o `baixo-estoque` do backend deve usar o **mesmo critério** (senão o badge da sidebar diverge da tabela).
+
+---
+
+# Pendências por fase (detalhe e decisões)
+
 ## Fase 5 — Pedidos (rodada 1)
 
 - [ ] **P1 · Backend — campo `pago` no pedido.** O `PedidoResponse` (spec §11) não traz `pago`, mas o card do Kanban precisa dele para o "$ pendente". Hoje `pago?: boolean` é opcional no tipo: se o backend não enviar, a tag não aparece (falha silenciosa). Opções: adicionar `pago` ao `PedidoResponse`, ou o filtro `pago=false` em `/pedidos` (que também destrava o bloco de pendências do Caixa, §7.9/§14.2).
