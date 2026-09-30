@@ -3,6 +3,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { entrarComo } from './utils';
 import { db } from '@/mocks/db';
+import { api } from '@/api/client';
 import { reloginCancelado } from '@/api/sessaoEventos';
 
 afterEach(() => reloginCancelado());
@@ -114,5 +115,41 @@ describe('Usuários (ADMIN)', () => {
     const eu = await screen.findByRole('button', { name: 'Desativar Admin SAP' });
     expect(eu).toBeDisabled();
     expect(eu).toHaveAttribute('title', 'Você não pode desativar o próprio usuário');
+  });
+
+  it('o admin não pode alterar o próprio papel (campo bloqueado), mas edita o nome', async () => {
+    await entrarComo('/usuarios', admin);
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar Admin SAP' }));
+    const m = await screen.findByRole('dialog', { name: 'Editar usuário' });
+    expect(within(m).getByLabelText(/^Papel/)).toBeDisabled();
+    expect(within(m).getByText('Você não pode alterar o próprio papel.')).toBeInTheDocument();
+    const nome = within(m).getByLabelText('Nome');
+    await userEvent.clear(nome);
+    await userEvent.type(nome, 'Admin Geral');
+    await userEvent.click(within(m).getByRole('button', { name: 'Salvar' }));
+    await screen.findByText('Usuário atualizado');
+    expect(db.usuarios[2]).toMatchObject({ nome: 'Admin Geral', papel: 'ADMIN' }); // papel preservado
+  });
+
+  it('editar outro usuário mantém o papel editável', async () => {
+    await entrarComo('/usuarios', admin);
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar Bruna Costa' }));
+    expect(within(await screen.findByRole('dialog', { name: 'Editar usuário' })).getByLabelText(/^Papel/)).toBeEnabled();
+  });
+
+  it('redefinir senha pelo admin (PATCH /senha { novaSenha }): valida, troca e a antiga deixa de valer', async () => {
+    await entrarComo('/usuarios', admin);
+    await userEvent.click(await screen.findByRole('button', { name: 'Redefinir senha de Bruna Costa' }));
+    const m = await screen.findByRole('dialog', { name: 'Redefinir senha' });
+    await userEvent.type(within(m).getByLabelText('Nova senha provisória'), '123');
+    await userEvent.click(within(m).getByRole('button', { name: 'Redefinir senha' }));
+    expect(await within(m).findByText(/ao menos 6 caracteres/)).toBeInTheDocument();
+    await userEvent.type(within(m).getByLabelText('Nova senha provisória'), '456789');
+    await userEvent.click(within(m).getByRole('button', { name: 'Redefinir senha' }));
+    await screen.findByText('Senha de Bruna Costa redefinida');
+    expect(db.usuarios[0].senha).toBe('123456789');
+    await expect(api.post('/auth/login', { email: 'atendente@sap.com', senha: '123456' })).rejects.toMatchObject({ status: 400 });
+    const r = await api.post('/auth/login', { email: 'atendente@sap.com', senha: '123456789' });
+    expect(r.status).toBe(200);
   });
 });

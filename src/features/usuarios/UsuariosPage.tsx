@@ -9,6 +9,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { Pagina } from '@/components/Pagina';
 import { useToast } from '@/components/Toast';
 import { rotuloPapel, useAlterarStatusUsuario, useUsuarios } from './api';
+import { RedefinirSenhaModal } from './RedefinirSenhaModal';
 import { UsuarioModal } from './UsuarioModal';
 
 const btn = 'h-[26px] rounded border border-linha-forte bg-white px-2.5 text-sm font-medium text-aco hover:bg-fundo disabled:cursor-not-allowed disabled:opacity-50';
@@ -20,6 +21,7 @@ export function UsuariosPage() {
   const { mutate: alterarStatus } = useAlterarStatusUsuario();
   const [modal, setModal] = useState<Usuario | 'novo' | null>(null);
   const [desativando, setDesativando] = useState<Usuario | null>(null);
+  const [senhaDe, setSenhaDe] = useState<Usuario | null>(null);
 
   const alterar = (u: Usuario, ativo: boolean) =>
     alterarStatus({ id: u.id, ativo }, {
@@ -48,6 +50,7 @@ export function UsuariosPage() {
         return (
           <span className="flex gap-2">
             <button type="button" className={btn} onClick={() => setModal(u)} aria-label={`Editar ${u.nome}`}>Editar</button>
+            <button type="button" className={btn} onClick={() => setSenhaDe(u)} aria-label={`Redefinir senha de ${u.nome}`}>Redefinir senha</button>
             {u.ativo ? (
               <button
                 type="button" className={btn} onClick={() => setDesativando(u)} aria-label={`Desativar ${u.nome}`}
@@ -81,6 +84,7 @@ export function UsuariosPage() {
       </div>
 
       <UsuarioModal key={modal === 'novo' ? 'novo' : modal?.id ?? 'fechado'} usuario={modal} onFechar={() => setModal(null)} />
+      <RedefinirSenhaModal key={senhaDe?.id ?? 'fechado'} usuario={senhaDe} onFechar={() => setSenhaDe(null)} />
       <ConfirmDialog
         aberto={desativando !== null} perigo onFechar={() => setDesativando(null)}
         onConfirmar={() => { if (desativando) alterar(desativando, false); setDesativando(null); }}

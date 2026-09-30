@@ -34,3 +34,18 @@ export const useVinculosDoServico = (servicoId: number) =>
     queryKey: ['estoque', 'vinculos', servicoId],
     queryFn: async () => (await api.get<VinculoServicoItem[]>('/estoque/vinculos', { params: { servicoId } })).data,
   });
+
+export type NovoItemRequest = { nome: string; sku?: string; unidade?: string; quantidade: number; quantidadeMinima: number };
+
+/** `POST /estoque/itens` (GERENTE/ADMIN). */
+export function useCriarItem() {
+  const qc = useQueryClient();
+  return useMutation<ItemEstoque, ApiError, NovoItemRequest>({
+    mutationFn: async (d) => (await api.post<ItemEstoque>('/estoque/itens', d)).data,
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: qk.estoque });
+      void qc.invalidateQueries({ queryKey: qk.estoqueBaixo });
+      void qc.invalidateQueries({ queryKey: ['dash'] });
+    },
+  });
+}

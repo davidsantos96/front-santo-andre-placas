@@ -45,3 +45,10 @@ export function useAlterarStatusUsuario() {
     onSuccess: invalidar,
   });
 }
+
+/** `PATCH /usuarios/{id}/senha` com `{ novaSenha }` (ADMIN): define uma nova senha provisória. */
+export function useRedefinirSenha(id: number) {
+  return useMutation<Usuario, ApiError, string>({
+    mutationFn: async (novaSenha) => (await api.patch<Usuario>(`/usuarios/${id}/senha`, { novaSenha })).data,
+  });
+}

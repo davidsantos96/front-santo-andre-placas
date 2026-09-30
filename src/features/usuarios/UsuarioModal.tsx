@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as Dialog from '@radix-ui/react-dialog';
 import { z } from 'zod';
 import type { ApiError, Usuario } from '@/api/types';
+import { useSessao } from '@/auth/SessionProvider';
 import { useToast } from '@/components/Toast';
 import { aplicarErrosDeCampos } from '@/lib/erros';
 import { PAPEIS, useAtualizarUsuario, useCriarUsuario } from './api';
@@ -26,6 +27,9 @@ export function UsuarioModal({ usuario, onFechar }: { usuario: Usuario | 'novo' 
   const criar = useCriarUsuario();
   const atualizar = useAtualizarUsuario(editando?.id ?? 0);
   const [mostrar, setMostrar] = useState(false);
+  const { usuario: eu } = useSessao();
+  // O ADMIN não altera o próprio papel (evita perder o acesso sem querer e sessão com papel desatualizado).
+  const proprioPapel = !!editando && editando.email.toLowerCase() === eu?.email.toLowerCase();
   const mutando = editando ? atualizar.isPending : criar.isPending;
 
   const { register, handleSubmit, setError, formState: { errors } } = useForm<Dados>({
@@ -69,10 +73,20 @@ export function UsuarioModal({ usuario, onFechar }: { usuario: Usuario | 'novo' 
 
             <label className="text-xs font-semibold text-aco">
               Papel
-              <select {...register('papel')} aria-invalid={!!errors.papel} defaultValue={editando?.papel ?? ''} className={campo}>
-                <option value="" disabled>Selecione…</option>
-                {PAPEIS.map((p) => <option key={p.valor} value={p.valor}>{p.label}</option>)}
-              </select>
+              {proprioPapel ? (
+                <>
+                  <select disabled value={editando!.papel} onChange={() => {}} className={`${campo} cursor-not-allowed opacity-70`}>
+                    {PAPEIS.map((p) => <option key={p.valor} value={p.valor}>{p.label}</option>)}
+                  </select>
+                  <input type="hidden" {...register('papel')} value={editando!.papel} />
+                  <span className="text-xs font-normal text-aco">Você não pode alterar o próprio papel.</span>
+                </>
+              ) : (
+                <select {...register('papel')} aria-invalid={!!errors.papel} defaultValue={editando?.papel ?? ''} className={campo}>
+                  <option value="" disabled>Selecione…</option>
+                  {PAPEIS.map((p) => <option key={p.valor} value={p.valor}>{p.label}</option>)}
+                </select>
+              )}
             </label>
             {errors.papel && <p role="alert" className="-mt-2 text-xs text-erro">{errors.papel.message}</p>}
 

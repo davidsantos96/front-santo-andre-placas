@@ -133,6 +133,38 @@ describe('Estoque', () => {
   });
 });
 
+describe('Estoque — novo item (GERENTE/ADMIN)', () => {
+  it('ATENDENTE não vê o botão "+ Novo item"', async () => {
+    await entrarComo('/estoque');
+    await screen.findByRole('button', { name: 'Movimentar Lacre inviolável' });
+    expect(screen.queryByRole('button', { name: '+ Novo item' })).not.toBeInTheDocument();
+  });
+
+  it('GERENTE cadastra item (SKU/unidade opcionais) e ele aparece na tabela', async () => {
+    await entrarComo('/estoque', gerente);
+    await userEvent.click(await screen.findByRole('button', { name: '+ Novo item' }));
+    const m = await screen.findByRole('dialog', { name: 'Novo item de estoque' });
+    await userEvent.click(within(m).getByRole('button', { name: 'Salvar item' }));
+    expect(await within(m).findByText('Informe o nome do item')).toBeInTheDocument();
+    await userEvent.type(within(m).getByLabelText(/^Nome/), 'Fita refletiva');
+    await userEvent.clear(within(m).getByLabelText(/^Quantidade inicial/));
+    await userEvent.type(within(m).getByLabelText(/^Quantidade inicial/), '-1');
+    await userEvent.click(within(m).getByRole('button', { name: 'Salvar item' }));
+    expect(await within(m).findByText('Informe um número inteiro (0 ou mais)')).toBeInTheDocument();
+    await userEvent.clear(within(m).getByLabelText(/^Quantidade inicial/));
+    await userEvent.type(within(m).getByLabelText(/^Quantidade inicial/), '4');
+    await userEvent.clear(within(m).getByLabelText(/^Quantidade mínima/));
+    await userEvent.type(within(m).getByLabelText(/^Quantidade mínima/), '10');
+    await userEvent.click(within(m).getByRole('button', { name: 'Salvar item' }));
+
+    await screen.findByText('Item "Fita refletiva" cadastrado');
+    expect(db.estoque.at(-1)).toMatchObject({ nome: 'Fita refletiva', sku: null, unidade: null, quantidade: 4, quantidadeMinima: 10 });
+    const r = await linha('Fita refletiva');
+    expect(r).toHaveTextContent('Abaixo do mínimo'); // 4 <= 10
+    expect(await screen.findByRole('status')).toHaveTextContent('4 abaixo do mínimo');
+  });
+});
+
 describe('Financeiro', () => {
   it('padrão: aba Pagamentos, últimos 7 dias, com total e contagem', async () => {
     await entrarComo('/financeiro', gerente);

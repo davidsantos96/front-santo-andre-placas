@@ -295,6 +295,19 @@ export const handlers = [
     return HttpResponse.json({ id: 1, itemEstoqueId: item.id, itemEstoqueNome: item.nome, tipo: d.tipo, quantidade: d.quantidade, pedidoId: d.pedidoId ?? null, criadoEm: new Date().toISOString() });
   }),
 
+  http.post(url('/estoque/itens'), async ({ request }) => {
+    const u = autenticado(request);
+    if (!u) return naoAutorizado();
+    if (u.papel === 'ATENDENTE') return HttpResponse.json({ mensagem: 'Acesso negado' }, { status: 403 });
+    const d = (await request.json()) as { nome: string; sku?: string; unidade?: string; quantidade: number; quantidadeMinima: number };
+    if (!d.nome?.trim()) return HttpResponse.json({ mensagem: 'O nome do item de estoque não pode ser vazio' }, { status: 400 });
+    if (d.quantidade < 0) return HttpResponse.json({ mensagem: 'A quantidade em estoque não pode ser negativa' }, { status: 400 });
+    if (d.quantidadeMinima < 0) return HttpResponse.json({ mensagem: 'A quantidade mínima não pode ser negativa' }, { status: 400 });
+    const item = { id: Math.max(0, ...db.estoque.map((i) => i.id)) + 1, nome: d.nome, sku: d.sku ?? null, unidade: d.unidade ?? null, quantidade: d.quantidade, quantidadeMinima: d.quantidadeMinima };
+    db.estoque.push(item);
+    return HttpResponse.json(item);
+  }),
+
   http.get(url('/estoque/vinculos'), ({ request }) => {
     if (!autenticado(request)) return naoAutorizado();
     const servicoId = Number(new URL(request.url).searchParams.get('servicoId'));
@@ -362,6 +375,18 @@ export const handlers = [
       return HttpResponse.json({ mensagem: `Já existe um usuário com o e-mail ${d.email}` }, { status: 400 });
     }
     Object.assign(alvo, d); // a senha não muda pelo PUT
+    return HttpResponse.json(semSenha(alvo));
+  }),
+
+  http.patch(url('/usuarios/:id/senha'), async ({ request, params }) => {
+    const u = autenticado(request);
+    if (!u) return naoAutorizado();
+    if (u.papel !== 'ADMIN') return HttpResponse.json({ mensagem: 'Acesso negado' }, { status: 403 });
+    const alvo = db.usuarios.find((x) => x.id === Number(params.id));
+    if (!alvo) return naoEncontradoMock('Usuário', params.id);
+    const { novaSenha } = (await request.json()) as { novaSenha?: string };
+    if (!novaSenha?.trim()) return HttpResponse.json({ mensagem: 'Informe a nova senha.' }, { status: 400 });
+    alvo.senha = novaSenha;
     return HttpResponse.json(semSenha(alvo));
   }),
 
