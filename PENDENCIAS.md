@@ -6,7 +6,63 @@ Legenda: **Backend** = depende de mudança/confirmação na API · **Front** = d
 
 ---
 
+# Verificação contra a API real (2026-09-30)
+
+Li o código do backend (`api-santo-andre-placas`, commit `6ad76ba`), subi a API e rodei o front **sem mock** num navegador real (Chromium), com um usuário ADMIN. Esta seção **substitui** qualquer item abaixo que a contradiga. Tudo o que está em "Confirmado" foi exercitado de ponta a ponta.
+
+## O que o front já faz conforme a API real
+
+- Login: credencial errada → `400 {"mensagem":"Email ou senha inválidos"}` (mensagem inline no front).
+- Token ausente/inválido/expirado → **`403` sem corpo** (não 401). O front trata o 403 como sessão expirada **só quando o `exp` do JWT já passou** (abre o modal de re-login e refaz a requisição — testado de ponta a ponta) e como falta de permissão caso contrário.
+- Erros de negócio (`IllegalArgumentException`/`IllegalStateException`) → `400 {"mensagem": "..."}`; "não encontrado" também vem como **400** (o front aceita 400 ou 404).
+- **Só `mensagem`**: o backend nunca envia `campos`; erros aparecem no formulário/toast (o tratamento de `campos` segue pronto para quando existir).
+- Regras confirmadas em uso real: baixa automática de estoque ao ir para `EM_PROCESSAMENTO` (com recusa `400` "Estoque insuficiente…" e rollback no front), status finais (`ENTREGUE`/`CANCELADO`) não mudam mais, `registradoPor`/`alteradoPor` com o nome do usuário, permissões por papel (ATENDENTE/GERENTE/ADMIN) nas rotas e nos endpoints.
+- Contratos conferidos e compatíveis: `PedidoResponse` (com `cliente`/`veiculo`/`servico` aninhados), paginação `PagedModel`, `ClienteResponse`, `VeiculoResponse`, `ServicoResponse`, `UsuarioResponse`, `PagamentoResponse`, `PagamentoListagemResponse`, `FechamentoCaixaResponse`, `ItemEstoqueResponse`, `ResumoResponse`, `TempoMedioProducaoResponse`, `GET /pedidos/{id}/historico` (ordem crescente), `GET /pedidos/{id}/pagamentos`, `GET /clientes/{id}`, `GET /veiculos/{id}`, `GET /estoque/vinculos?servicoId=`.
+
+## Ajustes feitos no front por causa dessa verificação
+
+- Faturamento: a resposta é `{ de, ate, totalCentavos, porDia: [{ data, totalCentavos }] }` (antes assumi um array).
+- Estoque: a movimentação usa `itemEstoqueId` e **não tem observação** (campo removido da tela).
+- Veículo: `POST /veiculos` recebe `cliente: { id }` e rejeita `chassi` em branco (o front omite); a resposta é a entidade crua, então o front relê `GET /veiculos/{id}`.
+- Serviço: ativar/desativar não funciona no backend (ver B3) — o front desfaz a mudança otimista e avisa.
+- Kanban: cards `ENTREGUE`/`CANCELADO` não são arrastáveis; aviso de baixa de estoque usa os vínculos reais; "Tempo médio" diz "Em produção → placa pronta" (o que o backend mede); pagamentos ordenados no front.
+- **Bug do front achado só no navegador real:** `MoneyInput` inseria o dígito no lugar do cursor (cursor no início/meio → R$ 316,90 virava R$ 300.016,90). Corrigido (cada dígito é anexado ao final) com testes.
+
+## Backend — bugs e lacunas encontrados (em ordem de prioridade)
+
+**Alta**
+- [ ] **B1 · Login não checa `ativo` (segurança).** `AuthController.login` e `CustomUserDetailsService` ignoram `usuario.isAtivo()`. **Confirmado em teste real: um atendente desativado conseguiu entrar.** O JWT já emitido (8h) também continua valendo. Corrigir: recusar login de inativo e checar `ativo` no filtro JWT a cada requisição.
+- [ ] **B2 · Token inválido/expirado vira 403 em vez de 401.** Falta `authenticationEntryPoint` no `SecurityConfig`. O front contorna lendo o `exp`, mas o correto é `401` (assim o 403 passa a significar só "sem permissão").
+- [ ] **B3 · Não existe desativar/reativar serviço.** `ServicoService.atualizar` **ignora `ativo`** e `DELETE /servicos/{id}` apaga de verdade (pode falhar por FK com pedidos). Sugestão: `PATCH /servicos/{id}/status` `{ ativo }` (igual a usuários) e `GET /servicos?incluirInativos=true` (hoje um serviço desativado sumiria e não poderia ser reativado).
+- [ ] **B4 · `PedidoResponse` sem `pago` (= P1).** Confirmado: nenhuma tag "$ pendente" aparece no Kanban. Adicionar `pago` (ou o filtro `pago=false` em `GET /pedidos`).
+- [ ] **B5 · Erros de validação de entidade viram 400 genérico.** Os setters lançam `IllegalArgumentException` durante a desserialização; o Jackson embrulha e o Spring responde `{"timestamp","status":400,"error":"Bad Request"}` **sem `mensagem`** (ex.: `chassi` em branco no `POST /veiculos`). Adicionar handler para `HttpMessageNotReadableException` (desembrulhar a causa) e, melhor, DTOs de entrada com Bean Validation (cliente, veículo, serviço) devolvendo `campos`.
+- [ ] **B6 · `POST /veiculos` espera `cliente: {id}` e devolve a entidade crua.** O resto da API usa `clienteId` (`NovoVeiculoRequest` já existe em `pedido/`). Sem `cliente` → 500 por constraint (deveria ser 400). Sugestão: aceitar `clienteId` e responder `VeiculoResponse`.
+
+**Média**
+- [ ] **B7 · Duplicidades não validadas.** CPF/CNPJ de cliente e placa de veículo podem ser cadastrados duas vezes; e-mail de usuário é comparado **diferenciando maiúsculas** (`gerente@x` ≠ `GERENTE@x`).
+- [ ] **B8 · Busca de clientes com CPF/telefone mascarados.** `GET /clientes?busca=` usa `LIKE` no texto guardado (mascarado, como o front grava). Digitar só dígitos (`52998224725`) **não encontra** `529.982.247-25`. Normalizar: guardar só dígitos e comparar por dígitos (e o front passa a enviar dígitos).
+- [ ] **B9 · Pagamentos.** Nada impede dois pagamentos no mesmo pedido, nem valor ≤ 0 ou diferente do preço; `GET /pagamentos` não é ordenado (o front ordena); `de`/`ate` usam o fuso do servidor (`LocalDate.now()`).
+- [ ] **B10 · "Não encontrado" responde 400, não 404.** O front aceita os dois; o ideal é 404 com `mensagem`.
+- [ ] **B11 · Dashboard.** `servicos-mais-vendidos` conta pedidos cancelados e não tem período; `tempo-medio-producao` não compara com período anterior (tendência "▼ 12 min" segue não implementada — P29).
+- [ ] **B12 · Estoque.** `NovaMovimentacaoRequest` não tem observação/motivo (a spec do front previa). Sem endpoint de "estoque baixo" por critério diferente da tabela: hoje ambos usam `quantidade <= quantidadeMinima` (ok — manter).
+
+**Baixa**
+- [ ] **B13 · Infra.** Chave do JWT fixa no código; CORS só `localhost:5173`; `application.properties` usa H2 em memória (o `CONTEXT.md` fala em H2 de arquivo); não há seed de usuário (o primeiro ADMIN precisa ser inserido no banco).
+
+## Itens antigos resolvidos por esta verificação
+
+- **P6** (item do aviso de baixa): resolvido — `GET /estoque/vinculos?servicoId=` existe e o front já o usa.
+- **P8** (`GET /pedidos/{id}/pagamentos`), **P16** (`GET /clientes/{id}`, `GET /veiculos/{id}`): existem.
+- **P12** (transições): a única regra é "status final não muda"; o front já trava esses cards. Voltar/pular etapas é permitido pelo backend.
+- **P23** (movimentação): contrato conhecido (`itemEstoqueId`, sem observação).
+- **P22** (desativar serviço): confirmado que **não funciona** (B3).
+- **P7** (contratos de cliente/veículo): cliente confere; veículo divergia (B6).
+
+---
+
 # Checklist do backend (por fase)
+
+> ⚠ Escrito **antes** da verificação contra a API real. Em caso de conflito com a seção "Verificação contra a API real" (acima), vale a de cima.
 
 Tudo o que o front **assume** hoje (e roda contra o MSW) e que o backend precisa confirmar ou ajustar. Cada linha diz o que o front envia/espera. Prioridade: **Alta** = a funcionalidade não opera de verdade sem isso · **Média** = opera, mas degradada · **Baixa** = melhoria. O detalhe de cada item (`Pn`) está nas seções por fase mais abaixo. As Fases 8–10 acrescentam itens aqui quando forem implementadas.
 
