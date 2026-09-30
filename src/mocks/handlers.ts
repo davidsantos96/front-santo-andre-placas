@@ -7,13 +7,22 @@ import { gerarJwt } from './jwt';
 const base = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8080/api';
 const url = (p: string) => `${base}${p}`;
 
-/** Como o Spring Security sem `authenticationEntryPoint`: token ausente/inválido/expirado → **403** sem corpo (não 401). */
-const naoAutorizado = () => new HttpResponse(null, { status: 403 });
+/** `authenticationEntryPoint` do backend: token ausente/inválido/expirado (ou usuário desativado) → **401** com `mensagem`. */
+const naoAutorizado = () => HttpResponse.json({ mensagem: 'Não autenticado. Faça login novamente.' }, { status: 401 });
 const naoEncontradoMock = (o: string, id: unknown) => HttpResponse.json({ mensagem: `${o} não encontrado: ${id}` }, { status: 400 }); // IllegalArgumentException → 400
 const autenticado = (req: Request) => {
   const t = req.headers.get('Authorization')?.replace('Bearer ', '');
-  return t && db.tokens.has(t) ? db.tokens.get(t)! : null;
+  const sessao = t ? db.tokens.get(t) : undefined;
+  if (!sessao) return null;
+  // usuário desativado depois do login: o token continua assinado, mas não autentica mais (→ 401)
+  return db.usuarios.find((u) => u.email === sessao.email)?.ativo ? sessao : null;
 };
+
+/** `PedidoResponse.pago` do backend: soma dos pagamentos PAGO ≥ preço do serviço. */
+const comPago = (p: Pedido): Pedido => ({
+  ...p,
+  pago: db.pagamentos.filter((x) => x.pedidoId === p.id && x.status === 'PAGO').reduce((t, x) => t + x.valorCentavos, 0) >= p.servico.precoCentavos,
+});
 
 /** Invalida todos os tokens (simula JWT de 8h expirado). */
 export const expirarSessoes = () => db.tokens.clear();
@@ -29,11 +38,12 @@ const dia = (iso: string) => {
 export const handlers = [
   http.post(url('/auth/login'), async ({ request }) => {
     const { email, senha } = (await request.json()) as LoginRequest;
-    // Como o backend: credencial errada → 400 "Email ou senha inválidos"; **não** checa `ativo`.
+    // Como o backend: credencial errada → 400 "Email ou senha inválidos"; usuário inativo → 400 "Usuário inativo…".
     const u = db.usuarios.find((x) => x.email === email && x.senha === senha);
     if (!u) return HttpResponse.json({ mensagem: 'Email ou senha inválidos' }, { status: 400 });
+    if (!u.ativo) return HttpResponse.json({ mensagem: 'Usuário inativo. Contate um administrador.' }, { status: 400 });
     const token = `${gerarJwt(u.email, u.papel)}.${++seq}`;
-    db.tokens.set(token, { papel: u.papel, nome: u.nome });
+    db.tokens.set(token, { papel: u.papel, nome: u.nome, email: u.email });
     const corpo: LoginResponse = { token, papel: u.papel, nome: u.nome };
     return HttpResponse.json(corpo);
   }),
@@ -65,7 +75,7 @@ export const handlers = [
       .sort((a, b) => b.id - a.id);
 
     const corpo: Paginado<Pedido> = {
-      content: filtrados.slice(page * size, page * size + size),
+      content: filtrados.slice(page * size, page * size + size).map(comPago),
       page: { size, number: page, totalElements: filtrados.length, totalPages: Math.max(1, Math.ceil(filtrados.length / size)) },
     };
     return HttpResponse.json(corpo);
@@ -74,7 +84,7 @@ export const handlers = [
   http.get(url('/pedidos/:id'), ({ request, params }) => {
     if (!autenticado(request)) return naoAutorizado();
     const p = db.pedidos.find((x) => x.id === Number(params.id));
-    return p ? HttpResponse.json(p) : naoEncontradoMock('Pedido', params.id);
+    return p ? HttpResponse.json(comPago(p)) : naoEncontradoMock('Pedido', params.id);
   }),
 
   http.patch(url('/pedidos/:id/status'), async ({ request, params }) => {
@@ -103,7 +113,7 @@ export const handlers = [
       id: db.historico.length + 1, pedidoId: p.id, statusAnterior: anterior, statusNovo: novoStatus,
       alteradoPor: u.nome, alteradoEm: p.atualizadoEm,
     });
-    return HttpResponse.json(p);
+    return HttpResponse.json(comPago(p));
   }),
 
   http.get(url('/pedidos/:id/historico'), ({ request, params }) => {
@@ -133,7 +143,6 @@ export const handlers = [
       formaPagamento: dados.formaPagamento, status: 'PAGO', pagoEm: new Date().toISOString(), registradoPor: u.nome,
     };
     db.pagamentos.push(pg);
-    pedido.pago = true;
     return HttpResponse.json(pg, { status: 201 });
   }),
 
@@ -154,7 +163,7 @@ export const handlers = [
     };
     db.pedidos.push(pedido);
     db.historico.push({ id: db.historico.length + 1, pedidoId: pedido.id, statusAnterior: null, statusNovo: 'RECEBIDO', alteradoPor: u.nome, alteradoEm: agora });
-    return HttpResponse.json(pedido, { status: 201 });
+    return HttpResponse.json(comPago(pedido), { status: 201 });
   }),
 
   http.get(url('/clientes'), ({ request }) => {
@@ -189,19 +198,20 @@ export const handlers = [
   http.post(url('/veiculos'), async ({ request }) => {
     if (!autenticado(request)) return naoAutorizado();
     const d = (await request.json()) as NovoVeiculoRequest;
-    // Setters da entidade rejeitam valores em branco → Jackson embrulha → 400 genérico do Spring (sem `mensagem`).
-    if (d.chassi !== undefined && !d.chassi.trim()) return erroSpring400();
-    if (!d.placa?.trim() || !d.marcaModelo?.trim()) return erroSpring400();
-    const cliente = db.clientes.find((c) => c.id === d.cliente?.id);
-    if (!cliente) return HttpResponse.json({ error: 'Internal Server Error', status: 500 }, { status: 500 }); // cliente ausente → violação de constraint
+    const cliente = db.clientes.find((c) => c.id === d.clienteId);
+    if (!cliente) return naoEncontradoMock('Cliente', d.clienteId);
+    // Validações dos setters da entidade (todas obrigatórias, inclusive `chassi`).
+    if (!d.placa?.trim()) return HttpResponse.json({ mensagem: 'Digite a placa do veiculo' }, { status: 400 });
+    if (!d.marcaModelo?.trim()) return HttpResponse.json({ mensagem: 'Marca e modelo não pode ser vazio' }, { status: 400 });
+    if (!(d.anoFabricacao >= 1900)) return HttpResponse.json({ mensagem: 'Ano de fabricação inválido.' }, { status: 400 });
+    if (!(d.anoModelo >= 1900)) return HttpResponse.json({ mensagem: 'Ano do modelo inválido.' }, { status: 400 });
+    if (!d.chassi?.trim()) return HttpResponse.json({ mensagem: 'o chassi nao pode ser vazio' }, { status: 400 });
     const v: Veiculo = {
       id: Math.max(0, ...db.veiculos.map((x) => x.id)) + 1, placa: d.placa, marcaModelo: d.marcaModelo, anoFabricacao: d.anoFabricacao,
-      anoModelo: d.anoModelo, chassi: d.chassi ?? '', clienteId: cliente.id, clienteNome: cliente.nome,
+      anoModelo: d.anoModelo, chassi: d.chassi, clienteId: cliente.id, clienteNome: cliente.nome,
     };
     db.veiculos.push(v);
-    // Resposta = entidade JPA crua: `cliente` aninhado, sem `clienteId`/`clienteNome`.
-    const { clienteId: _c, clienteNome: _n, ...resto } = v;
-    return HttpResponse.json({ ...resto, cliente, criadoEm: new Date().toISOString() });
+    return HttpResponse.json(v);
   }),
 
   http.post(url('/veiculos/:id/consultar'), ({ request }) => {
@@ -260,6 +270,16 @@ export const handlers = [
     // O backend (`ServicoService.atualizar`) copia nome/descrição/preço/categoria e **ignora `ativo`**.
     const { ativo: _ignorado, ...resto } = (await request.json()) as NovoServicoRequest;
     Object.assign(s, resto);
+    return HttpResponse.json({ ...s, codigoExterno: null });
+  }),
+
+  http.patch(url('/servicos/:id/status'), async ({ request, params }) => {
+    const u = autenticado(request);
+    if (!u) return naoAutorizado();
+    if (u.papel === 'ATENDENTE') return HttpResponse.json({ mensagem: 'Acesso negado' }, { status: 403 });
+    const s = db.servicos.find((x) => x.id === Number(params.id));
+    if (!s) return naoEncontradoMock('Serviço', params.id);
+    s.ativo = ((await request.json()) as { ativo: boolean }).ativo;
     return HttpResponse.json({ ...s, codigoExterno: null });
   }),
 
@@ -442,7 +462,3 @@ function semSenha({ senha: _senha, ...u }: Usuario & { senha: string }): Usuario
   return u;
 }
 
-/** Corpo padrão de erro do Spring para JSON ilegível (ex.: setter da entidade lançou exceção): sem `mensagem`. */
-function erroSpring400() {
-  return HttpResponse.json({ timestamp: new Date().toISOString(), status: 400, error: 'Bad Request', path: '/api' }, { status: 400 });
-}

@@ -54,22 +54,7 @@ describe('Serviços', () => {
     expect(db.servicos.find((s) => s.id === 5)!.precoCentavos).toBe(9900);
   });
 
-  it('hoje o backend ignora `ativo` no PUT: a mudança é desfeita com aviso claro (sem fingir sucesso)', async () => {
-    await entrarComo('/servicos', gerente);
-    const sw = within(await linha('Lacre / desamassamento')).getByRole('switch');
-    await userEvent.click(sw);
-    expect(await screen.findByText(/O servidor não aplicou a mudança de status de "Lacre \/ desamassamento"/)).toBeInTheDocument();
-    await waitFor(() => expect(within(screen.getByText('Lacre / desamassamento').closest('tr')!).getByRole('switch')).toBeChecked()); // voltou
-    expect(db.servicos.find((s) => s.id === 5)!.ativo).toBe(true);
-  });
-
-  it('quando o backend aplicar `ativo`: otimista, linha reativável, foco mantido e serviço some do Novo pedido', async () => {
-    server.use(http.put('http://localhost:8080/api/servicos/:id', async ({ request, params }) => {
-      const corpo = (await request.json()) as { ativo: boolean };
-      const s = db.servicos.find((x) => x.id === Number(params.id))!;
-      Object.assign(s, corpo);
-      return HttpResponse.json({ ...s, codigoExterno: null });
-    }));
+  it('desativar usa PATCH /status: otimista, foco mantido, linha reativável e serviço some do Novo pedido', async () => {
     const { router } = await entrarComo('/servicos', gerente);
     const sw = within(await linha('Lacre / desamassamento')).getByRole('switch');
     await userEvent.click(sw);
@@ -85,6 +70,17 @@ describe('Serviços', () => {
     await userEvent.click(await screen.findByRole('radio', { name: /DPT7B02/ }));
     expect(await screen.findByRole('radio', { name: /Segunda via de placa/ })).toBeInTheDocument();
     expect(screen.queryByRole('radio', { name: /Lacre/ })).not.toBeInTheDocument();
+  });
+
+  it('se o servidor não aplicar o status, desfaz a mudança otimista e avisa', async () => {
+    server.use(http.patch('http://localhost:8080/api/servicos/:id/status', async ({ params }) => {
+      const s = db.servicos.find((x) => x.id === Number(params.id))!;
+      return HttpResponse.json({ ...s, codigoExterno: null }); // devolve o serviço inalterado
+    }));
+    await entrarComo('/servicos', gerente);
+    await userEvent.click(within(await linha('Lacre / desamassamento')).getByRole('switch'));
+    expect(await screen.findByText(/O servidor não aplicou a mudança de status de "Lacre \/ desamassamento"/)).toBeInTheDocument();
+    await waitFor(() => expect(within(screen.getByText('Lacre / desamassamento').closest('tr')!).getByRole('switch')).toBeChecked());
   });
 });
 

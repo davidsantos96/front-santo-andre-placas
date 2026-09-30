@@ -6,7 +6,7 @@ import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { PlacaBadge } from '@/components/PlacaBadge';
 import { telaInicial } from '@/auth/papeis';
 import { useSessao } from '@/auth/SessionProvider';
-import type { ApiError } from '@/api/types';
+import { mensagemDeLogin } from '@/lib/erros';
 
 const schema = z.object({
   email: z.string().min(1, 'Informe o e-mail').email('E-mail inválido'),
@@ -32,9 +32,7 @@ export function LoginPage() {
       const u = await login(d);
       navigate(nextSeguro(sp.get('next')) ?? telaInicial(u.papel), { replace: true });
     } catch (e) {
-      const status = (e as ApiError).status;
-      // A API responde 400 ("Email ou senha inválidos") para credencial errada; 401/403 por garantia.
-      setErro([400, 401, 403].includes(status) ? 'E-mail ou senha incorretos' : (e as ApiError).mensagem ?? 'Não foi possível entrar');
+      setErro(mensagemDeLogin(e));
     }
   });
 

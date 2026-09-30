@@ -120,7 +120,7 @@ export function criarBanco(agora = Date.now()) {
     estoque: structuredClone(ESTOQUE),
     vinculos: structuredClone(VINCULOS),
     usuarios: structuredClone(USUARIOS),
-    tokens: new Map<string, { papel: Papel; nome: string }>(),
+    tokens: new Map<string, { papel: Papel; nome: string; email: string }>(),
   };
 }
 

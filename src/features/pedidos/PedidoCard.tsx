@@ -35,7 +35,7 @@ export function PedidoCard({ pedido, agora, arrastando, travado, innerRef, class
       <div className="text-xs text-aco">{pedido.servico.nome}</div>
       <div className="mt-2 flex items-center gap-1.5">
         <OrigemTag origem={pedido.origem} />
-        {pedido.pago === false && <PendenteTag />}
+        {!pedido.pago && <PendenteTag />}
       </div>
     </div>
   );

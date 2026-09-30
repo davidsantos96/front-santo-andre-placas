@@ -4,8 +4,6 @@ import userEvent from '@testing-library/user-event';
 import { entrarComo, renderApp } from './utils';
 import { api } from '@/api/client';
 import { expirarSessoes } from '@/mocks/handlers';
-import { jwtExpirado } from '@/mocks/jwt';
-import { setAccessToken } from '@/api/client';
 import { reloginCancelado } from '@/api/sessaoEventos';
 
 async function entrar(email: string, senha = '123456') {
@@ -92,14 +90,13 @@ describe('papéis (fluxo 5)', () => {
 });
 
 describe('sessão expirada', () => {
-  it('token expirado (API responde 403) abre o modal de re-login e a requisição é refeita ao entrar', async () => {
+  it('token expirado (API responde 401) abre o modal de re-login e a requisição é refeita ao entrar', async () => {
     renderApp('/login');
     await entrar('atendente@sap.com');
     await screen.findByRole('navigation', { name: 'Navegação principal' });
 
-    // A API responde 403 (não 401) com token expirado: o front só trata como expiração se o `exp` do JWT passou.
+    // Token expirado/inválido (ou usuário desativado): a API responde 401.
     expirarSessoes();
-    setAccessToken(jwtExpirado());
     const pendente = api.get('/estoque/itens');
 
     const modal = await screen.findByRole('dialog', { name: 'Sessão expirada' });
@@ -128,7 +125,6 @@ describe('sessão expirada', () => {
     await screen.findByRole('navigation', { name: 'Navegação principal' });
 
     expirarSessoes();
-    setAccessToken(jwtExpirado());
     const pendente = api.get('/estoque/itens');
     pendente.catch(() => {});
     const modal = await screen.findByRole('dialog', { name: 'Sessão expirada' });

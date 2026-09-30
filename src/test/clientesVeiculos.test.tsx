@@ -113,6 +113,7 @@ describe('Clientes — detalhe', () => {
     await userEvent.type(within(f).getByLabelText('Marca / modelo'), 'Fiat Uno');
     await userEvent.type(within(f).getByLabelText('Ano de fabricação'), '2015');
     await userEvent.type(within(f).getByLabelText('Ano do modelo'), '2015');
+    await userEvent.type(within(f).getByLabelText('Chassi'), '9BD195A2NK0000002');
     await userEvent.click(within(f).getByRole('button', { name: 'Salvar veículo' }));
     expect(await screen.findByText('Fiat Uno')).toBeInTheDocument();
     expect(db.veiculos.at(-1)).toMatchObject({ placa: 'QWE1R23', clienteId: 3 });

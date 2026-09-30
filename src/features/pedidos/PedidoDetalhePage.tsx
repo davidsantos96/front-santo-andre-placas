@@ -75,7 +75,7 @@ export function PedidoDetalhePage() {
 
   const pedido = pedidoQ.data;
   const pagamento = pagQ.data?.find((p) => p.status === 'PAGO');
-  const pago = pagQ.isSuccess ? !!pagamento : undefined; // desconhecido enquanto carrega
+  const pago = pedido.pago; // vem da API (soma dos pagamentos PAGO ≥ preço do serviço)
   const alvo = { id: pedido.id, status: pedido.status, pago };
 
   const idx = FLUXO.indexOf(pedido.status);
@@ -149,7 +149,7 @@ export function PedidoDetalhePage() {
           {rotuloPrincipal && (
             <button
               type="button"
-              disabled={processando || (!entregueSemPagar && pago === undefined && pedido.status === 'PLACA_PRONTA')}
+              disabled={processando}
               onClick={acaoPrincipal}
               className="h-10 rounded bg-mercosul px-4 text-base font-semibold text-white hover:bg-mercosul-hover disabled:opacity-60"
             >

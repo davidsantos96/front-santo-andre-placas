@@ -11,10 +11,6 @@ export const useServicos = () =>
 
 export const CATEGORIAS = ['EMPLACAMENTO', 'SEGUNDA VIA', 'DOCUMENTAÇÃO', 'SERVIÇOS'] as const;
 
-const corpo = (s: Servico, sobre: Partial<NovoServicoRequest> = {}): NovoServicoRequest => ({
-  nome: s.nome, descricao: s.descricao ?? '', categoria: s.categoria, precoCentavos: s.precoCentavos, ativo: s.ativo, ...sobre,
-});
-
 function invalidarServico(qc: ReturnType<typeof useQueryClient>) {
   // o pedido embute o serviço (nome/preço), então as telas de pedido também recarregam
   for (const k of [['servicos'], ['pedidos'], ['pedido']]) void qc.invalidateQueries({ queryKey: k });
@@ -37,14 +33,14 @@ export function useAtualizarServico(id: number) {
 }
 
 /**
- * Ativar/desativar — otimista (spec §7.7). Não refaz o GET ao final: como `GET /servicos` só devolve
- * ativos (limitação aceita), um refetch faria a linha desativada sumir e impediria reativá-la na sessão.
+ * Ativar/desativar (`PATCH /servicos/{id}/status`) — otimista (spec §7.7). Não refaz o GET ao final: como
+ * `GET /servicos` só devolve ativos, um refetch faria a linha desativada sumir e impediria reativá-la na sessão.
  */
 export function useAlternarServico() {
   const qc = useQueryClient();
   const toast = useToast();
   return useMutation<Servico, ApiError, { servico: Servico; ativo: boolean }, { anterior?: Servico[] }>({
-    mutationFn: async ({ servico, ativo }) => (await api.put<Servico>(`/servicos/${servico.id}`, corpo(servico, { ativo }))).data,
+    mutationFn: async ({ servico, ativo }) => (await api.patch<Servico>(`/servicos/${servico.id}/status`, { ativo })).data,
     onMutate: async ({ servico, ativo }) => {
       await qc.cancelQueries({ queryKey: qk.servicos });
       const anterior = qc.getQueryData<Servico[]>(qk.servicos);
@@ -56,11 +52,10 @@ export function useAlternarServico() {
       toast(`Não foi possível alterar "${servico.nome}": ${e.mensagem}`, 'erro');
     },
     onSuccess: (salvo, { servico, ativo }, ctx) => {
-      // Hoje o backend (`ServicoService.atualizar`) ignora `ativo` no PUT e devolve o serviço inalterado.
-      // Em vez de fingir sucesso, confere a resposta e desfaz a mudança otimista.
+      // Confere a resposta: se o servidor não aplicou o status pedido, desfaz a mudança otimista.
       if (salvo.ativo !== ativo) {
         if (ctx?.anterior) qc.setQueryData(qk.servicos, ctx.anterior);
-        toast(`O servidor não aplicou a mudança de status de "${servico.nome}" (o backend ainda não permite ativar/desativar serviços).`, 'erro');
+        toast(`O servidor não aplicou a mudança de status de "${servico.nome}".`, 'erro');
         return;
       }
       toast(`${servico.nome} ${ativo ? 'ativado' : 'desativado'}`);

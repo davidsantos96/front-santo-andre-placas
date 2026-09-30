@@ -14,12 +14,7 @@ export const useVeiculos = (filtro?: { placa?: string; clienteId?: number }, ena
 export const useCriarVeiculo = () => {
   const qc = useQueryClient();
   return useMutation<Veiculo, ApiError, NovoVeiculoRequest>({
-    // `POST /veiculos` devolve a entidade crua (cliente aninhado, sem clienteId/clienteNome):
-    // relê pelo id para voltar no formato `VeiculoResponse` que o resto do app usa.
-    mutationFn: async (dados) => {
-      const { data: criado } = await api.post<{ id: number }>('/veiculos', dados);
-      return (await api.get<Veiculo>(`/veiculos/${criado.id}`)).data;
-    },
+    mutationFn: async (dados) => (await api.post<Veiculo>('/veiculos', dados)).data,
     onSuccess: () => { void qc.invalidateQueries({ queryKey: ['veiculos'] }); void qc.invalidateQueries({ queryKey: ['clientes'] }); },
   });
 };

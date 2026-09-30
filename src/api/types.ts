@@ -13,11 +13,8 @@ export type Servico = { id: number; nome: string; descricao: string; precoCentav
 export type Pedido = {
   id: number; status: StatusPedido; origem: string; criadoEm: string; atualizadoEm: string;
   cliente: Cliente; veiculo: Veiculo; servico: Servico;
-  /**
-   * NÃO existe no PedidoResponse atual (spec §11) — o Kanban precisa dele para o
-   * "$ pendente" sem N+1. Opcional: se o backend não enviar, a tag simplesmente não aparece.
-   */
-  pago?: boolean;
+  /** Vem da API: soma dos pagamentos `PAGO` ≥ preço do serviço (`PedidoService.estaPago`). */
+  pago: boolean;
 };
 
 export type Pagamento = {
@@ -72,9 +69,9 @@ export type ApiError = { status: number; mensagem: string; campos?: Record<strin
 
 /** Corpos de POST assumidos (o backend ainda usa a entidade crua — ver PENDENCIAS.md). */
 export type NovoClienteRequest = { nome: string; telefone: string; cpfCnpj: string; email: string };
-/** O backend recebe a entidade `Veiculo`: o cliente vai aninhado (`cliente: { id }`) e `chassi` em branco é rejeitado (omitir). */
+/** `chassi` é obrigatório no backend (o setter da entidade rejeita em branco). */
 export type NovoVeiculoRequest = {
-  placa: string; marcaModelo: string; anoFabricacao: number; anoModelo: number; chassi?: string; cliente: { id: number };
+  clienteId: number; placa: string; marcaModelo: string; anoFabricacao: number; anoModelo: number; chassi: string;
 };
 export type PagamentoRequest = { valorCentavos: number; formaPagamento: import('@/components/status').FormaPagamento };
 

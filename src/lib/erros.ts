@@ -16,3 +16,14 @@ export const naoEncontrado = (e: unknown): boolean => {
   const { status, mensagem } = (e ?? {}) as Partial<ApiError>;
   return status === 404 || (status === 400 && /não encontrad/i.test(mensagem ?? ''));
 };
+
+/**
+ * Mensagem do login. A API responde 400 "Email ou senha inválidos" (credencial) ou 400 "Usuário inativo…";
+ * mostramos o texto do servidor só para o inativo e uma frase padrão para credencial errada.
+ */
+export function mensagemDeLogin(e: unknown): string {
+  const { status, mensagem } = (e ?? {}) as Partial<ApiError>;
+  if (status === 400 && /inativo/i.test(mensagem ?? '')) return mensagem!;
+  if (status === 400 || status === 401 || status === 403) return 'E-mail ou senha incorretos';
+  return mensagem ?? 'Não foi possível entrar';
+}

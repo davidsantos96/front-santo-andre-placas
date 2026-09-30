@@ -45,7 +45,7 @@ describe('Novo pedido', () => {
     await screen.findByText('Pedido #1059 criado');
     await waitFor(() => expect(router.state.location.pathname).toBe('/pedidos'));
     const novo = db.pedidos.find((p) => p.id === 1059)!;
-    expect(novo).toMatchObject({ status: 'RECEBIDO', origem: 'BALCAO', pago: true });
+    expect(novo).toMatchObject({ status: 'RECEBIDO', origem: 'BALCAO' });
     expect(novo.cliente.nome).toBe('Marcos Vilela');
     expect(novo.veiculo.placa).toBe('FZR4C71');
     expect(db.pagamentos.find((p) => p.pedidoId === 1059)).toMatchObject({ formaPagamento: 'PIX', valorCentavos: 31690 });
@@ -114,6 +114,9 @@ describe('Novo pedido', () => {
     await userEvent.type(within(f).getByLabelText('Marca / modelo'), 'Fiat Mobi');
     await userEvent.type(within(f).getByLabelText('Ano de fabricação'), '2021');
     await userEvent.type(within(f).getByLabelText('Ano do modelo'), '2022');
+    await userEvent.click(within(f).getByRole('button', { name: 'Salvar veículo' }));
+    expect(await within(f).findByText('Informe o chassi')).toBeInTheDocument(); // obrigatório no backend
+    await userEvent.type(within(f).getByLabelText(/^Chassi/), '9BD195A2NK0000001');
     await userEvent.click(within(f).getByRole('button', { name: 'Salvar veículo' }));
 
     await waitFor(() => expect(screen.getByRole('radio', { name: /ABC1D23/ })).toBeChecked());

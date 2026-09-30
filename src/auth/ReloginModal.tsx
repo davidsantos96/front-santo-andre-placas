@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
+import { mensagemDeLogin } from '@/lib/erros';
 import { useSessao } from './SessionProvider';
 
 /** Modal de re-login sobre a tela atual (sem desmontá-la). Login completo, não refresh. */
@@ -17,8 +18,8 @@ export function ReloginModal() {
     try {
       await login({ email, senha });
       setSenha('');
-    } catch {
-      setErro('E-mail ou senha incorretos');
+    } catch (e) {
+      setErro(mensagemDeLogin(e));
     } finally {
       setEnviando(false);
     }
