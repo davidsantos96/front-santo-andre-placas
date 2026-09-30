@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { entrarComo } from './utils';
@@ -41,6 +41,43 @@ describe('Dashboard', () => {
 
     await userEvent.click(within(card).getByRole('button', { name: 'Ver gráfico' }));
     expect(await within(card).findByRole('img', { name: /últimos 30 dias/ })).toBeInTheDocument();
+  });
+
+  it('faturamento personalizado: datas livres, validação e resumo do intervalo', async () => {
+    await entrarComo('/dashboard', gerente);
+    const card = await cartao('Faturamento');
+    await within(card).findByRole('img', { name: /dos últimos 7 dias/ });
+    await userEvent.click(within(card).getByRole('radio', { name: 'Personalizado' }));
+
+    const de = within(card).getByLabelText('De') as HTMLInputElement;
+    const ate = within(card).getByLabelText('Até') as HTMLInputElement;
+    const hoje = new Date();
+    const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const tresDiasAtras = new Date(hoje); tresDiasAtras.setDate(hoje.getDate() - 2);
+    expect(ate.value).toBe(iso(hoje)); // padrão: últimos 30 dias
+    const inicioPadrao = new Date(hoje); inicioPadrao.setDate(hoje.getDate() - 29);
+    expect(de.value).toBe(iso(inicioPadrao));
+
+    // período válido de 3 dias
+    fireEvent.change(de, { target: { value: iso(tresDiasAtras) } });
+    const br = (d: Date) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+    await within(card).findByRole('img', { name: new RegExp(`de ${br(tresDiasAtras)} a ${br(hoje)}: total`) });
+    await userEvent.click(within(card).getByRole('button', { name: 'Ver como tabela' }));
+    await waitFor(() => expect(within(card).getAllByRole('row')).toHaveLength(1 + 3));
+
+    // de depois de até → erro, sem consultar (mantém o que está na tela)
+    fireEvent.change(de, { target: { value: iso(new Date(hoje.getTime() + 86_400_000 * 2)) } });
+    expect(await within(card).findByRole('alert')).toHaveTextContent('A data inicial não pode ser depois da data final.');
+
+    // janela grande demais (> 366 dias)
+    fireEvent.change(de, { target: { value: '2020-01-01' } });
+    expect(await within(card).findByRole('alert')).toHaveTextContent('no máximo 366 dias');
+
+    // 366 dias exatos é aceito e gera 366 linhas
+    const inicio366 = new Date(hoje); inicio366.setDate(hoje.getDate() - 365);
+    fireEvent.change(de, { target: { value: iso(inicio366) } });
+    await waitFor(() => expect(within(card).queryByRole('alert')).not.toBeInTheDocument());
+    await waitFor(() => expect(within(card).getAllByRole('row')).toHaveLength(1 + 366));
   });
 
   it('serviços mais vendidos: barras proporcionais com nome e contagem em texto', async () => {

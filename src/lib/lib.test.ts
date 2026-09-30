@@ -3,7 +3,7 @@ import { digitosParaCentavos, fmt, reaisParaCentavos } from './money';
 import { normalizarPlaca, placaValida } from './placa';
 import { cnpjValido, cpfCnpjValido, cpfValido, mascararCpfCnpj } from './documento';
 import { mascararTelefone } from './telefone';
-import { dataHora, intervaloDoPeriodo, tempoDecorrido } from './datas';
+import { dataBR, dataHora, intervaloDoPeriodo, intervaloUltimosDias, tempoDecorrido, validarIntervalo } from './datas';
 import { pode, telaInicial } from '@/auth/papeis';
 
 const nbsp = (s: string) => s.replace(/ /g, ' ');
@@ -68,6 +68,22 @@ describe('datas', () => {
     expect(intervaloDoPeriodo('7', agora)).toEqual({ de: '2026-09-22', ate: '2026-09-28' });
     expect(intervaloDoPeriodo('ontem', agora)).toEqual({ de: '2026-09-27', ate: '2026-09-27' });
   });
+});
+
+describe('intervalos de datas', () => {
+  it('últimos N dias inclui hoje', () => {
+    const hoje = new Date(2026, 8, 30, 10, 0);
+    expect(intervaloUltimosDias(14, hoje)).toEqual({ de: '2026-09-17', ate: '2026-09-30' });
+    expect(intervaloUltimosDias(1, hoje)).toEqual({ de: '2026-09-30', ate: '2026-09-30' });
+  });
+  it('valida de/ate e a janela máxima de 366 dias', () => {
+    expect(validarIntervalo('', '2026-09-30')).toBe('Informe as duas datas.');
+    expect(validarIntervalo('2026-10-01', '2026-09-30')).toMatch(/não pode ser depois/);
+    expect(validarIntervalo('2026-09-30', '2026-09-30')).toBeNull();
+    expect(validarIntervalo('2025-09-30', '2026-09-30')).toBeNull(); // 366 dias (ano de 365 + 1 inclusivo)
+    expect(validarIntervalo('2025-09-29', '2026-09-30')).toMatch(/máximo 366 dias/);
+  });
+  it('formata dd/MM/aaaa', () => expect(dataBR('2026-09-01')).toBe('01/09/2026'));
 });
 
 describe('papéis', () => {

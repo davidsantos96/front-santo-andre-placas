@@ -5,18 +5,19 @@ import type { FaturamentoResponse, ResumoDashboard, ServicoMaisVendido, TempoMed
 import { intervaloUltimosDias } from '@/lib/datas';
 import { usePedidos } from '@/features/pedidos/api';
 
-export type DiasFaturamento = 7 | 14 | 30;
-
 export const useResumo = () =>
   useQuery({ queryKey: qk.dashboard.resumo, queryFn: async () => (await api.get<ResumoDashboard>('/dashboard/resumo')).data });
 
-/** `GET /dashboard/faturamento?de=&ate=` — o front calcula `de`/`ate` a partir de 7, 14 ou 30 dias. */
-export function useFaturamento(dias: DiasFaturamento) {
-  const { de, ate } = intervaloUltimosDias(dias);
+export type IntervaloDatas = { de: string; ate: string };
+
+/** `GET /dashboard/faturamento?de=&ate=` (datas `yyyy-MM-dd`, inclusivas). `null` = intervalo inválido (não consulta). */
+export function useFaturamento(intervalo: IntervaloDatas | null) {
   return useQuery({
-    queryKey: qk.dashboard.faturamento(String(dias)),
+    queryKey: qk.dashboard.faturamento(intervalo ? `${intervalo.de}_${intervalo.ate}` : 'invalido'),
+    enabled: intervalo !== null,
     placeholderData: keepPreviousData, // troca de período mantém o gráfico anterior (esmaecido) em vez de piscar
     queryFn: async () => {
+      const { de, ate } = intervalo!;
       const { data } = await api.get<FaturamentoResponse>('/dashboard/faturamento', { params: { de, ate } });
       return { de, ate, dias: data.porDia }; // só dias com pagamento; o cartão completa o intervalo com zeros
     },

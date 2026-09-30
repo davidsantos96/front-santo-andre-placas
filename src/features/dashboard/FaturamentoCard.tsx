@@ -6,11 +6,12 @@ import { ErrorState } from '@/components/ErrorState';
 import { Money } from '@/components/Money';
 import { SegmentedControl } from '@/components/SegmentedControl';
 import { Skeleton } from '@/components/Skeleton';
-import { diasDoIntervalo } from '@/lib/datas';
+import { dataBR, diasDoIntervalo, intervaloUltimosDias, validarIntervalo } from '@/lib/datas';
 import { fmt } from '@/lib/money';
-import { useFaturamento, type DiasFaturamento } from './api';
+import { useFaturamento } from './api';
 
 const COR = '#003399'; // mercosul
+type Modo = '7' | '14' | '30' | 'custom';
 const dm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 
 type Ponto = { data: string; rotulo: string; valor: number };
@@ -31,9 +32,17 @@ function Dica({ active, payload }: { active?: boolean; payload?: readonly { payl
 }
 
 export function FaturamentoCard() {
-  const [dias, setDias] = useState<DiasFaturamento>(7);
+  const [modo, setModo] = useState<Modo>('7');
+  const [custom, setCustom] = useState(() => intervaloUltimosDias(30));
   const [tabela, setTabela] = useState(false);
-  const q = useFaturamento(dias);
+
+  const erroCustom = modo === 'custom' ? validarIntervalo(custom.de, custom.ate) : null;
+  const intervalo = useMemo(
+    () => (modo === 'custom' ? (erroCustom ? null : custom) : intervaloUltimosDias(Number(modo))),
+    [modo, custom, erroCustom],
+  );
+  const q = useFaturamento(intervalo);
+  const descricao = modo === 'custom' ? `de ${dataBR(custom.de)} a ${dataBR(custom.ate)}` : `dos últimos ${modo} dias`;
 
   const pontos = useMemo<Ponto[]>(() => {
     if (!q.data) return [];
@@ -52,8 +61,8 @@ export function FaturamentoCard() {
     >
       <div className="-mt-1 mb-3 flex flex-wrap items-center gap-3">
         <SegmentedControl
-          ariaLabel="Período do faturamento" valor={String(dias) as '7' | '14' | '30'} onChange={(v) => setDias(Number(v) as DiasFaturamento)}
-          opcoes={[{ valor: '7', label: '7 dias' }, { valor: '14', label: '14 dias' }, { valor: '30', label: '30 dias' }]}
+          ariaLabel="Período do faturamento" valor={modo} onChange={setModo}
+          opcoes={[{ valor: '7', label: '7 dias' }, { valor: '14', label: '14 dias' }, { valor: '30', label: '30 dias' }, { valor: 'custom', label: 'Personalizado' }]}
         />
         {q.isSuccess && <span className="text-sm text-aco">Total no período: <Money centavos={total} className="font-semibold text-grafite" /></span>}
         <div className="flex-1" />
@@ -63,7 +72,24 @@ export function FaturamentoCard() {
         </button>
       </div>
 
-      {q.isPending ? <Skeleton className="h-[240px]" />
+      {modo === 'custom' && (
+        <div className="mb-3 flex flex-wrap items-end gap-3">
+          <label className="text-xs font-semibold text-aco">
+            De
+            <input type="date" value={custom.de} onChange={(e) => setCustom((c) => ({ ...c, de: e.target.value }))}
+              aria-invalid={!!erroCustom} className="mt-1 block h-[30px] rounded border border-linha-forte bg-white px-2 text-sm font-normal text-grafite" />
+          </label>
+          <label className="text-xs font-semibold text-aco">
+            Até
+            <input type="date" value={custom.ate} onChange={(e) => setCustom((c) => ({ ...c, ate: e.target.value }))}
+              aria-invalid={!!erroCustom} className="mt-1 block h-[30px] rounded border border-linha-forte bg-white px-2 text-sm font-normal text-grafite" />
+          </label>
+          {erroCustom && <p role="alert" className="pb-1 text-sm text-erro">{erroCustom}</p>}
+        </div>
+      )}
+
+      {q.isPending && intervalo ? <Skeleton className="h-[240px]" />
+        : !q.data ? <p className="py-10 text-center text-sm text-aco">Escolha um período válido para ver o faturamento.</p>
         : q.isError ? <ErrorState onRetry={() => void q.refetch()} />
         : tabela ? (
           <div className="max-h-[240px] overflow-auto">
@@ -87,7 +113,7 @@ export function FaturamentoCard() {
             <p className="mb-1 text-xs text-aco">Eixo vertical em R$ mil</p>
           <div
             role="img" className="h-[240px]"
-            aria-label={`Faturamento dos últimos ${dias} dias: total ${fmt(total)}${maior && maior.valor > 0 ? `, maior dia ${maior.rotulo} com ${fmt(maior.valor)}` : ''}. Use "Ver como tabela" para os valores por dia.`}
+            aria-label={`Faturamento ${descricao}: total ${fmt(total)}${maior && maior.valor > 0 ? `, maior dia ${maior.rotulo} com ${fmt(maior.valor)}` : ''}. Use "Ver como tabela" para os valores por dia.`}
           >
             <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 640, height: 240 }}>
               <AreaChart data={pontos} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>

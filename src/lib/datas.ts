@@ -74,3 +74,17 @@ export function intervaloUltimosDias(n: number, hoje = new Date()): { de: string
   de.setDate(de.getDate() - (n - 1));
   return { de: paraISOData(de), ate: paraISOData(hoje) };
 }
+
+export const MAX_DIAS_INTERVALO = 366;
+
+/** Valida `de`/`ate` (yyyy-MM-dd): ambos preenchidos, `de ≤ ate` e janela de até 366 dias. Devolve a mensagem de erro ou null. */
+export function validarIntervalo(de: string, ate: string): string | null {
+  if (!de || !ate) return 'Informe as duas datas.';
+  if (de > ate) return 'A data inicial não pode ser depois da data final.';
+  const dias = Math.round((new Date(`${ate}T12:00:00`).getTime() - new Date(`${de}T12:00:00`).getTime()) / 86_400_000) + 1;
+  if (dias > MAX_DIAS_INTERVALO) return `O período pode ter no máximo ${MAX_DIAS_INTERVALO} dias.`;
+  return null;
+}
+
+/** "2026-09-01" → "01/09/2026". */
+export const dataBR = (iso: string): string => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
