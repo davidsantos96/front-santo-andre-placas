@@ -57,6 +57,19 @@ describe('MoneyInput — posição do cursor', () => {
     expect(texto()).toBe('R$ 316,90');
   });
 
+  it('com o texto selecionado, digitar SUBSTITUI o valor (não anexa ao antigo)', async () => {
+    function Campo316() {
+      const [v, setV] = useState(31690);
+      return <MoneyInput aria-label="Preço" value={v} onChange={setV} />;
+    }
+    render(<Campo316 />);
+    const campo = screen.getByLabelText('Preço') as HTMLInputElement;
+    expect(texto()).toBe('R$ 316,90');
+    await userEvent.tripleClick(campo); // seleciona tudo
+    await userEvent.keyboard('10000');
+    expect(texto()).toBe('R$ 100,00');
+  });
+
   it('ignora letras, apaga o último dígito no Backspace e respeita o teto', async () => {
     render(<Campo />);
     const campo = screen.getByLabelText('Preço');

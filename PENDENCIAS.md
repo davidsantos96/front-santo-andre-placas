@@ -14,7 +14,7 @@ Conferido lendo o diff e rodando o front contra a API nova. **Resolvido no backe
 
 ## Conflitos novos que precisam da sua decisão
 
-- [ ] **C1 · "Pago" no backend é `soma dos pagamentos ≥ preço`, não "qualquer pagamento".** Verificado: um pagamento parcial de R$ 100 num pedido de R$ 316,90 deixa `pago = false`. Isso contradiz a decisão de hoje ("pago = com qualquer pagamento"). Opções: (a) **alinhar o front ao backend** — vários pagamentos parciais, detalhe com saldo restante, "$ pendente" e confirmação de entrega até quitar (recomendado: o `pago` do Kanban já vem assim); (b) pedir ao backend para marcar pago com qualquer pagamento; (c) valor editável só para desconto (pagamento único ≤ preço quita — mas o backend só quita com soma ≥ preço, então um desconto **não** quitaria). Afeta a tarefa B5.
+- [x] **C1 (resolvido: front alinhado ao backend, pagamentos parciais) · "Pago" no backend é `soma dos pagamentos ≥ preço`, não "qualquer pagamento".** Verificado: um pagamento parcial de R$ 100 num pedido de R$ 316,90 deixa `pago = false`. Isso contradiz a decisão de hoje ("pago = com qualquer pagamento"). Opções: (a) **alinhar o front ao backend** — vários pagamentos parciais, detalhe com saldo restante, "$ pendente" e confirmação de entrega até quitar (recomendado: o `pago` do Kanban já vem assim); (b) pedir ao backend para marcar pago com qualquer pagamento; (c) valor editável só para desconto (pagamento único ≤ preço quita — mas o backend só quita com soma ≥ preço, então um desconto **não** quitaria). Afeta a tarefa B5.
 - [ ] **C2 · "Consultar placa" no cadastro de veículo novo (B3 do plano) × campos obrigatórios.** Com `chassi`, marca/modelo e anos obrigatórios no `POST /veiculos`, não é mais possível salvar só com a placa. Para o fluxo "digitar placa → consultar → preencher" é preciso o backend aceitar cadastro parcial **ou** o front chamar a consulta sem criar o veículo (endpoint por placa, que hoje exige o `id`).
 - [ ] **C3 · Reativar serviço após recarregar.** `GET /servicos` ainda lista só ativos, então um serviço desativado some ao recarregar e não pode ser reativado pela tela (só na mesma sessão). Falta `?incluirInativos=true`.
 
@@ -59,14 +59,14 @@ Decididas com o usuário (lista de múltipla escolha). `P9` e `P35` seguem abert
 **B. Decisões viram tarefas** _(B5, B9 e B3 dependem de C1, do endpoint real de senha e de C2 — ver acima)_
 - [x] **B1 · Faturamento "Personalizado":** terceiro modo do seletor (7/14/30 dias + datas de/até). Validar `de ≤ ate`, limitar a janela (ex.: até 366 dias) e manter a tabela/gráfico funcionando em períodos longos (agrupar por mês acima de ~90 dias?).
 - [x] **B2 · Origem:** trocar `#93A9D1` por um azul mais escuro que passe em contraste ≥ 3:1 sobre o cartão (validar com o script de paleta).
-- [x] **B3 · "Consultar placa" no cadastro de veículo novo:** ao digitar a placa, botão que salva o veículo só com a placa e chama `POST /veiculos/{id}/consultar`; hoje sempre volta 400 "não disponível" (aviso). Depende do backend aceitar cadastro parcial (hoje `marcaModelo`/anos ficariam nulos/0 — ver B15).
+- [ ] **B3 (bloqueado por C2) · "Consultar placa" no cadastro de veículo novo:** ao digitar a placa, botão que salva o veículo só com a placa e chama `POST /veiculos/{id}/consultar`; hoje sempre volta 400 "não disponível" (aviso). Depende do backend aceitar cadastro parcial (hoje `marcaModelo`/anos ficariam nulos/0 — ver B15).
 - [x] **B4 · Cancelar só em Recebido e Em processamento:** esconder "Cancelar pedido" em Placa pronta (o backend não impõe isso; é regra do front).
 - [x] **B5 · Pagamento com valor editável:** campo de valor (`MoneyInput`, padrão = preço do serviço) no Detalhe e no Novo pedido; validar `> 0`; avisar quando o valor difere do preço; o pedido conta como pago com **qualquer** pagamento, então o formulário some após o primeiro.
 - [x] **B6 · Caixa com as 5 formas sempre:** completar os cartões que faltam com R$ 0,00 / "0 pagamentos" (ordem fixa das formas).
-- [ ] **B7 · Estoque → "Novo item":** modal (nome, SKU, unidade, quantidade, mínimo) → `POST /estoque/itens` (GERENTE/ADMIN; esconder para ATENDENTE com `RequirePapel`). O vínculo serviço↔item **não** entra agora.
-- [ ] **B8 · Fila de produção com Placa pronta:** 3 consultas (Recebido, Em processamento, Placa pronta), mais antigos primeiro.
-- [ ] **B9 · Usuários:** campo Papel **desabilitado** ao editar o próprio usuário; botão **"Redefinir senha"** (modal com nova senha provisória) chamando um endpoint ainda inexistente (B14).
-- [ ] **B10 · e2e com Playwright contra a API real:** pasta `e2e/` com os roteiros (login, serviço, novo pedido, Kanban + estoque insuficiente, detalhe/pagamento, financeiro, dashboard, clientes, veículos, usuários e permissões, sessão expirada), configurados por variáveis de ambiente (`E2E_API_URL`, `E2E_USER`, `E2E_PASSWORD`) e documentados no README.
+- [x] **B7 · Estoque → "Novo item":** modal (nome, SKU, unidade, quantidade, mínimo) → `POST /estoque/itens` (GERENTE/ADMIN; esconder para ATENDENTE com `RequirePapel`). O vínculo serviço↔item **não** entra agora.
+- [x] **B8 · Fila de produção com Placa pronta:** 3 consultas (Recebido, Em processamento, Placa pronta), mais antigos primeiro.
+- [x] **B9 · Usuários:** campo Papel **desabilitado** ao editar o próprio usuário; botão **"Redefinir senha"** (modal com nova senha provisória) chamando um endpoint ainda inexistente (B14).
+- [x] **B10 · e2e com Playwright contra a API real:** pasta `e2e/` com os roteiros (login, serviço, novo pedido, Kanban + estoque insuficiente, detalhe/pagamento, financeiro, dashboard, clientes, veículos, usuários e permissões, sessão expirada), configurados por variáveis de ambiente (`E2E_API_URL`, `E2E_USER`, `E2E_PASSWORD`) e documentados no README.
 - [ ] **B11 · PR #1:** revisar e mesclar inteiro; depois abrir PRs menores.
 
 **C. Depois**
@@ -118,6 +118,8 @@ Li o código do backend (`api-santo-andre-placas`, commit `6ad76ba`), subi a API
 - [ ] **B10 · "Não encontrado" responde 400, não 404.** O front aceita os dois; o ideal é 404 com `mensagem`.
 - [ ] **B11 · Dashboard.** `servicos-mais-vendidos` conta pedidos cancelados e não tem período; `tempo-medio-producao` não compara com período anterior (tendência "▼ 12 min" segue não implementada — P29).
 - [ ] **B12 · Estoque.** `NovaMovimentacaoRequest` não tem observação/motivo (a spec do front previa). Sem endpoint de "estoque baixo" por critério diferente da tabela: hoje ambos usam `quantidade <= quantidadeMinima` (ok — manter).
+
+- [ ] **B16 · Usuário autenticado sem permissão recebe 401, não 403.** Verificado: ATENDENTE em `/usuarios` e `/pagamentos` → 401 "Não autenticado…". Provavelmente a negação do `@PreAuthorize` cai no dispatch de erro sem contexto de segurança e o entryPoint responde. O front trata 401 como sessão expirada (abre o modal de login), então o atendente seria deslogado em vez de ver "sem permissão". O e2e (`01-acesso`) está como `test.fail` até corrigir; remover o `test.fail` depois.
 
 **Baixa**
 - [ ] **B13 · Infra.** Chave do JWT fixa no código; CORS só `localhost:5173`; `application.properties` usa H2 em memória (o `CONTEXT.md` fala em H2 de arquivo); não há seed de usuário (o primeiro ADMIN precisa ser inserido no banco).

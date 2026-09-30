@@ -27,6 +27,16 @@ Com `VITE_USE_MOCKS=true` o app usa MSW (dados fictícios em `src/mocks/`); com 
 
 O que ainda diverge do esperado no backend está em [`PENDENCIAS.md`](PENDENCIAS.md) (seção "Verificação contra a API real").
 
+## Testes e2e (Playwright, contra a API real)
+
+Os roteiros em `e2e/` usam a API de verdade e **gravam dados** (clientes, pedidos, usuários com sufixo único por execução). Use um banco de teste.
+
+1. Suba a API em `http://localhost:8080` com um usuário ADMIN ativo.
+2. `npm run e2e:install` (baixa o Chromium; em ambientes com Chromium já instalado, use `E2E_CHROMIUM_PATH`).
+3. `E2E_CONFIRM=1 npm run e2e` — o Playwright sobe o Vite sozinho (mocks desligados, porta 5173).
+
+Variáveis: `E2E_CONFIRM` (obrigatória), `E2E_API_URL` (padrão `http://localhost:8080/api`), `E2E_WEB_URL`, `E2E_USER`/`E2E_PASSWORD` (padrão `admin@santoandreplacas.com.br` / `admin123`), `E2E_CHROMIUM_PATH`. Tipos: `npm run e2e:typecheck`.
+
 ## Protótipo de referência
 
 O protótipo HTML navegável está em [`prototipo/`](prototipo/) (abrir `prototipo/index.html`). É a fonte da verdade visual; não é código de produção.

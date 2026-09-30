@@ -11,6 +11,7 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
     css: false,
+    include: ['src/**/*.test.{ts,tsx}'], // e2e/ roda com o Playwright (npm run e2e)
     env: { VITE_API_URL: 'http://localhost:8080/api', VITE_USE_MOCKS: 'false' },
   },
 });
