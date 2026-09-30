@@ -223,7 +223,7 @@ describe('Financeiro', () => {
     const { router } = await entrarComo('/pedidos/1058', gerente);
     await screen.findByRole('heading', { name: '#1058' });
     await userEvent.click(screen.getByRole('button', { name: 'Registrar pagamento' }));
-    await screen.findByText(/Pago via Pix/);
+    await screen.findByText(/^Pago · R\$\s316,90/);
 
     await router.navigate('/financeiro?periodo=hoje');
     await screen.findByText('4 pagamentos ·');

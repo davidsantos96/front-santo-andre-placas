@@ -135,9 +135,7 @@ export const handlers = [
     const pedido = db.pedidos.find((x) => x.id === Number(params.id));
     if (!pedido) return naoEncontradoMock('Pedido', params.id);
     const dados = (await request.json()) as PagamentoRequest;
-    if (db.pagamentos.some((p) => p.pedidoId === pedido.id && p.status === 'PAGO')) {
-      return HttpResponse.json({ mensagem: 'Pedido já possui pagamento registrado' }, { status: 400 });
-    }
+    // O backend aceita vários pagamentos por pedido (parcelas); `pago` só fica true quando a soma chega ao preço.
     const pg: Pagamento = {
       id: db.pagamentos.length + 1, pedidoId: pedido.id, valorCentavos: dados.valorCentavos,
       formaPagamento: dados.formaPagamento, status: 'PAGO', pagoEm: new Date().toISOString(), registradoPor: u.nome,

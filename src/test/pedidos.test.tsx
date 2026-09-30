@@ -34,6 +34,13 @@ describe('Pedidos — quadro', () => {
     expect(screen.queryByRole('region', { name: 'Cancelado' })).not.toBeInTheDocument();
   });
 
+  it('pedido com pagamento parcial segue com "$ pendente" (pago = soma ≥ preço)', async () => {
+    db.pagamentos.push({ id: 99, pedidoId: 1058, valorCentavos: 10000, formaPagamento: 'PIX', status: 'PAGO', pagoEm: new Date().toISOString(), registradoPor: 'Bruna Costa' });
+    await entrar('/pedidos');
+    expect(await screen.findByRole('button', { name: /Pedido 1058/ })).toHaveTextContent('$ pendente');
+    expect(screen.getByRole('button', { name: /Pedido 1056/ })).not.toHaveTextContent('$ pendente'); // quitado
+  });
+
   it('cards de pedido em status final (Entregue) não são arrastáveis; os demais são', async () => {
     await entrar('/pedidos');
     expect(await screen.findByRole('button', { name: /Pedido 1050/ })).toHaveAttribute('aria-disabled', 'true'); // ENTREGUE

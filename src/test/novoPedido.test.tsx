@@ -51,6 +51,25 @@ describe('Novo pedido', () => {
     expect(db.pagamentos.find((p) => p.pedidoId === 1059)).toMatchObject({ formaPagamento: 'PIX', valorCentavos: 31690 });
   });
 
+  it('pagamento parcial no Novo pedido: valor editável, aviso de saldo e pedido criado sem estar quitado', async () => {
+    await entrarComo('/pedidos/novo');
+    await userEvent.type(await screen.findByRole('combobox', { name: 'Buscar cliente' }), 'Renata');
+    await userEvent.click(await screen.findByRole('option', { name: /Renata Sampaio/ }));
+    await userEvent.click(await screen.findByRole('radio', { name: /DPT7B02/ }));
+    await userEvent.click(await screen.findByRole('radio', { name: /Segunda via de placa/ })); // R$ 249,00
+    expect(screen.queryByLabelText('Valor do pagamento')).not.toBeInTheDocument(); // só aparece com uma forma escolhida
+    await userEvent.selectOptions(screen.getByLabelText('Forma de pagamento'), 'PIX');
+    const valor = screen.getByLabelText('Valor do pagamento');
+    expect((valor as HTMLInputElement).value.replace(/\u00a0/g, ' ')).toBe('R$ 249,00'); // padrão = preço do serviço
+    await userEvent.clear(valor);
+    await userEvent.type(valor, '10000');
+    expect(await screen.findByText(/Pagamento parcial: o pedido será criado com saldo de R\$\s149,00/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /Criar pedido/ }));
+
+    await screen.findByText('Pedido #1059 criado');
+    expect(db.pagamentos.find((p) => p.pedidoId === 1059)).toMatchObject({ valorCentavos: 10000, formaPagamento: 'PIX' });
+  });
+
   it('blocos só habilitam quando o anterior está preenchido e há validação ao enviar', async () => {
     await entrarComo('/pedidos/novo');
     await screen.findByRole('combobox', { name: 'Buscar cliente' });

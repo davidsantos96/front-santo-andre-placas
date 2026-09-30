@@ -74,7 +74,6 @@ export function PedidoDetalhePage() {
   }
 
   const pedido = pedidoQ.data;
-  const pagamento = pagQ.data?.find((p) => p.status === 'PAGO');
   const pago = pedido.pago; // vem da API (soma dos pagamentos PAGO ≥ preço do serviço)
   const alvo = { id: pedido.id, status: pedido.status, pago };
 
@@ -143,7 +142,7 @@ export function PedidoDetalhePage() {
             </dl>
           </Cartao>
 
-          <PagamentoCard ref={formaRef} pedido={pedido} pagamento={pagamento} />
+          {pagQ.isPending ? <Skeleton className="h-[130px]" /> : <PagamentoCard ref={formaRef} pedido={pedido} pagamentos={pagQ.data ?? []} />}
         </div>
 
         <div className="flex flex-col gap-3.5">

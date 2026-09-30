@@ -43,15 +43,53 @@ describe('Detalhe do pedido', () => {
     expect(screen.getByRole('button', { name: 'Iniciar processamento' })).toBeInTheDocument();
   });
 
-  it('registra pagamento (forma escolhida) e passa a mostrar "Pago via …"', async () => {
+  it('registra pagamento (forma escolhida; valor padrão = saldo) e passa a mostrar "Pago"', async () => {
     await entrarComo('/pedidos/1058');
     await screen.findByRole('heading', { name: '#1058' });
+    expect((screen.getByLabelText('Valor') as HTMLInputElement).value.replace(/\u00a0/g, ' ')).toBe('R$ 316,90');
     await userEvent.selectOptions(screen.getByLabelText('Forma'), 'DINHEIRO');
     await userEvent.click(screen.getByRole('button', { name: 'Registrar pagamento' }));
-    expect(await screen.findByText(/Pago via Dinheiro · hoje/)).toHaveTextContent('Bruna Costa');
+    expect(await screen.findByText(/^Pago · R\$\s316,90/)).toBeInTheDocument();
+    const lista = screen.getByRole('list', { name: 'Pagamentos registrados' });
+    const item = within(lista).getByRole('listitem');
+    expect(item).toHaveTextContent(/Dinheiro · R\$\s316,90 · hoje/);
+    expect(item).toHaveTextContent('Bruna Costa');
     expect(await screen.findByText(/Pagamento registrado — R\$\s316,90 via Dinheiro/)).toBeInTheDocument();
     expect(db.pagamentos.find((p) => p.pedidoId === 1058)).toMatchObject({ formaPagamento: 'DINHEIRO', valorCentavos: 31690 });
     expect(screen.queryByRole('button', { name: 'Registrar pagamento' })).not.toBeInTheDocument();
+  });
+
+  it('pagamento parcial (como o backend: pago só quando a soma chega ao preço): mostra saldo e mantém o formulário', async () => {
+    await entrarComo('/pedidos/1058');
+    await screen.findByRole('heading', { name: '#1058' });
+    const valor = screen.getByLabelText('Valor');
+    await userEvent.clear(valor);
+    await userEvent.type(valor, '10000');
+    expect(await screen.findByText(/Pagamento parcial: o pedido continua com saldo de R\$\s216,90/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Registrar pagamento' }));
+
+    expect(await screen.findByText(/Pago R\$\s100,00 de R\$\s316,90/)).toBeInTheDocument();
+    expect(screen.getByText(/Saldo restante: R\$\s216,90/)).toBeInTheDocument();
+    expect(screen.queryByText(/^Pago · /)).not.toBeInTheDocument(); // ainda não quitado
+    expect((screen.getByLabelText('Valor') as HTMLInputElement).value.replace(/\u00a0/g, ' ')).toBe('R$ 216,90'); // padrão = novo saldo
+
+    await userEvent.selectOptions(screen.getByLabelText('Forma'), 'PIX');
+    await userEvent.click(screen.getByRole('button', { name: 'Registrar pagamento' }));
+    expect(await screen.findByText(/^Pago · R\$\s316,90/)).toBeInTheDocument();
+    expect(within(screen.getByRole('list', { name: 'Pagamentos registrados' })).getAllByRole('listitem')).toHaveLength(2);
+    expect(screen.queryByRole('button', { name: 'Registrar pagamento' })).not.toBeInTheDocument();
+  });
+
+  it('valor zero é recusado; valor acima do saldo apenas avisa', async () => {
+    await entrarComo('/pedidos/1058');
+    await screen.findByRole('heading', { name: '#1058' });
+    const valor = screen.getByLabelText('Valor');
+    await userEvent.clear(valor);
+    await userEvent.click(screen.getByRole('button', { name: 'Registrar pagamento' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Informe um valor maior que zero.');
+    expect(db.pagamentos.some((p) => p.pedidoId === 1058)).toBe(false);
+    await userEvent.type(valor, '40000');
+    expect(await screen.findByText(/Valor acima do saldo de R\$\s316,90/)).toBeInTheDocument();
   });
 
   it('PLACA_PRONTA sem pagamento: "Registrar entrega" pede confirmação', async () => {

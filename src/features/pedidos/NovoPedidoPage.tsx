@@ -10,6 +10,7 @@ import type { ApiError, Cliente, Servico, Veiculo } from '@/api/types';
 import { Cartao } from '@/components/Cartao';
 import { Combobox } from '@/components/Combobox';
 import { Money } from '@/components/Money';
+import { MoneyInput } from '@/components/MoneyInput';
 import { Pagina } from '@/components/Pagina';
 import { PlacaBadge } from '@/components/PlacaBadge';
 import { FORMA_PAGAMENTO, ORIGEM, type FormaPagamento } from '@/components/status';
@@ -19,6 +20,7 @@ import { ClientePainel } from '@/features/clientes/ClientePainel';
 import { useServicos } from '@/features/servicos/api';
 import { useConsultarVeiculo, useVeiculos } from '@/features/veiculos/api';
 import { VeiculoForm } from '@/features/veiculos/VeiculoForm';
+import { fmt } from '@/lib/money';
 import { useDebounce } from '@/lib/useDebounce';
 import { useCriarPedido } from './api';
 
@@ -55,7 +57,7 @@ export function NovoPedidoPage() {
   const criar = useCriarPedido();
   const consultar = useConsultarVeiculo();
 
-  const { handleSubmit, setValue, resetField, register, formState: { errors } } = useForm<Dados>({
+  const { handleSubmit, setValue, resetField, register, watch, formState: { errors } } = useForm<Dados>({
     resolver: zodResolver(schema),
     defaultValues: { origem: 'BALCAO' },
   });
@@ -67,6 +69,10 @@ export function NovoPedidoPage() {
   const [painel, setPainel] = useState(false);
   const [novoVeiculo, setNovoVeiculo] = useState(false);
   const [enviando, setEnviando] = useState(false);
+  const [valorEditado, setValorEditado] = useState<number | null>(null); // null = acompanha o preço do serviço
+  const [erroValor, setErroValor] = useState<string | null>(null);
+  const forma = watch('formaPagamento');
+  const valorPag = valorEditado ?? servico?.precoCentavos ?? 0;
 
   const termo = useDebounce(busca.trim(), 200);
   const clientesQ = useClientes(termo, !cliente && termo.length >= 2);
@@ -88,6 +94,8 @@ export function NovoPedidoPage() {
 
   const enviar = handleSubmit(async (d) => {
     if (enviando) return;
+    if (d.formaPagamento && valorPag <= 0) { setErroValor('Informe um valor maior que zero.'); return; }
+    setErroValor(null);
     setEnviando(true);
     try {
       let pedido;
@@ -99,7 +107,7 @@ export function NovoPedidoPage() {
       }
       if (d.formaPagamento && servico) {
         try {
-          await api.post(`/pedidos/${pedido.id}/pagamento`, { valorCentavos: servico.precoCentavos, formaPagamento: d.formaPagamento });
+          await api.post(`/pedidos/${pedido.id}/pagamento`, { valorCentavos: valorPag, formaPagamento: d.formaPagamento });
           for (const k of ['pagamentos', 'caixa', 'dash']) void qc.invalidateQueries({ queryKey: [k] });
         } catch (e) {
           toast(`Pedido #${pedido.id} criado, mas o pagamento falhou: ${(e as ApiError).mensagem}`, 'erro');
@@ -241,13 +249,26 @@ export function NovoPedidoPage() {
               <select
                 className={selectCls}
                 defaultValue=""
-                onChange={(e) => setValue('formaPagamento', (e.target.value || undefined) as FormaPagamento | undefined)}
+                onChange={(e) => { setValue('formaPagamento', (e.target.value || undefined) as FormaPagamento | undefined); setErroValor(null); }}
               >
                 <option value="">Depois</option>
                 {(Object.keys(FORMA_PAGAMENTO) as FormaPagamento[]).map((f) => <option key={f} value={f}>{FORMA_PAGAMENTO[f].label}</option>)}
               </select>
             </label>
+            {forma && (
+              <div>
+                <label htmlFor="valor-pagamento" className="text-xs font-semibold text-aco">Valor do pagamento</label>
+                <MoneyInput
+                  id="valor-pagamento" value={valorPag} onChange={(c) => { setValorEditado(c); setErroValor(null); }}
+                  aria-invalid={!!erroValor} className="mt-1 block !h-9 w-[150px] text-base"
+                />
+              </div>
+            )}
           </div>
+          {forma && erroValor && <p role="alert" className="mt-2 text-sm text-erro">{erroValor}</p>}
+          {forma && !erroValor && servico && valorPag > 0 && valorPag < servico.precoCentavos && (
+            <p role="note" className="mt-2 text-sm text-aco">Pagamento parcial: o pedido será criado com saldo de {fmt(servico.precoCentavos - valorPag)}.</p>
+          )}
         </Bloco>
       </div>
 

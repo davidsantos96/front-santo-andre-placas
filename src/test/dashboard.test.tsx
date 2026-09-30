@@ -143,7 +143,7 @@ describe('Dashboard', () => {
     await waitFor(async () => expect(await kpi('FATURAMENTO HOJE')).toHaveTextContent(/R\$\s814,90/));
     await router.navigate('/pedidos/1058');
     await userEvent.click(await screen.findByRole('button', { name: 'Registrar pagamento' }));
-    await screen.findByText(/Pago via Pix/);
+    await screen.findByText(/^Pago · R\$\s316,90/);
     await router.navigate('/dashboard');
     await waitFor(async () => expect(await kpi('FATURAMENTO HOJE')).toHaveTextContent(/R\$\s1\.131,80/));
   });
