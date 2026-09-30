@@ -17,19 +17,28 @@ api.interceptors.request.use((config) => {
 
 type Retentavel = InternalAxiosRequestConfig & { _retentado?: boolean };
 
+/** Texto padrão (em português) quando a API não manda `mensagem` — ex.: 500 ou o "Bad Request" genérico do Spring. */
+export function mensagemPadrao(status: number): string {
+  if (status === 0) return 'Sem conexão com o servidor. Verifique a rede e tente novamente.';
+  if (status === 401) return 'Sessão expirada. Entre novamente.';
+  if (status === 403) return 'Você não tem permissão para esta ação.';
+  if (status === 404) return 'Não encontrado.';
+  if (status >= 500) return 'Erro no servidor. Tente novamente em instantes.';
+  return 'Não foi possível concluir a operação. Confira os dados e tente novamente.';
+}
+
 export function normalizarErro(e: unknown): ApiError {
   if (axios.isAxiosError(e)) {
     const status = e.response?.status ?? 0;
     const corpo = e.response?.data as
-      | { message?: string; mensagem?: string; erro?: string; campos?: Record<string, string>; errors?: Record<string, string> }
+      | { message?: string; mensagem?: string; campos?: Record<string, string>; errors?: Record<string, string> }
       | undefined;
-    const mensagem =
-      corpo?.mensagem ?? corpo?.message ?? corpo?.erro ??
-      (status === 0 ? 'Sem conexão com o servidor.' : `Erro ${status}`);
+    // `error` do corpo padrão do Spring ("Bad Request", "Internal Server Error") é ignorado de propósito.
+    const mensagem = corpo?.mensagem?.trim() || corpo?.message?.trim() || mensagemPadrao(status);
     return { status, mensagem, campos: corpo?.campos ?? corpo?.errors };
   }
   if (e && typeof e === 'object' && 'status' in e && 'mensagem' in e) return e as ApiError;
-  return { status: 0, mensagem: e instanceof Error ? e.message : 'Erro inesperado' };
+  return { status: 0, mensagem: e instanceof Error ? e.message : 'Erro inesperado.' };
 }
 
 api.interceptors.response.use(

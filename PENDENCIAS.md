@@ -6,6 +6,20 @@ Legenda: **Backend** = depende de mudança/confirmação na API · **Front** = d
 
 ---
 
+# Backend atualizado (commits `e73bb9c`, `df3c800`) — verificado em 2026-09-30
+
+Conferido lendo o diff e rodando o front contra a API nova. **Resolvido no backend:** B1 (login de inativo recusado + token de usuário desativado → 401), B2 (`401` com `{ mensagem }` para token ausente/inválido/expirado — o contorno do 403 saiu do front), B3 parcial (`PATCH /servicos/{id}/status`; `DELETE` virou desativação), B4 (`pago` no pedido), B5 (handler devolve a mensagem real da validação), B6 (`POST /veiculos` com `clienteId` e resposta `VeiculoResponse`), B14 (reset de senha).
+
+**Ajustes feitos no front:** `Pedido.pago` agora é obrigatório e vem da API; serviço usa `PATCH /status`; veículo envia `clienteId` (sem reler por id) e **`chassi` passou a ser obrigatório**; o login mostra "Usuário inativo. Contate um administrador." (também no modal de re-login); `pago`, 401 e usuário desativado testados de ponta a ponta.
+
+## Conflitos novos que precisam da sua decisão
+
+- [ ] **C1 · "Pago" no backend é `soma dos pagamentos ≥ preço`, não "qualquer pagamento".** Verificado: um pagamento parcial de R$ 100 num pedido de R$ 316,90 deixa `pago = false`. Isso contradiz a decisão de hoje ("pago = com qualquer pagamento"). Opções: (a) **alinhar o front ao backend** — vários pagamentos parciais, detalhe com saldo restante, "$ pendente" e confirmação de entrega até quitar (recomendado: o `pago` do Kanban já vem assim); (b) pedir ao backend para marcar pago com qualquer pagamento; (c) valor editável só para desconto (pagamento único ≤ preço quita — mas o backend só quita com soma ≥ preço, então um desconto **não** quitaria). Afeta a tarefa B5.
+- [ ] **C2 · "Consultar placa" no cadastro de veículo novo (B3 do plano) × campos obrigatórios.** Com `chassi`, marca/modelo e anos obrigatórios no `POST /veiculos`, não é mais possível salvar só com a placa. Para o fluxo "digitar placa → consultar → preencher" é preciso o backend aceitar cadastro parcial **ou** o front chamar a consulta sem criar o veículo (endpoint por placa, que hoje exige o `id`).
+- [ ] **C3 · Reativar serviço após recarregar.** `GET /servicos` ainda lista só ativos, então um serviço desativado some ao recarregar e não pode ser reativado pela tela (só na mesma sessão). Falta `?incluirInativos=true`.
+
+---
+
 # Decisões de 2026-09-30 e plano de implementação do front
 
 Decididas com o usuário (lista de múltipla escolha). `P9` e `P35` seguem abertas. Nada abaixo foi implementado ainda; a ordem é a sugerida.
@@ -38,17 +52,17 @@ Decididas com o usuário (lista de múltipla escolha). `P9` e `P35` seguem abert
 ## Plano (ordem sugerida)
 
 **A. Correções que não dependem de decisão (propostas; aguardam seu "pode fazer")**
-- [ ] **A1 · Kanban: confirmar "entregar sem pagamento" com a API real.** O backend não manda `pago` (B4); ao soltar em ENTREGUE com `pago` desconhecido, consultar `GET /pedidos/{id}/pagamentos` na hora. Com a regra "pago = qualquer pagamento" (abaixo), conta como pago se existir algum pagamento `PAGO`.
-- [ ] **A2 · Fontes locais (P5).** Hospedar Archivo Narrow e IBM Plex no projeto (sem depender do Google Fonts) para a placa não cortar o texto.
-- [ ] **A3 · Mensagens de erro em português** quando a API devolver "Bad Request"/500 sem `mensagem`.
+- [x] **A1 · Kanban: confirmar "entregar sem pagamento" com a API real.** _(Resolvido pelo backend: `PedidoResponse.pago` agora existe; o front usa esse campo. Verificado: a confirmação aparece para pedido não quitado e não aparece para o quitado.)_ O backend não manda `pago` (B4); ao soltar em ENTREGUE com `pago` desconhecido, consultar `GET /pedidos/{id}/pagamentos` na hora. Com a regra "pago = qualquer pagamento" (abaixo), conta como pago se existir algum pagamento `PAGO`.
+- [x] **A2 · Fontes locais (P5).** _(Feito com `@fontsource`; verificado no navegador: fontes carregam e há 0 requisições ao Google Fonts.)_ Hospedar Archivo Narrow e IBM Plex no projeto (sem depender do Google Fonts) para a placa não cortar o texto.
+- [x] **A3 · Mensagens de erro em português** _(Feito: `mensagemPadrao` por status; o corpo padrão do Spring "Bad Request" é ignorado; testes em `src/api/client.test.ts`.)_ quando a API devolver "Bad Request"/500 sem `mensagem`.
 
-**B. Decisões viram tarefas**
-- [ ] **B1 · Faturamento "Personalizado":** terceiro modo do seletor (7/14/30 dias + datas de/até). Validar `de ≤ ate`, limitar a janela (ex.: até 366 dias) e manter a tabela/gráfico funcionando em períodos longos (agrupar por mês acima de ~90 dias?).
-- [ ] **B2 · Origem:** trocar `#93A9D1` por um azul mais escuro que passe em contraste ≥ 3:1 sobre o cartão (validar com o script de paleta).
-- [ ] **B3 · "Consultar placa" no cadastro de veículo novo:** ao digitar a placa, botão que salva o veículo só com a placa e chama `POST /veiculos/{id}/consultar`; hoje sempre volta 400 "não disponível" (aviso). Depende do backend aceitar cadastro parcial (hoje `marcaModelo`/anos ficariam nulos/0 — ver B15).
-- [ ] **B4 · Cancelar só em Recebido e Em processamento:** esconder "Cancelar pedido" em Placa pronta (o backend não impõe isso; é regra do front).
-- [ ] **B5 · Pagamento com valor editável:** campo de valor (`MoneyInput`, padrão = preço do serviço) no Detalhe e no Novo pedido; validar `> 0`; avisar quando o valor difere do preço; o pedido conta como pago com **qualquer** pagamento, então o formulário some após o primeiro.
-- [ ] **B6 · Caixa com as 5 formas sempre:** completar os cartões que faltam com R$ 0,00 / "0 pagamentos" (ordem fixa das formas).
+**B. Decisões viram tarefas** _(B5, B9 e B3 dependem de C1, do endpoint real de senha e de C2 — ver acima)_
+- [x] **B1 · Faturamento "Personalizado":** terceiro modo do seletor (7/14/30 dias + datas de/até). Validar `de ≤ ate`, limitar a janela (ex.: até 366 dias) e manter a tabela/gráfico funcionando em períodos longos (agrupar por mês acima de ~90 dias?).
+- [x] **B2 · Origem:** trocar `#93A9D1` por um azul mais escuro que passe em contraste ≥ 3:1 sobre o cartão (validar com o script de paleta).
+- [x] **B3 · "Consultar placa" no cadastro de veículo novo:** ao digitar a placa, botão que salva o veículo só com a placa e chama `POST /veiculos/{id}/consultar`; hoje sempre volta 400 "não disponível" (aviso). Depende do backend aceitar cadastro parcial (hoje `marcaModelo`/anos ficariam nulos/0 — ver B15).
+- [x] **B4 · Cancelar só em Recebido e Em processamento:** esconder "Cancelar pedido" em Placa pronta (o backend não impõe isso; é regra do front).
+- [x] **B5 · Pagamento com valor editável:** campo de valor (`MoneyInput`, padrão = preço do serviço) no Detalhe e no Novo pedido; validar `> 0`; avisar quando o valor difere do preço; o pedido conta como pago com **qualquer** pagamento, então o formulário some após o primeiro.
+- [x] **B6 · Caixa com as 5 formas sempre:** completar os cartões que faltam com R$ 0,00 / "0 pagamentos" (ordem fixa das formas).
 - [ ] **B7 · Estoque → "Novo item":** modal (nome, SKU, unidade, quantidade, mínimo) → `POST /estoque/itens` (GERENTE/ADMIN; esconder para ATENDENTE com `RequirePapel`). O vínculo serviço↔item **não** entra agora.
 - [ ] **B8 · Fila de produção com Placa pronta:** 3 consultas (Recebido, Em processamento, Placa pronta), mais antigos primeiro.
 - [ ] **B9 · Usuários:** campo Papel **desabilitado** ao editar o próprio usuário; botão **"Redefinir senha"** (modal com nova senha provisória) chamando um endpoint ainda inexistente (B14).
@@ -60,7 +74,7 @@ Decididas com o usuário (lista de múltipla escolha). `P9` e `P35` seguem abert
 
 ## Backend: itens novos surgidos dessas decisões
 
-- [ ] **B14 · Reset de senha pelo ADMIN.** Endpoint novo (ex.: `PUT /usuarios/{id}/senha` com `{ senha }`, só ADMIN, senha com hash). O front assume esse caminho até ser confirmado.
+- [x] **B14 · Reset de senha pelo ADMIN.** _(Existe: `PATCH /usuarios/{id}/senha` com `{ novaSenha }`, só ADMIN — verificado. O front (B9) deve usar exatamente esse caminho e campo.)_
 - [ ] **B15 · Cadastro parcial de veículo (para o "Consultar placa" no cadastro novo).** Hoje a entidade aceita só a placa (os campos ausentes ficam `null`/`0`, já que o setter só valida quando o campo vem no JSON), mas isso gera dados incompletos. Definir se a API aceita cadastro parcial e como o resultado da consulta preenche/atualiza o veículo (hoje não há `PUT /veiculos/{id}`).
 
 ---
