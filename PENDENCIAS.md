@@ -6,6 +6,65 @@ Legenda: **Backend** = depende de mudança/confirmação na API · **Front** = d
 
 ---
 
+# Decisões de 2026-09-30 e plano de implementação do front
+
+Decididas com o usuário (lista de múltipla escolha). `P9` e `P35` seguem abertas. Nada abaixo foi implementado ainda; a ordem é a sugerida.
+
+## Decisões
+
+| Item | Decisão |
+|---|---|
+| P3 Janela do Kanban | **Hoje e ontem** (como está) |
+| P30 Períodos do Dashboard | **Só o Faturamento** tem seletor por ora, **mais um filtro "Personalizado"** (datas livres) para períodos longos |
+| P31 Contraste | **Escurecer só o tom claro** (#93A9D1) das barras de Origem |
+| P26 Nível do estoque | **Mínimo na metade da barra** (como está) |
+| P10 "Consultar placa" | **Também no cadastro de veículo novo** (além do cartão e do detalhe) |
+| P11 Cancelar pedido | Só em **Recebido e Em processamento** (sai de Placa pronta) |
+| P13 Valor do pagamento | **Valor editável** (desconto/parcial) |
+| Quando é "pago" | **Com qualquer pagamento** registrado |
+| P19 CPF legado | **Continuar validando sempre** |
+| P18/P27/P32/P37 Extras | **Manter todos**: editar cliente + novo veículo na aba; reativar usuário + bloqueio de auto-desativação; mostrar/ocultar senha; ver como tabela + clique na linha do serviço |
+| P25 Caixa | **Sempre as 5 formas** (R$ 0,00 quando não houve pagamento) |
+| P28 Estoque | **Adicionar "Novo item"** (GERENTE/ADMIN) |
+| P34 Fila de produção | **Incluir Placa pronta** |
+| P36 Senhas | **Reset de senha pelo ADMIN** (precisa endpoint novo no backend — B14) |
+| P38 Próprio papel | **Bloquear** a edição do próprio papel |
+| P4 Testes e2e | **Adicionar e2e contra a API real** (Playwright versionado) |
+| B8 Busca por dígitos | **Esperar o backend normalizar** (sem contorno no front) |
+| PR #1 | **Revisar e mesclar inteiro**; próximas mudanças em PRs menores a partir da `main` |
+| Fase 10 | **Depois** das tarefas abaixo |
+| P9 `/pedidos/completo` | **Em aberto** ("vou validar depois") |
+
+## Plano (ordem sugerida)
+
+**A. Correções que não dependem de decisão (propostas; aguardam seu "pode fazer")**
+- [ ] **A1 · Kanban: confirmar "entregar sem pagamento" com a API real.** O backend não manda `pago` (B4); ao soltar em ENTREGUE com `pago` desconhecido, consultar `GET /pedidos/{id}/pagamentos` na hora. Com a regra "pago = qualquer pagamento" (abaixo), conta como pago se existir algum pagamento `PAGO`.
+- [ ] **A2 · Fontes locais (P5).** Hospedar Archivo Narrow e IBM Plex no projeto (sem depender do Google Fonts) para a placa não cortar o texto.
+- [ ] **A3 · Mensagens de erro em português** quando a API devolver "Bad Request"/500 sem `mensagem`.
+
+**B. Decisões viram tarefas**
+- [ ] **B1 · Faturamento "Personalizado":** terceiro modo do seletor (7/14/30 dias + datas de/até). Validar `de ≤ ate`, limitar a janela (ex.: até 366 dias) e manter a tabela/gráfico funcionando em períodos longos (agrupar por mês acima de ~90 dias?).
+- [ ] **B2 · Origem:** trocar `#93A9D1` por um azul mais escuro que passe em contraste ≥ 3:1 sobre o cartão (validar com o script de paleta).
+- [ ] **B3 · "Consultar placa" no cadastro de veículo novo:** ao digitar a placa, botão que salva o veículo só com a placa e chama `POST /veiculos/{id}/consultar`; hoje sempre volta 400 "não disponível" (aviso). Depende do backend aceitar cadastro parcial (hoje `marcaModelo`/anos ficariam nulos/0 — ver B15).
+- [ ] **B4 · Cancelar só em Recebido e Em processamento:** esconder "Cancelar pedido" em Placa pronta (o backend não impõe isso; é regra do front).
+- [ ] **B5 · Pagamento com valor editável:** campo de valor (`MoneyInput`, padrão = preço do serviço) no Detalhe e no Novo pedido; validar `> 0`; avisar quando o valor difere do preço; o pedido conta como pago com **qualquer** pagamento, então o formulário some após o primeiro.
+- [ ] **B6 · Caixa com as 5 formas sempre:** completar os cartões que faltam com R$ 0,00 / "0 pagamentos" (ordem fixa das formas).
+- [ ] **B7 · Estoque → "Novo item":** modal (nome, SKU, unidade, quantidade, mínimo) → `POST /estoque/itens` (GERENTE/ADMIN; esconder para ATENDENTE com `RequirePapel`). O vínculo serviço↔item **não** entra agora.
+- [ ] **B8 · Fila de produção com Placa pronta:** 3 consultas (Recebido, Em processamento, Placa pronta), mais antigos primeiro.
+- [ ] **B9 · Usuários:** campo Papel **desabilitado** ao editar o próprio usuário; botão **"Redefinir senha"** (modal com nova senha provisória) chamando um endpoint ainda inexistente (B14).
+- [ ] **B10 · e2e com Playwright contra a API real:** pasta `e2e/` com os roteiros (login, serviço, novo pedido, Kanban + estoque insuficiente, detalhe/pagamento, financeiro, dashboard, clientes, veículos, usuários e permissões, sessão expirada), configurados por variáveis de ambiente (`E2E_API_URL`, `E2E_USER`, `E2E_PASSWORD`) e documentados no README.
+- [ ] **B11 · PR #1:** revisar e mesclar inteiro; depois abrir PRs menores.
+
+**C. Depois**
+- [ ] **Fase 10:** busca global (combobox), atalhos `G P`/`G C` e passada de acessibilidade.
+
+## Backend: itens novos surgidos dessas decisões
+
+- [ ] **B14 · Reset de senha pelo ADMIN.** Endpoint novo (ex.: `PUT /usuarios/{id}/senha` com `{ senha }`, só ADMIN, senha com hash). O front assume esse caminho até ser confirmado.
+- [ ] **B15 · Cadastro parcial de veículo (para o "Consultar placa" no cadastro novo).** Hoje a entidade aceita só a placa (os campos ausentes ficam `null`/`0`, já que o setter só valida quando o campo vem no JSON), mas isso gera dados incompletos. Definir se a API aceita cadastro parcial e como o resultado da consulta preenche/atualiza o veículo (hoje não há `PUT /veiculos/{id}`).
+
+---
+
 # Verificação contra a API real (2026-09-30)
 
 Li o código do backend (`api-santo-andre-placas`, commit `6ad76ba`), subi a API e rodei o front **sem mock** num navegador real (Chromium), com um usuário ADMIN. Esta seção **substitui** qualquer item abaixo que a contradiga. Tudo o que está em "Confirmado" foi exercitado de ponta a ponta.
@@ -134,8 +193,8 @@ Marque `[x]` quando o backend estiver ajustado **e** o front testado contra a AP
 
 - [ ] **P1 · Backend — campo `pago` no pedido.** O `PedidoResponse` (spec §11) não traz `pago`, mas o card do Kanban precisa dele para o "$ pendente". Hoje `pago?: boolean` é opcional no tipo: se o backend não enviar, a tag não aparece (falha silenciosa). Opções: adicionar `pago` ao `PedidoResponse`, ou o filtro `pago=false` em `/pedidos` (que também destrava o bloco de pendências do Caixa, §7.9/§14.2).
 - [ ] **P2 · Backend — busca de texto em `/pedidos`.** A API só filtra por `status`, `clienteId`, `de`, `ate`. A busca por placa/cliente/nº da tabela filtra só a página já carregada (o campo diz "Filtrar…"). Para busca real é preciso um parâmetro no backend.
-- [ ] **P3 · Produto — janela do quadro.** O quadro mostra pedidos de **hoje e ontem** (até 200), para o histórico de entregues não crescer sem limite. A spec não define. Alternativas: só hoje; últimos 7 dias; ou esconder ENTREGUE após N horas.
-- [ ] **P4 · Front — teste do arrastar.** No jsdom o arrastar por teclado do dnd-kit não move (sem layout). As regras do soltar estão testadas no hook `useTrocaStatus`; o gesto foi conferido manualmente no Chromium. Opção: adicionar testes e2e com Playwright no repo.
+- [x] **P3 · Produto — janela do quadro.** O quadro mostra pedidos de **hoje e ontem** (até 200), para o histórico de entregues não crescer sem limite. A spec não define. Alternativas: só hoje; últimos 7 dias; ou esconder ENTREGUE após N horas.
+- [x] **P4 · Front — teste do arrastar.** No jsdom o arrastar por teclado do dnd-kit não move (sem layout). As regras do soltar estão testadas no hook `useTrocaStatus`; o gesto foi conferido manualmente no Chromium. Opção: adicionar testes e2e com Playwright no repo.
 - [ ] **P5 · Front — fontes.** Archivo Narrow/IBM Plex vêm do Google Fonts. Em ambiente sem acesso (ou offline) a placa `sm`/`md` pode cortar o texto. Confirmar visualmente na máquina de desenvolvimento e, se preferir, hospedar as fontes localmente.
 
 ## Decisões já tomadas com o usuário (registro)
@@ -151,10 +210,10 @@ Marque `[x]` quando o backend estiver ajustado **e** o front testado contra a AP
 - [ ] **P7 · Backend — contratos de `POST /clientes` e `POST /veiculos`.** O backend recebe a entidade JPA crua (dívida técnica já citada na spec). Assumi: `POST /clientes {nome, telefone, cpfCnpj, email}`, `POST /veiculos {placa, marcaModelo, anoFabricacao, anoModelo, chassi, clienteId}`, listas (`GET /clientes`, `GET /veiculos`) como arrays simples (sem `PagedModel`) e erros de validação como `{mensagem, campos:{campo: msg}}`. Também decidir se `cpfCnpj`/`telefone` seguem **mascarados** (como estão hoje no protótipo/mock) ou só dígitos.
 - [ ] **P8 · Backend — `GET /pedidos/{id}/pagamentos`.** A spec §11 manda buscar o pagamento por esse endpoint, mas ele não consta na tabela §14. Assumido como existente; o detalhe do pedido depende dele para saber se está pago.
 - [ ] **P9 · Produto — `POST /pedidos/completo` não foi usado.** Você pediu para usá-lo quando cliente e veículo são novos, mas o fluxo da spec §7.3 salva o cliente **na hora** (painel lateral) e o veículo em seguida; na hora de criar o pedido ambos já existem, então o endpoint não tem onde entrar. Além disso o corpo do `/completo` não está documentado. Para usá-lo seria preciso adiar a gravação do cliente/veículo até o "Criar pedido" (muda o fluxo da spec). Decidir se vale.
-- [ ] **P10 · Produto — onde fica o "Consultar placa".** Como o endpoint exige o `id` do veículo, o botão ficou em cada cartão de veículo já salvo (não no formulário de novo veículo, que é manual). Quando houver provedor, decidir o fluxo de preenchimento automático (ex.: salvar só a placa e completar com a consulta).
-- [ ] **P11 · Produto — quando cancelar.** O menu "Cancelar pedido" aparece em RECEBIDO/EM_PROCESSAMENTO/PLACA_PRONTA e some em ENTREGUE e CANCELADO. Confirmar a regra de negócio.
+- [x] **P10 · Produto — onde fica o "Consultar placa".** Como o endpoint exige o `id` do veículo, o botão ficou em cada cartão de veículo já salvo (não no formulário de novo veículo, que é manual). Quando houver provedor, decidir o fluxo de preenchimento automático (ex.: salvar só a placa e completar com a consulta).
+- [x] **P11 · Produto — quando cancelar.** O menu "Cancelar pedido" aparece em RECEBIDO/EM_PROCESSAMENTO/PLACA_PRONTA e some em ENTREGUE e CANCELADO. Confirmar a regra de negócio.
 - [ ] **P12 · Backend — transições de status.** O front permite soltar o card em qualquer coluna (inclusive voltar de status). Se o backend rejeitar certas transições, o card volta (rollback) com o toast do erro. Definir as transições válidas para poder bloquear antes no front.
-- [ ] **P13 · Produto — pagamento no Novo pedido.** Ao escolher a forma, registra-se o valor cheio do serviço (não há pagamento parcial). A opção "Depois" deixa o pedido pendente.
+- [x] **P13 · Produto — pagamento no Novo pedido.** Ao escolher a forma, registra-se o valor cheio do serviço (não há pagamento parcial). A opção "Depois" deixa o pedido pendente.
 - [ ] **P14 · Front — teclado em selects.** O fluxo "só teclado" do Novo pedido é testado com Tab/setas/Enter/Ctrl+Enter; os `<select>` nativos (origem e forma) são operáveis por teclado no navegador, mas o jsdom não simula isso e o teste usa `selectOptions` neles.
 
 ## Fase 6 — Clientes e Veículos
@@ -162,8 +221,8 @@ Marque `[x]` quando o backend estiver ajustado **e** o front testado contra a AP
 - [ ] **P15 · Backend — total de pedidos por cliente.** A coluna "Pedidos" da lista de clientes faz uma chamada `GET /pedidos?clienteId=&size=1` **por cliente** (N+1; lê `page.totalElements`). Funciona para poucas dezenas de clientes, mas não escala. Sugestão: campo `totalPedidos` (e talvez `veiculos`) no `ClienteResponse`.
 - [ ] **P16 · Backend — endpoints e DTOs não listados no §14.** Assumidos: `GET /clientes/{id}`, `GET /veiculos/{id}` e `GET /veiculos/{id}/historico-consultas` → `{id, consultadoEm, fonte, resultado}[]` (formato inventado; hoje sempre `[]`). Confirmar existência e formato.
 - [ ] **P17 · Backend — listas sem paginação.** `GET /clientes` e `GET /veiculos` são tratados como arrays completos, e a lista de clientes chama `GET /veiculos` **sem filtro** para mostrar as placas de cada um. Com base grande isso precisa de paginação e/ou de trazer as placas no cliente.
-- [ ] **P18 · Produto — extras fora da spec.** A spec (§7.5) não descreve edição de cliente, mas o `PUT /clientes/{id}` existe: adicionei "Editar" na aba Dados. Também adicionei "+ Novo veículo" na aba Veículos do cliente (reaproveita o formulário do Novo pedido). Confirmar se ficam.
-- [ ] **P19 · Produto — documentos legados inválidos.** O formulário valida CPF/CNPJ pelo dígito verificador também na edição. Se o cadastro real tiver documentos legados inválidos, o usuário não conseguirá salvar outras alterações do cliente sem corrigir o documento. Decidir se a edição deve ser mais tolerante.
+- [x] **P18 · Produto — extras fora da spec.** A spec (§7.5) não descreve edição de cliente, mas o `PUT /clientes/{id}` existe: adicionei "Editar" na aba Dados. Também adicionei "+ Novo veículo" na aba Veículos do cliente (reaproveita o formulário do Novo pedido). Confirmar se ficam.
+- [x] **P19 · Produto — documentos legados inválidos.** O formulário valida CPF/CNPJ pelo dígito verificador também na edição. Se o cadastro real tiver documentos legados inválidos, o usuário não conseguirá salvar outras alterações do cliente sem corrigir o documento. Decidir se a edição deve ser mais tolerante.
 - [ ] **P20 · Front — fixtures.** Os CPFs/CNPJs fictícios do protótipo não passavam na validação, então as fixtures do MSW usam documentos válidos equivalentes (mesmos 9/12 primeiros dígitos, dígitos verificadores corretos).
 
 ## Fase 7 — Serviços, Estoque e Financeiro
@@ -172,23 +231,23 @@ Marque `[x]` quando o backend estiver ajustado **e** o front testado contra a AP
 - [ ] **P22 · Backend — desativar/reativar serviço.** Assumi `PUT /servicos/{id}` aceitando `ativo`. Alternativa: `DELETE` como desativação lógica. Como `GET /servicos` só devolve ativos (limitação aceita), um serviço desativado some da lista ao recarregar e **não pode ser reativado pela UI** — só dentro da mesma sessão (a linha permanece até o recarregamento). Para reativar de verdade seria preciso listar inativos (ex.: `?incluirInativos=true`).
 - [ ] **P23 · Backend — contrato de `POST /estoque/movimentacoes`.** Assumi o corpo `{itemId, tipo: 'ENTRADA'|'SAIDA', quantidade, observacao}` e que erros de saldo/quantidade voltam como `400` com `mensagem`. Confirmar nomes dos campos e a resposta.
 - [ ] **P24 · Backend — fuso horário de `de`/`ate`.** "Hoje", "Ontem" e "N dias" são calculados no fuso do navegador e enviados como `yyyy-MM-dd`. O backend precisa interpretar essas datas no fuso de São Paulo (e `pagoEm` vem em ISO/UTC); senão pagamentos perto da meia-noite podem cair no dia errado.
-- [ ] **P25 · Produto — aba Caixa.** Só aparecem cartões das formas que tiveram pagamento no período (sem cartão "R$ 0,00" para as demais), como a spec descreve. Confirmar se preferem ver as 5 formas sempre.
-- [ ] **P26 · Produto — barra de nível do estoque.** Escala definida por mim: o mínimo fica na metade da barra (100% = 2× o mínimo), com marca no mínimo; laranja quando abaixo/igual ao mínimo. A spec só pede "Nível (barra)".
-- [ ] **P27 · Front — extras da tela de Serviços.** Clicar na linha abre a edição (a spec só cita "edição em modal"); o título do cartão ("TABELA DE SERVIÇOS · SP") foi escolhido por mim; a descrição do serviço não tem campo na UI (é preservada ao editar e vai vazia ao criar).
-- [ ] **P28 · Produto — Estoque sem cadastro de item.** A spec da Fase 1 não inclui criar item de estoque nem o vínculo serviço↔item (só ADMIN/GERENTE no backend). Não há UI para isso.
+- [x] **P25 · Produto — aba Caixa.** Só aparecem cartões das formas que tiveram pagamento no período (sem cartão "R$ 0,00" para as demais), como a spec descreve. Confirmar se preferem ver as 5 formas sempre.
+- [x] **P26 · Produto — barra de nível do estoque.** Escala definida por mim: o mínimo fica na metade da barra (100% = 2× o mínimo), com marca no mínimo; laranja quando abaixo/igual ao mínimo. A spec só pede "Nível (barra)".
+- [x] **P27 · Front — extras da tela de Serviços.** Clicar na linha abre a edição (a spec só cita "edição em modal"); o título do cartão ("TABELA DE SERVIÇOS · SP") foi escolhido por mim; a descrição do serviço não tem campo na UI (é preservada ao editar e vai vazia ao criar).
+- [x] **P28 · Produto — Estoque sem cadastro de item.** A spec da Fase 1 não inclui criar item de estoque nem o vínculo serviço↔item (só ADMIN/GERENTE no backend). Não há UI para isso.
 
 ## Fase 8 — Dashboard
 
 - [ ] **P29 · Produto — tendência do tempo médio.** A spec pede "▼ 12 min vs semana passada" (verde/vermelho), mas o backend não fornece o período anterior. O cartão mostra só o número. Decidir: pedir o campo ao backend (preferível) ou calcular no front com duas chamadas (exigiria parâmetros de período no endpoint).
-- [ ] **P30 · Produto — períodos dos cartões.** Só o Faturamento tem seletor (7/14/30 dias, como na spec). "Origem dos pedidos" usa **últimos 7 dias** fixos (a spec não define) e "Serviços mais vendidos" o acumulado total. Decidir se os cartões devem seguir um filtro de período único.
-- [ ] **P31 · Produto — contraste da paleta nos gráficos.** As cores da spec para origem (`#003399`, `#4C6EB0`, `#93A9D1`) não passam no validador de paleta categórica de dataviz (luminosidade/croma; o azul claro tem contraste 2,31:1 com o fundo). Mitigação aplicada: cada barra tem **rótulo, contagem e % em texto** (identidade nunca só por cor). Decidir se vale escurecer o tom claro para ganhar contraste.
-- [ ] **P32 · Front — extras acessíveis no gráfico.** Adicionei "Ver como tabela" (valores por dia) e um `aria-label` com o resumo do gráfico, que a spec não pede; o gráfico usa **linhas retas entre os dias** (sem suavização, para não sugerir valores entre dias) e a unidade "R$ mil" vai numa legenda acima do eixo. Tooltip conferido manualmente (o jsdom não simula o hover do Recharts).
+- [x] **P30 · Produto — períodos dos cartões.** Só o Faturamento tem seletor (7/14/30 dias, como na spec). "Origem dos pedidos" usa **últimos 7 dias** fixos (a spec não define) e "Serviços mais vendidos" o acumulado total. Decidir se os cartões devem seguir um filtro de período único.
+- [x] **P31 · Produto — contraste da paleta nos gráficos.** As cores da spec para origem (`#003399`, `#4C6EB0`, `#93A9D1`) não passam no validador de paleta categórica de dataviz (luminosidade/croma; o azul claro tem contraste 2,31:1 com o fundo). Mitigação aplicada: cada barra tem **rótulo, contagem e % em texto** (identidade nunca só por cor). Decidir se vale escurecer o tom claro para ganhar contraste.
+- [x] **P32 · Front — extras acessíveis no gráfico.** Adicionei "Ver como tabela" (valores por dia) e um `aria-label` com o resumo do gráfico, que a spec não pede; o gráfico usa **linhas retas entre os dias** (sem suavização, para não sugerir valores entre dias) e a unidade "R$ mil" vai numa legenda acima do eixo. Tooltip conferido manualmente (o jsdom não simula o hover do Recharts).
 - [ ] **P33 · Front — flag de metas.** O espaço de "progresso de metas" (Fase 2 do produto) só aparece com `VITE_FEATURE_METAS=true`; hoje é só um cartão "Em breve".
-- [ ] **P34 · Front — fila de produção.** Mostra os 6 mais antigos (RECEBIDO + EM_PROCESSAMENTO) com "+ N na fila"; a spec só cita "Fila de produção". Confirmar o tamanho e a ordenação (mais antigo primeiro).
+- [x] **P34 · Front — fila de produção.** Mostra os 6 mais antigos (RECEBIDO + EM_PROCESSAMENTO) com "+ N na fila"; a spec só cita "Fila de produção". Confirmar o tamanho e a ordenação (mais antigo primeiro).
 
 ## Fase 9 — Usuários
 
 - [ ] **P35 · Produto — "Último acesso".** A spec (§7.11) lista a coluna, mas o backend não rastreia (§14.9). Foi omitida. Decidir se o backend passa a registrar.
-- [ ] **P36 · Produto — senha provisória.** O fluxo de criação define uma senha provisória, mas não há troca obrigatória no primeiro acesso nem tela de "alterar minha senha"/reset pelo ADMIN. Decidir se entram na Fase 1 ou na seguinte.
-- [ ] **P37 · Front — extras fora da spec.** Adicionei "Reativar" (a spec só descreve desativar), o bloqueio do botão de desativar no próprio usuário, o "Mostrar/Ocultar" da senha provisória e a regra de mínimo de 6 caracteres. Confirmar se ficam.
-- [ ] **P38 · Produto — editar o próprio papel.** Se um ADMIN alterar o próprio papel, a sessão continua com o papel antigo até o próximo login (o papel vem do `POST /auth/login`, não é recarregado). Decidir se o front deve bloquear a edição do próprio papel.
+- [x] **P36 · Produto — senha provisória.** O fluxo de criação define uma senha provisória, mas não há troca obrigatória no primeiro acesso nem tela de "alterar minha senha"/reset pelo ADMIN. Decidir se entram na Fase 1 ou na seguinte.
+- [x] **P37 · Front — extras fora da spec.** Adicionei "Reativar" (a spec só descreve desativar), o bloqueio do botão de desativar no próprio usuário, o "Mostrar/Ocultar" da senha provisória e a regra de mínimo de 6 caracteres. Confirmar se ficam.
+- [x] **P38 · Produto — editar o próprio papel.** Se um ADMIN alterar o próprio papel, a sessão continua com o papel antigo até o próximo login (o papel vem do `POST /auth/login`, não é recarregado). Decidir se o front deve bloquear a edição do próprio papel.
