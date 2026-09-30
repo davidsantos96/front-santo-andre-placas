@@ -61,6 +61,15 @@ Marque `[x]` quando o backend estiver ajustado **e** o front testado contra a AP
 - [ ] **Baixa — serviços mais vendidos.** `GET /dashboard/servicos-mais-vendidos` não recebe período (hoje o front mostra o acumulado total, top 5). Sugestão: `de`/`ate`. Lembrete: `faturamentoNominalCentavos` usa o preço **atual** (não é usado na tela).
 - [ ] **Baixa — permissões.** Todos os endpoints `/dashboard/*` devem ser GERENTE+ (o front redireciona ATENDENTE, mas a API precisa responder `403`).
 
+## Fase 9 — Usuários
+
+- [ ] **Alta — contratos de `/usuarios` (ADMIN).** `GET /usuarios` → `Usuario[] { id, nome, email, papel, ativo }` (inclui inativos; nunca `senhaHash`); `POST /usuarios` com `{ nome, email, papel, senha }`; `PUT /usuarios/{id}` com `{ nome, email, papel }` (**não** altera senha); `PATCH /usuarios/{id}/status` com `{ ativo: boolean }`. O nome do campo da senha na criação (`senha`? `senhaProvisoria`?) é **assumido** — confirmar. `papel ∈ ATENDENTE|GERENTE|ADMIN`. Demais papéis → `403`.
+- [ ] **Alta — e-mail duplicado.** `400` com `campos: { email: "..." }` tanto no `POST` quanto no `PUT` (o front mostra no campo e mantém o modal aberto). Comparação sem diferenciar maiúsculas/minúsculas.
+- [ ] **Alta — usuário desativado.** Não pode logar (`POST /auth/login` → `401`) **e** o JWT já emitido (válido por 8h) deve parar de funcionar — o backend precisa checar `ativo` a cada requisição, senão um usuário desativado segue operando até o token expirar.
+- [ ] **Média — proteções de administração.** O front só **desabilita** o "Desativar" do próprio usuário logado. O backend deve impedir desativar a si mesmo e o **último ADMIN ativo** (e rebaixar o último ADMIN), respondendo `400` com `mensagem`.
+- [ ] **Média — senha.** Política mínima (o front exige 6 caracteres na senha provisória; definir a regra real e devolver `campos.senha` quando falhar) e **reset de senha** (não existe endpoint — §15.4 já lista como pendente). Sem ele, o ADMIN não consegue redefinir a senha de quem a esqueceu.
+- [ ] **Baixa — "último acesso".** Não é rastreado; a coluna foi omitida (§14.9). Se quiserem, registrar `ultimoAcessoEm` no login e expor em `UsuarioResponse`.
+
 ---
 
 # Pendências por fase (detalhe e decisões)
@@ -120,3 +129,10 @@ Marque `[x]` quando o backend estiver ajustado **e** o front testado contra a AP
 - [ ] **P32 · Front — extras acessíveis no gráfico.** Adicionei "Ver como tabela" (valores por dia) e um `aria-label` com o resumo do gráfico, que a spec não pede; o gráfico usa **linhas retas entre os dias** (sem suavização, para não sugerir valores entre dias) e a unidade "R$ mil" vai numa legenda acima do eixo. Tooltip conferido manualmente (o jsdom não simula o hover do Recharts).
 - [ ] **P33 · Front — flag de metas.** O espaço de "progresso de metas" (Fase 2 do produto) só aparece com `VITE_FEATURE_METAS=true`; hoje é só um cartão "Em breve".
 - [ ] **P34 · Front — fila de produção.** Mostra os 6 mais antigos (RECEBIDO + EM_PROCESSAMENTO) com "+ N na fila"; a spec só cita "Fila de produção". Confirmar o tamanho e a ordenação (mais antigo primeiro).
+
+## Fase 9 — Usuários
+
+- [ ] **P35 · Produto — "Último acesso".** A spec (§7.11) lista a coluna, mas o backend não rastreia (§14.9). Foi omitida. Decidir se o backend passa a registrar.
+- [ ] **P36 · Produto — senha provisória.** O fluxo de criação define uma senha provisória, mas não há troca obrigatória no primeiro acesso nem tela de "alterar minha senha"/reset pelo ADMIN. Decidir se entram na Fase 1 ou na seguinte.
+- [ ] **P37 · Front — extras fora da spec.** Adicionei "Reativar" (a spec só descreve desativar), o bloqueio do botão de desativar no próprio usuário, o "Mostrar/Ocultar" da senha provisória e a regra de mínimo de 6 caracteres. Confirmar se ficam.
+- [ ] **P38 · Produto — editar o próprio papel.** Se um ADMIN alterar o próprio papel, a sessão continua com o papel antigo até o próximo login (o papel vem do `POST /auth/login`, não é recarregado). Decidir se o front deve bloquear a edição do próprio papel.

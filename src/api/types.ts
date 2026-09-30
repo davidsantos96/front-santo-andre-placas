@@ -87,3 +87,7 @@ export type MovimentacaoRequest = { itemId: number; tipo: 'ENTRADA' | 'SAIDA'; q
 /** Contratos do dashboard ainda não documentados (formatos assumidos — ver PENDENCIAS.md). */
 export type FaturamentoDia = { data: string; valorCentavos: number };
 export type ServicoMaisVendido = { servicoId: number; servicoNome: string; quantidadePedidos: number; faturamentoNominalCentavos: number };
+
+/** Corpos assumidos de /usuarios (contrato não documentado — ver PENDENCIAS.md). `senha` só na criação. */
+export type NovoUsuarioRequest = { nome: string; email: string; papel: Usuario['papel']; senha: string };
+export type AtualizarUsuarioRequest = { nome: string; email: string; papel: Usuario['papel'] };

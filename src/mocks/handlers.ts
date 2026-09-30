@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw';
-import type { FaturamentoDia, ResumoDashboard, ServicoMaisVendido, TempoMedioProducao, FechamentoCaixa, MovimentacaoRequest, NovoServicoRequest, PagamentoListagem, Servico, Cliente, LoginRequest, LoginResponse, NovoClienteRequest, NovoPedidoRequest, NovoVeiculoRequest, Pagamento, PagamentoRequest, Paginado, Pedido, Veiculo } from '@/api/types';
+import type { AtualizarUsuarioRequest, NovoUsuarioRequest, Usuario, FaturamentoDia, ResumoDashboard, ServicoMaisVendido, TempoMedioProducao, FechamentoCaixa, MovimentacaoRequest, NovoServicoRequest, PagamentoListagem, Servico, Cliente, LoginRequest, LoginResponse, NovoClienteRequest, NovoPedidoRequest, NovoVeiculoRequest, Pagamento, PagamentoRequest, Paginado, Pedido, Veiculo } from '@/api/types';
 import type { StatusPedido } from '@/components/status';
 import { db } from './db';
 
@@ -292,6 +292,50 @@ export const handlers = [
     return HttpResponse.json(corpo);
   }),
 
+  http.get(url('/usuarios'), ({ request }) => {
+    const u = autenticado(request);
+    if (!u) return naoAutorizado();
+    if (u.papel !== 'ADMIN') return HttpResponse.json({ mensagem: 'Acesso negado' }, { status: 403 });
+    return HttpResponse.json(db.usuarios.map(semSenha));
+  }),
+
+  http.post(url('/usuarios'), async ({ request }) => {
+    const u = autenticado(request);
+    if (!u) return naoAutorizado();
+    if (u.papel !== 'ADMIN') return HttpResponse.json({ mensagem: 'Acesso negado' }, { status: 403 });
+    const d = (await request.json()) as NovoUsuarioRequest;
+    if (db.usuarios.some((x) => x.email.toLowerCase() === d.email.toLowerCase())) {
+      return HttpResponse.json({ mensagem: 'Dados inválidos', campos: { email: 'E-mail já cadastrado' } }, { status: 400 });
+    }
+    const novo = { id: Math.max(0, ...db.usuarios.map((x) => x.id)) + 1, nome: d.nome, email: d.email, papel: d.papel, ativo: true, senha: d.senha };
+    db.usuarios.push(novo);
+    return HttpResponse.json(semSenha(novo), { status: 201 });
+  }),
+
+  http.put(url('/usuarios/:id'), async ({ request, params }) => {
+    const u = autenticado(request);
+    if (!u) return naoAutorizado();
+    if (u.papel !== 'ADMIN') return HttpResponse.json({ mensagem: 'Acesso negado' }, { status: 403 });
+    const alvo = db.usuarios.find((x) => x.id === Number(params.id));
+    if (!alvo) return HttpResponse.json({ mensagem: 'Usuário não encontrado' }, { status: 404 });
+    const d = (await request.json()) as AtualizarUsuarioRequest;
+    if (db.usuarios.some((x) => x.id !== alvo.id && x.email.toLowerCase() === d.email.toLowerCase())) {
+      return HttpResponse.json({ mensagem: 'Dados inválidos', campos: { email: 'E-mail já cadastrado' } }, { status: 400 });
+    }
+    Object.assign(alvo, d); // a senha não muda pelo PUT
+    return HttpResponse.json(semSenha(alvo));
+  }),
+
+  http.patch(url('/usuarios/:id/status'), async ({ request, params }) => {
+    const u = autenticado(request);
+    if (!u) return naoAutorizado();
+    if (u.papel !== 'ADMIN') return HttpResponse.json({ mensagem: 'Acesso negado' }, { status: 403 });
+    const alvo = db.usuarios.find((x) => x.id === Number(params.id));
+    if (!alvo) return HttpResponse.json({ mensagem: 'Usuário não encontrado' }, { status: 404 });
+    alvo.ativo = ((await request.json()) as { ativo: boolean }).ativo;
+    return HttpResponse.json(semSenha(alvo));
+  }),
+
   http.get(url('/dashboard/resumo'), ({ request }) => {
     const u = autenticado(request);
     if (!u) return naoAutorizado();
@@ -372,4 +416,8 @@ function listarPagamentos(q: URLSearchParams): PagamentoListagem[] {
         formaPagamento: p.formaPagamento, valorCentavos: p.valorCentavos, pagoEm: p.pagoEm, registradoPor: p.registradoPor,
       };
     });
+}
+
+function semSenha({ senha: _senha, ...u }: Usuario & { senha: string }): Usuario {
+  return u;
 }

@@ -16,11 +16,8 @@ import { ServicosPage } from '@/features/servicos/ServicosPage';
 import { EstoquePage } from '@/features/estoque/EstoquePage';
 import { FinanceiroPage } from '@/features/financeiro/FinanceiroPage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
-import { EmConstrucao } from '@/components/EmConstrucao';
+import { UsuariosPage } from '@/features/usuarios/UsuariosPage';
 import { NaoEncontrado } from '@/components/NaoEncontrado';
-
-// As telas trocam de placeholder para a implementação real fase a fase.
-const P = (titulo: string) => <EmConstrucao titulo={titulo} />;
 
 export const rotas: RouteObject[] = [
   { path: '/login', element: <AuthLayout><LoginPage /></AuthLayout> },
@@ -39,7 +36,7 @@ export const rotas: RouteObject[] = [
       { path: 'servicos', element: <RequirePapel min="GERENTE"><ServicosPage /></RequirePapel> },
       { path: 'estoque', element: <EstoquePage /> },
       { path: 'financeiro', element: <RequirePapel min="GERENTE"><FinanceiroPage /></RequirePapel> },
-      { path: 'usuarios', element: <RequirePapel min="ADMIN">{P('Usuários')}</RequirePapel> },
+      { path: 'usuarios', element: <RequirePapel min="ADMIN"><UsuariosPage /></RequirePapel> },
       { path: '*', element: <NaoEncontrado /> },
     ],
   },

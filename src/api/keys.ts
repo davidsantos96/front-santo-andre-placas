@@ -11,6 +11,7 @@ export const qk = {
   consultas: (id: number) => ['veiculo', id, 'consultas'] as const,
   veiculos: (f?: { placa?: string; clienteId?: number }) => ['veiculos', f] as const,
   servicos: ['servicos'] as const,
+  usuarios: ['usuarios'] as const,
   estoque: ['estoque'] as const,
   estoqueBaixo: ['estoque', 'baixo'] as const,
   pagamentos: (f: FiltroPagamentos) => ['pagamentos', f] as const,
