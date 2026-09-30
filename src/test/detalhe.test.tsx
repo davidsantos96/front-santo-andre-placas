@@ -82,6 +82,18 @@ describe('Detalhe do pedido', () => {
     expect(screen.queryByRole('button', { name: 'Mais ações' })).not.toBeInTheDocument();
   });
 
+  it('com a placa pronta não dá mais para cancelar (só Recebido e Em processamento)', async () => {
+    await entrarComo('/pedidos/1052'); // PLACA_PRONTA
+    await screen.findByRole('heading', { name: '#1052' });
+    expect(screen.queryByRole('button', { name: 'Mais ações' })).not.toBeInTheDocument();
+    await screen.findByRole('button', { name: 'Registrar entrega' });
+  });
+
+  it('em processamento ainda pode cancelar', async () => {
+    await entrarComo('/pedidos/1055'); // EM_PROCESSAMENTO
+    expect(await screen.findByRole('button', { name: 'Mais ações' })).toBeInTheDocument();
+  });
+
   it('pedido inexistente mostra erro claro', async () => {
     await entrarComo('/pedidos/9999');
     expect(await screen.findByText('Pedido não encontrado.')).toBeInTheDocument();

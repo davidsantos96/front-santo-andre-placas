@@ -6,7 +6,7 @@ import type { Papel } from '@/auth/papeis';
 export type Cliente = { id: number; nome: string; telefone: string; cpfCnpj: string; email: string; criadoEm: string };
 export type Veiculo = {
   id: number; placa: string; marcaModelo: string; anoFabricacao: number; anoModelo: number;
-  chassi: string; clienteId: number; clienteNome: string;
+  chassi: string | null; clienteId: number; clienteNome: string;
 };
 export type Servico = { id: number; nome: string; descricao: string; precoCentavos: number; categoria: string; ativo: boolean };
 
@@ -69,9 +69,9 @@ export type ApiError = { status: number; mensagem: string; campos?: Record<strin
 
 /** Corpos de POST assumidos (o backend ainda usa a entidade crua — ver PENDENCIAS.md). */
 export type NovoClienteRequest = { nome: string; telefone: string; cpfCnpj: string; email: string };
-/** `chassi` é obrigatório no backend (o setter da entidade rejeita em branco). */
+/** `chassi` é opcional (o backend aceita em branco). */
 export type NovoVeiculoRequest = {
-  clienteId: number; placa: string; marcaModelo: string; anoFabricacao: number; anoModelo: number; chassi: string;
+  clienteId: number; placa: string; marcaModelo: string; anoFabricacao: number; anoModelo: number; chassi?: string;
 };
 export type PagamentoRequest = { valorCentavos: number; formaPagamento: import('@/components/status').FormaPagamento };
 

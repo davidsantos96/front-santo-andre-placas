@@ -42,15 +42,19 @@ export function useOrigemDosPedidos() {
   return usePedidos({ de, size: 500 });
 }
 
-/** Fila de produção: pedidos RECEBIDO + EM_PROCESSAMENTO (o filtro `status` só aceita um valor → duas chamadas). */
+/**
+ * Fila de produção: RECEBIDO + EM_PROCESSAMENTO + PLACA_PRONTA (o que falta produzir e o que aguarda retirada).
+ * O filtro `status` só aceita um valor → uma chamada por status; mais antigos primeiro.
+ */
 export function useFilaDeProducao() {
   const recebidos = usePedidos({ status: 'RECEBIDO', size: 50 });
   const emProcessamento = usePedidos({ status: 'EM_PROCESSAMENTO', size: 50 });
+  const prontos = usePedidos({ status: 'PLACA_PRONTA', size: 50 });
+  const consultas = [recebidos, emProcessamento, prontos];
   return {
-    isPending: recebidos.isPending || emProcessamento.isPending,
-    isError: recebidos.isError || emProcessamento.isError,
-    refetch: () => { void recebidos.refetch(); void emProcessamento.refetch(); },
-    pedidos: [...(recebidos.data?.content ?? []), ...(emProcessamento.data?.content ?? [])]
-      .sort((a, b) => a.criadoEm.localeCompare(b.criadoEm)),
+    isPending: consultas.some((c) => c.isPending),
+    isError: consultas.some((c) => c.isError),
+    refetch: () => consultas.forEach((c) => void c.refetch()),
+    pedidos: consultas.flatMap((c) => c.data?.content ?? []).sort((a, b) => a.criadoEm.localeCompare(b.criadoEm)),
   };
 }

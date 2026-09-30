@@ -200,15 +200,14 @@ export const handlers = [
     const d = (await request.json()) as NovoVeiculoRequest;
     const cliente = db.clientes.find((c) => c.id === d.clienteId);
     if (!cliente) return naoEncontradoMock('Cliente', d.clienteId);
-    // Validações dos setters da entidade (todas obrigatórias, inclusive `chassi`).
+    // Validações dos setters da entidade (o `chassi` voltou a ser opcional).
     if (!d.placa?.trim()) return HttpResponse.json({ mensagem: 'Digite a placa do veiculo' }, { status: 400 });
     if (!d.marcaModelo?.trim()) return HttpResponse.json({ mensagem: 'Marca e modelo não pode ser vazio' }, { status: 400 });
     if (!(d.anoFabricacao >= 1900)) return HttpResponse.json({ mensagem: 'Ano de fabricação inválido.' }, { status: 400 });
     if (!(d.anoModelo >= 1900)) return HttpResponse.json({ mensagem: 'Ano do modelo inválido.' }, { status: 400 });
-    if (!d.chassi?.trim()) return HttpResponse.json({ mensagem: 'o chassi nao pode ser vazio' }, { status: 400 });
     const v: Veiculo = {
       id: Math.max(0, ...db.veiculos.map((x) => x.id)) + 1, placa: d.placa, marcaModelo: d.marcaModelo, anoFabricacao: d.anoFabricacao,
-      anoModelo: d.anoModelo, chassi: d.chassi, clienteId: cliente.id, clienteNome: cliente.nome,
+      anoModelo: d.anoModelo, chassi: d.chassi ?? null, clienteId: cliente.id, clienteNome: cliente.nome,
     };
     db.veiculos.push(v);
     return HttpResponse.json(v);

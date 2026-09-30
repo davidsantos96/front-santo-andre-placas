@@ -15,13 +15,13 @@ const schema = z.object({
   marcaModelo: z.string().trim().min(2, 'Informe marca e modelo'),
   anoFabricacao: anoSchema('Ano inválido'),
   anoModelo: anoSchema('Ano inválido'),
-  chassi: z.string().trim().min(1, 'Informe o chassi'),
+  chassi: z.string().trim(),
 });
 type Dados = z.infer<typeof schema>;
 
 const campo = 'mt-1 block h-9 w-full rounded border border-linha-forte bg-white px-2.5 text-base';
 
-/** Cadastro manual de veículo (a consulta automática depende de provedor externo — ver PENDENCIAS.md). Todos os campos são obrigatórios no backend. */
+/** Cadastro manual de veículo (a consulta automática depende de provedor externo — ver PENDENCIAS.md). Só o chassi é opcional. */
 export function VeiculoForm({ clienteId, onSalvo, onCancelar }: { clienteId: number; onSalvo: (v: Veiculo) => void; onCancelar: () => void }) {
   const criar = useCriarVeiculo();
   const { register, control, handleSubmit, setError, formState: { errors } } = useForm<Dados>({
@@ -33,7 +33,8 @@ export function VeiculoForm({ clienteId, onSalvo, onCancelar }: { clienteId: num
     try {
       onSalvo(await criar.mutateAsync({
         clienteId, placa: normalizarPlaca(d.placa), marcaModelo: d.marcaModelo,
-        anoFabricacao: Number(d.anoFabricacao), anoModelo: Number(d.anoModelo), chassi: d.chassi.trim(),
+        anoFabricacao: Number(d.anoFabricacao), anoModelo: Number(d.anoModelo),
+        ...(d.chassi.trim() ? { chassi: d.chassi.trim() } : {}),
       }));
     } catch (e) {
       const erro = e as ApiError;
@@ -77,9 +78,8 @@ export function VeiculoForm({ clienteId, onSalvo, onCancelar }: { clienteId: num
           {errors.anoModelo && <span role="alert" className="text-xs font-normal text-erro">{errors.anoModelo.message}</span>}
         </label>
         <label className="col-span-2 text-xs font-semibold text-aco max-[599px]:col-span-1">
-          Chassi
-          <input {...register('chassi')} aria-invalid={!!errors.chassi} className={campo} />
-          {errors.chassi && <span role="alert" className="text-xs font-normal text-erro">{errors.chassi.message}</span>}
+          Chassi <span className="font-normal">(opcional)</span>
+          <input {...register('chassi')} className={campo} />
         </label>
       </div>
       {errors.root && <p role="alert" className="mt-2 rounded bg-erro-bg px-2.5 py-2 text-sm text-erro">{errors.root.message}</p>}

@@ -62,7 +62,8 @@ export function TempoMedioCard() {
 }
 
 // Cor fixa por origem (a cor segue a entidade, nunca o ranking). Rótulo e número sempre em texto.
-const COR_ORIGEM = { BALCAO: '#003399', WHATSAPP: '#4C6EB0', TELEFONE: '#93A9D1' } as const;
+// Telefone usa #7691C8 (em vez do #93A9D1 da spec, que tinha contraste de 2,38:1): agora 3,16:1 sobre branco.
+const COR_ORIGEM = { BALCAO: '#003399', WHATSAPP: '#4C6EB0', TELEFONE: '#7691C8' } as const;
 
 export function OrigemCard() {
   const q = useOrigemDosPedidos();

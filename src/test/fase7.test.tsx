@@ -175,14 +175,15 @@ describe('Financeiro', () => {
     expect(await total()).toHaveTextContent('3 pagamentos');
     expect(screen.getByText('PIX').parentElement).toHaveTextContent(/R\$\s498,00.*2 pagamentos/);
     expect(screen.getByText('CARTÃO DE CRÉDITO').parentElement).toHaveTextContent(/R\$\s316,90.*1 pagamento/);
-    expect(screen.queryByText('BOLETO')).not.toBeInTheDocument(); // só formas com pagamento no período
+    // sempre as 5 formas: as sem pagamento no período aparecem com R$ 0,00
+    for (const f of ['CARTÃO DE DÉBITO', 'DINHEIRO', 'BOLETO']) expect(screen.getByText(f).parentElement).toHaveTextContent(/R\$\s0,00.*0 pagamentos/);
     expect(screen.queryByRole('button', { name: /fechar caixa|reabrir/i })).not.toBeInTheDocument();
 
     await userEvent.selectOptions(screen.getByLabelText('Período'), '7');
     await waitFor(async () => expect(await total()).toHaveTextContent(/R\$\s1\.669,80/));
     expect(await total()).toHaveTextContent('6 pagamentos');
-    expect(await screen.findByText('BOLETO')).toBeInTheDocument();
-    expect(screen.getByText('DINHEIRO')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('BOLETO').parentElement).toHaveTextContent(/R\$\s449,00.*1 pagamento/));
+    expect(screen.getByText('DINHEIRO').parentElement).toHaveTextContent(/R\$\s89,00/);
     expect(screen.getByText('PAGAMENTOS DO PERÍODO · SP')).toBeInTheDocument();
   });
 

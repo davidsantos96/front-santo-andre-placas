@@ -115,9 +115,6 @@ describe('Novo pedido', () => {
     await userEvent.type(within(f).getByLabelText('Ano de fabricação'), '2021');
     await userEvent.type(within(f).getByLabelText('Ano do modelo'), '2022');
     await userEvent.click(within(f).getByRole('button', { name: 'Salvar veículo' }));
-    expect(await within(f).findByText('Informe o chassi')).toBeInTheDocument(); // obrigatório no backend
-    await userEvent.type(within(f).getByLabelText(/^Chassi/), '9BD195A2NK0000001');
-    await userEvent.click(within(f).getByRole('button', { name: 'Salvar veículo' }));
 
     await waitFor(() => expect(screen.getByRole('radio', { name: /ABC1D23/ })).toBeChecked());
     expect(db.veiculos.at(-1)).toMatchObject({ placa: 'ABC1D23', anoFabricacao: 2021, anoModelo: 2022, clienteNome: 'Renata Sampaio' });

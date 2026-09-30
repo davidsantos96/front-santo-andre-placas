@@ -14,7 +14,7 @@ export default {
         ok: { DEFAULT: '#1E7F4F', bg: '#E7F3ED' },
         alerta: { DEFAULT: '#B45309', texto: '#8A4B12', bg: '#FBF0E4', bgHover: '#FDF6EC', borda: '#F0DCC0' },
         erro: { DEFAULT: '#B91C1C', bg: '#FBEAEA' },
-        grafico: { 1: '#003399', 2: '#4C6EB0', 3: '#93A9D1', cartao: '#6B8BC9' },
+        grafico: { 1: '#003399', 2: '#4C6EB0', 3: '#7691C8', cartao: '#6B8BC9' }, // 3: escurecido (spec: #93A9D1) p/ contraste ≥ 3:1
       },
       fontFamily: {
         display: ['"Archivo Narrow"', 'sans-serif'],

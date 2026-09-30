@@ -88,13 +88,16 @@ function AbaCaixa({ periodo, onPeriodo }: { periodo: Periodo; onPeriodo: (p: Per
         <ErrorState onRetry={() => void caixa.refetch()} />
       ) : (
         <div className="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-3.5 max-[899px]:grid-cols-2">
-          {caixa.data.porFormaPagamento.map((f) => (
-            <KpiCard
-              key={f.formaPagamento} rotulo={FORMA_PAGAMENTO[f.formaPagamento].label.toUpperCase()}
-              marcador={FORMA_PAGAMENTO[f.formaPagamento].cor}
-              valor={<Money centavos={f.totalCentavos} />} sub={nPag(f.quantidade)}
-            />
-          ))}
+          {/* Sempre as 5 formas, em ordem fixa: as que não tiveram pagamento aparecem com R$ 0,00. */}
+          {FORMAS.map((forma) => {
+            const f = caixa.data.porFormaPagamento.find((x) => x.formaPagamento === forma);
+            return (
+              <KpiCard
+                key={forma} rotulo={FORMA_PAGAMENTO[forma].label.toUpperCase()} marcador={FORMA_PAGAMENTO[forma].cor}
+                valor={<Money centavos={f?.totalCentavos ?? 0} />} sub={nPag(f?.quantidade ?? 0)}
+              />
+            );
+          })}
           <KpiCard destaque rotulo="TOTAL DO PERÍODO" valor={<Money centavos={caixa.data.totalGeral} />} sub={nPag(caixa.data.quantidadePagamentos)} />
         </div>
       )}

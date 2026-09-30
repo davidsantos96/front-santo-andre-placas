@@ -76,14 +76,16 @@ describe('Dashboard', () => {
     expect(itens[2]).toHaveTextContent('2 · 18%');
   });
 
-  it('fila de produção lista recebidos + em processamento e abre o pedido', async () => {
+  it('fila de produção: recebidos + em processamento + placa pronta, mais antigos primeiro, "+ N na fila"', async () => {
     const { router } = await entrarComo('/dashboard', gerente);
     const card = await cartao('Fila de produção');
     const botoes = await within(card).findAllByRole('button');
-    expect(botoes).toHaveLength(6);
-    expect(within(card).queryByRole('button', { name: /Pedido 1052/ })).not.toBeInTheDocument(); // placa pronta não está na fila
-    await userEvent.click(within(card).getByRole('button', { name: /Pedido 1058/ }));
-    await waitFor(() => expect(router.state.location.pathname).toBe('/pedidos/1058'));
+    expect(botoes).toHaveLength(6); // mostra 6 de 8 (Recebido 3 + Em processamento 3 + Placa pronta 2)
+    expect(within(card).getByText('+ 2 na fila')).toBeInTheDocument();
+    expect(botoes[0]).toHaveAccessibleName(/Pedido 1051/); // o mais antigo (placa pronta há 6h15) vem primeiro
+    expect(within(card).getByRole('button', { name: /Pedido 1052/ })).toBeInTheDocument(); // placa pronta entra na fila
+    await userEvent.click(within(card).getByRole('button', { name: /Pedido 1053/ }));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/pedidos/1053'));
   });
 
   it('o espaço de metas só existe com a feature flag ativa (desligada por padrão)', async () => {

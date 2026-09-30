@@ -81,7 +81,8 @@ export function PedidoDetalhePage() {
   const idx = FLUXO.indexOf(pedido.status);
   const proximoStatus = idx >= 0 && idx < FLUXO.length - 1 ? FLUXO[idx + 1] : undefined;
   const entregueSemPagar = pedido.status === 'ENTREGUE' && pago === false;
-  const podeCancelar = pedido.status !== 'CANCELADO' && pedido.status !== 'ENTREGUE';
+  // Regra de produto: só dá para cancelar antes de a placa ficar pronta (o backend só trava os status finais).
+  const podeCancelar = pedido.status === 'RECEBIDO' || pedido.status === 'EM_PROCESSAMENTO';
 
   const acaoPrincipal = () => {
     if (entregueSemPagar) { formaRef.current?.focus(); formaRef.current?.scrollIntoView?.({ block: "center" }); return; }
