@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { renderApp } from './utils';
+import { entrarComo, renderApp } from './utils';
 import { api } from '@/api/client';
 import { expirarSessoes } from '@/mocks/handlers';
+import { jwtExpirado } from '@/mocks/jwt';
+import { setAccessToken } from '@/api/client';
 import { reloginCancelado } from '@/api/sessaoEventos';
 
 async function entrar(email: string, senha = '123456') {
@@ -90,12 +92,14 @@ describe('papéis (fluxo 5)', () => {
 });
 
 describe('sessão expirada', () => {
-  it('401 abre o modal de re-login e a requisição é refeita ao entrar', async () => {
+  it('token expirado (API responde 403) abre o modal de re-login e a requisição é refeita ao entrar', async () => {
     renderApp('/login');
     await entrar('atendente@sap.com');
     await screen.findByRole('navigation', { name: 'Navegação principal' });
 
+    // A API responde 403 (não 401) com token expirado: o front só trata como expiração se o `exp` do JWT passou.
     expirarSessoes();
+    setAccessToken(jwtExpirado());
     const pendente = api.get('/estoque/itens');
 
     const modal = await screen.findByRole('dialog', { name: 'Sessão expirada' });
@@ -111,12 +115,20 @@ describe('sessão expirada', () => {
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Sessão expirada' })).not.toBeInTheDocument());
   });
 
+  it('403 por falta de permissão (token válido) NÃO abre o modal: é erro de permissão', async () => {
+    await entrarComo('/pedidos');
+    await screen.findByRole('navigation', { name: 'Navegação principal' });
+    await expect(api.get('/usuarios')).rejects.toMatchObject({ status: 403 }); // ATENDENTE não lista usuários
+    expect(screen.queryByRole('dialog', { name: 'Sessão expirada' })).not.toBeInTheDocument();
+  });
+
   it('"Sair" no modal rejeita a requisição pendente e volta ao login', async () => {
     const { router } = renderApp('/login');
     await entrar('atendente@sap.com');
     await screen.findByRole('navigation', { name: 'Navegação principal' });
 
     expirarSessoes();
+    setAccessToken(jwtExpirado());
     const pendente = api.get('/estoque/itens');
     pendente.catch(() => {});
     const modal = await screen.findByRole('dialog', { name: 'Sessão expirada' });

@@ -87,7 +87,9 @@ describe('Novo pedido', () => {
     expect(await screen.findByText('Este cliente ainda não tem veículos.')).toBeInTheDocument();
   });
 
-  it('erro de campo vindo do backend aparece no formulário do cliente', async () => {
+  it('erro de campo (`campos`) vindo do backend aparece no formulário do cliente', async () => {
+    // A API atual só manda `mensagem`; o mecanismo de `campos` está pronto para quando ela passar a mandar.
+    server.use(http.post('http://localhost:8080/api/clientes', () => HttpResponse.json({ mensagem: 'Dados inválidos', campos: { cpfCnpj: 'CPF/CNPJ já cadastrado' } }, { status: 400 })));
     await entrarComo('/pedidos/novo');
     await userEvent.type(await screen.findByRole('combobox', { name: 'Buscar cliente' }), 'zz');
     await userEvent.click(await screen.findByRole('option', { name: '+ Cadastrar novo cliente' }));

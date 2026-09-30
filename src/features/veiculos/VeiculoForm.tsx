@@ -31,7 +31,11 @@ export function VeiculoForm({ clienteId, onSalvo, onCancelar }: { clienteId: num
 
   const enviar = handleSubmit(async (d) => {
     try {
-      onSalvo(await criar.mutateAsync({ ...d, placa: normalizarPlaca(d.placa), anoFabricacao: Number(d.anoFabricacao), anoModelo: Number(d.anoModelo), clienteId }));
+      // `chassi` em branco é rejeitado pelo backend (setter da entidade): só envia se preenchido.
+      onSalvo(await criar.mutateAsync({
+        placa: normalizarPlaca(d.placa), marcaModelo: d.marcaModelo, anoFabricacao: Number(d.anoFabricacao), anoModelo: Number(d.anoModelo),
+        ...(d.chassi.trim() ? { chassi: d.chassi.trim() } : {}), cliente: { id: clienteId },
+      }));
     } catch (e) {
       const erro = e as ApiError;
       if (!aplicarErrosDeCampos(erro, setError)) setError('root', { message: erro.mensagem });

@@ -24,7 +24,9 @@ const anuncios: Announcements = {
 };
 
 function CardArrastavel({ pedido, agora, onAbrir }: { pedido: Pedido; agora: Date; onAbrir: () => void }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: pedido.id, data: { pedido } });
+  // ENTREGUE e CANCELADO são status finais no backend (não mudam mais): o card não é arrastável.
+  const final = pedido.status === 'ENTREGUE' || pedido.status === 'CANCELADO';
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: pedido.id, data: { pedido }, disabled: final });
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Enter') { e.preventDefault(); onAbrir(); return; } // Enter abre; espaço pega (KeyboardSensor)
@@ -37,6 +39,7 @@ function CardArrastavel({ pedido, agora, onAbrir }: { pedido: Pedido; agora: Dat
       pedido={pedido}
       agora={agora}
       arrastando={isDragging}
+      travado={final}
       {...attributes}
       {...listeners}
       onKeyDown={onKeyDown}
@@ -121,7 +124,7 @@ export function KanbanBoard({ pedidos, carregando }: Props) {
         <DragOverlay>{ativo ? <PedidoCard pedido={ativo} agora={agora} className="rotate-1 shadow-placa" /> : null}</DragOverlay>
       </DndContext>
       {dialogo}
-      <p className="mt-3 text-xs text-aco">Arraste um card para mudar o status · CANCELADO fica recolhido nesta visão</p>
+      <p className="mt-3 text-xs text-aco">Arraste um card para mudar o status · Entregue e Cancelado são finais · CANCELADO fica recolhido nesta visão</p>
     </>
   );
 }

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
 import { qk } from '@/api/keys';
-import type { ApiError, ItemEstoque, MovimentacaoRequest } from '@/api/types';
+import type { ApiError, ItemEstoque, MovimentacaoRequest, VinculoServicoItem } from '@/api/types';
 
 export const useEstoque = () =>
   useQuery({ queryKey: qk.estoque, queryFn: async () => (await api.get<ItemEstoque[]>('/estoque/itens')).data });
@@ -27,3 +27,10 @@ export function useMovimentar() {
 }
 
 export const abaixoDoMinimo = (i: ItemEstoque): boolean => i.quantidade <= i.quantidadeMinima;
+
+/** `GET /estoque/vinculos?servicoId=` — itens baixados automaticamente ao iniciar o processamento do serviço. */
+export const useVinculosDoServico = (servicoId: number) =>
+  useQuery({
+    queryKey: ['estoque', 'vinculos', servicoId],
+    queryFn: async () => (await api.get<VinculoServicoItem[]>('/estoque/vinculos', { params: { servicoId } })).data,
+  });

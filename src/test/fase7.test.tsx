@@ -2,7 +2,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { entrarComo } from './utils';
+import { http, HttpResponse } from 'msw';
 import { db } from '@/mocks/db';
+import { server } from '@/mocks/server';
 import { reloginCancelado } from '@/api/sessaoEventos';
 
 afterEach(() => reloginCancelado());
@@ -52,12 +54,27 @@ describe('Serviços', () => {
     expect(db.servicos.find((s) => s.id === 5)!.precoCentavos).toBe(9900);
   });
 
-  it('desativar é otimista, a linha continua (reativável) e o serviço some do Novo pedido', async () => {
+  it('hoje o backend ignora `ativo` no PUT: a mudança é desfeita com aviso claro (sem fingir sucesso)', async () => {
+    await entrarComo('/servicos', gerente);
+    const sw = within(await linha('Lacre / desamassamento')).getByRole('switch');
+    await userEvent.click(sw);
+    expect(await screen.findByText(/O servidor não aplicou a mudança de status de "Lacre \/ desamassamento"/)).toBeInTheDocument();
+    await waitFor(() => expect(within(screen.getByText('Lacre / desamassamento').closest('tr')!).getByRole('switch')).toBeChecked()); // voltou
+    expect(db.servicos.find((s) => s.id === 5)!.ativo).toBe(true);
+  });
+
+  it('quando o backend aplicar `ativo`: otimista, linha reativável, foco mantido e serviço some do Novo pedido', async () => {
+    server.use(http.put('http://localhost:8080/api/servicos/:id', async ({ request, params }) => {
+      const corpo = (await request.json()) as { ativo: boolean };
+      const s = db.servicos.find((x) => x.id === Number(params.id))!;
+      Object.assign(s, corpo);
+      return HttpResponse.json({ ...s, codigoExterno: null });
+    }));
     const { router } = await entrarComo('/servicos', gerente);
     const sw = within(await linha('Lacre / desamassamento')).getByRole('switch');
     await userEvent.click(sw);
-    await waitFor(() => expect(sw).not.toBeChecked()); // otimista: muda antes da resposta do servidor
-    expect(sw).toHaveFocus(); // a célula não remonta: o foco fica no switch
+    await waitFor(() => expect(sw).not.toBeChecked());
+    expect(sw).toHaveFocus(); // a célula não remonta
     await screen.findByText('Lacre / desamassamento desativado');
     expect(db.servicos.find((s) => s.id === 5)!.ativo).toBe(false);
     expect(within(await linha('Lacre / desamassamento')).getByRole('switch')).not.toBeChecked();
@@ -91,7 +108,7 @@ describe('Estoque', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Movimentar Lacre inviolável' }));
     const m = await screen.findByRole('dialog', { name: 'Movimentar estoque' });
     await userEvent.type(within(m).getByLabelText('Quantidade'), '20');
-    await userEvent.type(within(m).getByLabelText(/Observação/), 'Compra');
+    expect(within(m).queryByLabelText(/Observação/)).not.toBeInTheDocument(); // o backend não tem esse campo
     await userEvent.click(within(m).getByRole('button', { name: 'Registrar' }));
     await screen.findByText('Entrada de 20 — Lacre inviolável');
     expect(db.estoque.find((i) => i.sku === 'LAC-STD')!.quantidade).toBe(28);

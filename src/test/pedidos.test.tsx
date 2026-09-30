@@ -34,6 +34,18 @@ describe('Pedidos — quadro', () => {
     expect(screen.queryByRole('region', { name: 'Cancelado' })).not.toBeInTheDocument();
   });
 
+  it('cards de pedido em status final (Entregue) não são arrastáveis; os demais são', async () => {
+    await entrar('/pedidos');
+    expect(await screen.findByRole('button', { name: /Pedido 1050/ })).toHaveAttribute('aria-disabled', 'true'); // ENTREGUE
+    expect(screen.getByRole('button', { name: /Pedido 1058/ })).toHaveAttribute('aria-disabled', 'false'); // RECEBIDO
+  });
+
+  it('status final no backend: tentar mudar devolve 400 com a mensagem e o card volta', async () => {
+    await renderHarness({ id: 1050, de: 'PLACA_PRONTA', para: 'EM_PROCESSAMENTO' }); // 1050 já é ENTREGUE no servidor
+    await userEvent.click(screen.getByText('soltar'));
+    expect(await screen.findByText(/Pedido em status final \(ENTREGUE\) não pode mudar de status\./)).toBeInTheDocument();
+  });
+
   it('clique e Enter no card abrem o detalhe', async () => {
     const { router } = await entrar('/pedidos');
     await userEvent.click(await screen.findByRole('button', { name: /Pedido 1058/ }));

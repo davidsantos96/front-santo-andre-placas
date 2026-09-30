@@ -37,7 +37,7 @@ export function FaturamentoCard() {
 
   const pontos = useMemo<Ponto[]>(() => {
     if (!q.data) return [];
-    const porDia = new Map(q.data.dias.map((d) => [d.data, d.valorCentavos]));
+    const porDia = new Map(q.data.dias.map((d) => [d.data, d.totalCentavos]));
     // o backend só devolve dias com faturamento: completa o intervalo com zeros
     return diasDoIntervalo(q.data.de, q.data.ate).map((data) => ({ data, rotulo: dm(data), valor: porDia.get(data) ?? 0 }));
   }, [q.data]);

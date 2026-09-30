@@ -1,6 +1,6 @@
 import { ArrowLeft } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
-import type { ApiError } from '@/api/types';
+import { naoEncontrado } from '@/lib/erros';
 import { Cartao } from '@/components/Cartao';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
@@ -29,7 +29,7 @@ export function VeiculoDetalhePage() {
     return <div className="max-w-[1200px] px-6 py-5" aria-busy="true"><div className="mb-3.5">{voltar}</div><Skeleton className="h-[190px]" /></div>;
   }
   if (veiculoQ.isError) {
-    const naoExiste = (veiculoQ.error as unknown as ApiError).status === 404;
+    const naoExiste = naoEncontrado(veiculoQ.error);
     return (
       <div className="max-w-[1200px] px-6 py-5">
         <div className="mb-3.5">{voltar}</div>

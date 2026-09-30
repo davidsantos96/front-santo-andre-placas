@@ -1,7 +1,7 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { api } from '@/api/client';
 import { qk } from '@/api/keys';
-import type { FaturamentoDia, ResumoDashboard, ServicoMaisVendido, TempoMedioProducao } from '@/api/types';
+import type { FaturamentoResponse, ResumoDashboard, ServicoMaisVendido, TempoMedioProducao } from '@/api/types';
 import { intervaloUltimosDias } from '@/lib/datas';
 import { usePedidos } from '@/features/pedidos/api';
 
@@ -16,7 +16,10 @@ export function useFaturamento(dias: DiasFaturamento) {
   return useQuery({
     queryKey: qk.dashboard.faturamento(String(dias)),
     placeholderData: keepPreviousData, // troca de período mantém o gráfico anterior (esmaecido) em vez de piscar
-    queryFn: async () => ({ de, ate, dias: (await api.get<FaturamentoDia[]>('/dashboard/faturamento', { params: { de, ate } })).data }),
+    queryFn: async () => {
+      const { data } = await api.get<FaturamentoResponse>('/dashboard/faturamento', { params: { de, ate } });
+      return { de, ate, dias: data.porDia }; // só dias com pagamento; o cartão completa o intervalo com zeros
+    },
   });
 }
 

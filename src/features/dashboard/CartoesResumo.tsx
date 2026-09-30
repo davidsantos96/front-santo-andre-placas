@@ -52,7 +52,7 @@ export function TempoMedioCard() {
             </div>
             <p className="mt-2 text-xs text-aco">
               {q.data.pedidosConsiderados > 0
-                ? `Recebido → placa pronta · ${q.data.pedidosConsiderados} ${q.data.pedidosConsiderados === 1 ? 'pedido considerado' : 'pedidos considerados'}`
+                ? `Em produção → placa pronta · ${q.data.pedidosConsiderados} ${q.data.pedidosConsiderados === 1 ? 'pedido considerado' : 'pedidos considerados'}`
                 : 'Sem pedidos concluídos para calcular.'}
             </p>
           </>

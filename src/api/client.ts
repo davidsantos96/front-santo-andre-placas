@@ -7,6 +7,32 @@ let accessToken: string | null = null;
 export const setAccessToken = (t: string | null) => { accessToken = t; };
 export const getAccessToken = () => accessToken;
 
+/** `exp` (segundos) do JWT, ou null se o token não for um JWT legível. */
+function expDoToken(token: string): number | null {
+  try {
+    const corpo = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    const { exp } = JSON.parse(atob(corpo)) as { exp?: number };
+    return typeof exp === 'number' ? exp : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Sem token, ou com o `exp` do JWT no passado. Token ilegível não conta como expirado. */
+export function tokenExpirado(agora = Date.now()): boolean {
+  if (!accessToken) return true;
+  const exp = expDoToken(accessToken);
+  return exp !== null && exp * 1000 <= agora;
+}
+
+/**
+ * A API (Spring Security sem `authenticationEntryPoint`) responde **403** — não 401 — quando o token
+ * está ausente ou expirado. Só o status não distingue "sem permissão" de "sessão expirada", então
+ * o 403 conta como expiração apenas quando o token local já expirou (ou não existe).
+ */
+export const sessaoExpirou = (status: number | undefined): boolean =>
+  status === 401 || (status === 403 && tokenExpirado());
+
 export const api = axios.create({ baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:8080/api' });
 
 api.interceptors.request.use((config) => {
@@ -36,7 +62,7 @@ api.interceptors.response.use(
   async (err: AxiosError) => {
     const cfg = err.config as Retentavel | undefined;
     const ehLogin = cfg?.url?.includes('/auth/login');
-    if (err.response?.status === 401 && cfg && !ehLogin && !cfg._retentado) {
+    if (sessaoExpirou(err.response?.status) && cfg && !ehLogin && !cfg._retentado) {
       try {
         await aguardarRelogin();
       } catch (e) {

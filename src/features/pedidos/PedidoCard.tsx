@@ -10,16 +10,18 @@ type Props = HTMLAttributes<HTMLDivElement> & {
   pedido: Pedido;
   agora: Date;
   arrastando?: boolean;
+  travado?: boolean;
   innerRef?: Ref<HTMLDivElement>;
 };
 
-export function PedidoCard({ pedido, agora, arrastando, innerRef, className, ...rest }: Props) {
+export function PedidoCard({ pedido, agora, arrastando, travado, innerRef, className, ...rest }: Props) {
   return (
     <div
       ref={innerRef}
       {...rest}
       className={clsx(
-        'cursor-grab rounded-md border border-linha bg-white p-2.5 shadow-card active:cursor-grabbing',
+        'rounded-md border border-linha bg-white p-2.5 shadow-card',
+        travado ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing',
         arrastando && 'opacity-40',
         className,
       )}

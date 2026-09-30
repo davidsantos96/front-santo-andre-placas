@@ -72,8 +72,9 @@ export type ApiError = { status: number; mensagem: string; campos?: Record<strin
 
 /** Corpos de POST assumidos (o backend ainda usa a entidade crua — ver PENDENCIAS.md). */
 export type NovoClienteRequest = { nome: string; telefone: string; cpfCnpj: string; email: string };
+/** O backend recebe a entidade `Veiculo`: o cliente vai aninhado (`cliente: { id }`) e `chassi` em branco é rejeitado (omitir). */
 export type NovoVeiculoRequest = {
-  placa: string; marcaModelo: string; anoFabricacao: number; anoModelo: number; chassi: string; clienteId: number;
+  placa: string; marcaModelo: string; anoFabricacao: number; anoModelo: number; chassi?: string; cliente: { id: number };
 };
 export type PagamentoRequest = { valorCentavos: number; formaPagamento: import('@/components/status').FormaPagamento };
 
@@ -82,10 +83,15 @@ export type ConsultaHistorico = { id: number; consultadoEm: string; fonte: strin
 
 /** Corpos assumidos (contratos ainda não documentados — ver PENDENCIAS.md). */
 export type NovoServicoRequest = { nome: string; descricao: string; categoria: string; precoCentavos: number; ativo: boolean };
-export type MovimentacaoRequest = { itemId: number; tipo: 'ENTRADA' | 'SAIDA'; quantidade: number; observacao: string };
+/** Contrato real (`NovaMovimentacaoRequest`): não existe campo de observação. */
+export type MovimentacaoRequest = { itemEstoqueId: number; tipo: 'ENTRADA' | 'SAIDA'; quantidade: number; pedidoId?: number };
 
-/** Contratos do dashboard ainda não documentados (formatos assumidos — ver PENDENCIAS.md). */
-export type FaturamentoDia = { data: string; valorCentavos: number };
+/** Contratos do dashboard (conferidos contra o backend). */
+export type FaturamentoDia = { data: string; totalCentavos: number };
+export type FaturamentoResponse = { de: string; ate: string; totalCentavos: number; porDia: FaturamentoDia[] };
+export type VinculoServicoItem = {
+  id: number; servicoId: number; servicoNome: string; itemEstoqueId: number; itemEstoqueNome: string; quantidadeNecessaria: number;
+};
 export type ServicoMaisVendido = { servicoId: number; servicoNome: string; quantidadePedidos: number; faturamentoNominalCentavos: number };
 
 /** Corpos assumidos de /usuarios (contrato não documentado — ver PENDENCIAS.md). `senha` só na criação. */

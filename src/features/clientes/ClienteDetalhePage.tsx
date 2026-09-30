@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
-import type { ApiError, Cliente } from '@/api/types';
+import type { Cliente } from '@/api/types';
+import { naoEncontrado } from '@/lib/erros';
 import { Cartao } from '@/components/Cartao';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
@@ -81,7 +82,7 @@ export function ClienteDetalhePage() {
 
   if (q.isPending) return <div className="max-w-[1200px] px-6 py-5" aria-busy="true"><div className="mb-3.5">{voltar}</div><Skeleton className="h-[180px] max-w-[640px]" /></div>;
   if (q.isError) {
-    const naoExiste = (q.error as unknown as ApiError).status === 404;
+    const naoExiste = naoEncontrado(q.error);
     return (
       <div className="max-w-[1200px] px-6 py-5">
         <div className="mb-3.5">{voltar}</div>

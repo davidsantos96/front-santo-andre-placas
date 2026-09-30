@@ -1,12 +1,15 @@
 import { http, HttpResponse } from 'msw';
-import type { AtualizarUsuarioRequest, NovoUsuarioRequest, Usuario, FaturamentoDia, ResumoDashboard, ServicoMaisVendido, TempoMedioProducao, FechamentoCaixa, MovimentacaoRequest, NovoServicoRequest, PagamentoListagem, Servico, Cliente, LoginRequest, LoginResponse, NovoClienteRequest, NovoPedidoRequest, NovoVeiculoRequest, Pagamento, PagamentoRequest, Paginado, Pedido, Veiculo } from '@/api/types';
+import type { AtualizarUsuarioRequest, NovoUsuarioRequest, Usuario, FaturamentoResponse, ResumoDashboard, ServicoMaisVendido, TempoMedioProducao, FechamentoCaixa, MovimentacaoRequest, NovoServicoRequest, PagamentoListagem, Servico, Cliente, LoginRequest, LoginResponse, NovoClienteRequest, NovoPedidoRequest, NovoVeiculoRequest, Pagamento, PagamentoRequest, Paginado, Pedido, Veiculo } from '@/api/types';
 import type { StatusPedido } from '@/components/status';
 import { db } from './db';
+import { gerarJwt } from './jwt';
 
 const base = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8080/api';
 const url = (p: string) => `${base}${p}`;
 
-const naoAutorizado = () => HttpResponse.json({ mensagem: 'Não autenticado' }, { status: 401 });
+/** Como o Spring Security sem `authenticationEntryPoint`: token ausente/inválido/expirado → **403** sem corpo (não 401). */
+const naoAutorizado = () => new HttpResponse(null, { status: 403 });
+const naoEncontradoMock = (o: string, id: unknown) => HttpResponse.json({ mensagem: `${o} não encontrado: ${id}` }, { status: 400 }); // IllegalArgumentException → 400
 const autenticado = (req: Request) => {
   const t = req.headers.get('Authorization')?.replace('Bearer ', '');
   return t && db.tokens.has(t) ? db.tokens.get(t)! : null;
@@ -26,9 +29,10 @@ const dia = (iso: string) => {
 export const handlers = [
   http.post(url('/auth/login'), async ({ request }) => {
     const { email, senha } = (await request.json()) as LoginRequest;
-    const u = db.usuarios.find((x) => x.email === email && x.senha === senha && x.ativo);
-    if (!u) return HttpResponse.json({ mensagem: 'Credenciais inválidas' }, { status: 401 });
-    const token = `mock-${u.id}-${++seq}`;
+    // Como o backend: credencial errada → 400 "Email ou senha inválidos"; **não** checa `ativo`.
+    const u = db.usuarios.find((x) => x.email === email && x.senha === senha);
+    if (!u) return HttpResponse.json({ mensagem: 'Email ou senha inválidos' }, { status: 400 });
+    const token = `${gerarJwt(u.email, u.papel)}.${++seq}`;
     db.tokens.set(token, { papel: u.papel, nome: u.nome });
     const corpo: LoginResponse = { token, papel: u.papel, nome: u.nome };
     return HttpResponse.json(corpo);
@@ -70,27 +74,35 @@ export const handlers = [
   http.get(url('/pedidos/:id'), ({ request, params }) => {
     if (!autenticado(request)) return naoAutorizado();
     const p = db.pedidos.find((x) => x.id === Number(params.id));
-    return p ? HttpResponse.json(p) : HttpResponse.json({ mensagem: 'Pedido não encontrado' }, { status: 404 });
+    return p ? HttpResponse.json(p) : naoEncontradoMock('Pedido', params.id);
   }),
 
   http.patch(url('/pedidos/:id/status'), async ({ request, params }) => {
     const u = autenticado(request);
     if (!u) return naoAutorizado();
     const p = db.pedidos.find((x) => x.id === Number(params.id));
-    if (!p) return HttpResponse.json({ mensagem: 'Pedido não encontrado' }, { status: 404 });
+    if (!p) return naoEncontradoMock('Pedido', params.id);
     const { novoStatus } = (await request.json()) as { novoStatus: StatusPedido };
     const anterior = p.status;
+    // Única regra de transição do backend: ENTREGUE e CANCELADO são finais.
+    if (anterior === 'ENTREGUE' || anterior === 'CANCELADO') {
+      return HttpResponse.json({ mensagem: `Pedido em status final (${anterior}) não pode mudar de status.` }, { status: 400 });
+    }
+    // Baixa automática (vínculos serviço↔item): estoque insuficiente aborta a mudança de status.
+    const baixas = novoStatus === 'EM_PROCESSAMENTO' ? db.vinculos.filter((v) => v.servicoId === p.servico.id) : [];
+    for (const v of baixas) {
+      const item = db.estoque.find((i) => i.id === v.itemEstoqueId)!;
+      if (item.quantidade < v.quantidadeNecessaria) {
+        return HttpResponse.json({ mensagem: `Estoque insuficiente para "${item.nome}": disponível ${item.quantidade}, necessário ${v.quantidadeNecessaria}` }, { status: 400 });
+      }
+    }
+    baixas.forEach((v) => { db.estoque.find((i) => i.id === v.itemEstoqueId)!.quantidade -= v.quantidadeNecessaria; });
     p.status = novoStatus;
     p.atualizadoEm = new Date().toISOString();
     db.historico.push({
       id: db.historico.length + 1, pedidoId: p.id, statusAnterior: anterior, statusNovo: novoStatus,
       alteradoPor: u.nome, alteradoEm: p.atualizadoEm,
     });
-    // baixa automática de estoque ao entrar em EM_PROCESSAMENTO
-    if (novoStatus === 'EM_PROCESSAMENTO' && anterior !== 'EM_PROCESSAMENTO') {
-      const item = db.estoque.find((i) => i.id === (p.servico.id === 2 ? 2 : 1));
-      if (item) item.quantidade = Math.max(0, item.quantidade - 1);
-    }
     return HttpResponse.json(p);
   }),
 
@@ -111,7 +123,7 @@ export const handlers = [
     const u = autenticado(request);
     if (!u) return naoAutorizado();
     const pedido = db.pedidos.find((x) => x.id === Number(params.id));
-    if (!pedido) return HttpResponse.json({ mensagem: 'Pedido não encontrado' }, { status: 404 });
+    if (!pedido) return naoEncontradoMock('Pedido', params.id);
     const dados = (await request.json()) as PagamentoRequest;
     if (db.pagamentos.some((p) => p.pedidoId === pedido.id && p.status === 'PAGO')) {
       return HttpResponse.json({ mensagem: 'Pedido já possui pagamento registrado' }, { status: 400 });
@@ -158,10 +170,7 @@ export const handlers = [
   http.post(url('/clientes'), async ({ request }) => {
     if (!autenticado(request)) return naoAutorizado();
     const d = (await request.json()) as NovoClienteRequest;
-    const igual = (a: string, b: string) => a.replace(/\D/g, '') === b.replace(/\D/g, '');
-    if (db.clientes.some((c) => igual(c.cpfCnpj, d.cpfCnpj))) {
-      return HttpResponse.json({ mensagem: 'Dados inválidos', campos: { cpfCnpj: 'CPF/CNPJ já cadastrado' } }, { status: 400 });
-    }
+    // O backend (entidade crua) não valida CPF/CNPJ duplicado.
     const c: Cliente = { id: Math.max(0, ...db.clientes.map((x) => x.id)) + 1, ...d, criadoEm: new Date().toISOString() };
     db.clientes.push(c);
     return HttpResponse.json(c, { status: 201 });
@@ -180,14 +189,19 @@ export const handlers = [
   http.post(url('/veiculos'), async ({ request }) => {
     if (!autenticado(request)) return naoAutorizado();
     const d = (await request.json()) as NovoVeiculoRequest;
-    const cliente = db.clientes.find((c) => c.id === d.clienteId);
-    if (!cliente) return HttpResponse.json({ mensagem: 'Cliente não encontrado' }, { status: 400 });
-    if (db.veiculos.some((v) => v.placa === d.placa)) {
-      return HttpResponse.json({ mensagem: 'Dados inválidos', campos: { placa: 'Placa já cadastrada' } }, { status: 400 });
-    }
-    const v: Veiculo = { id: Math.max(0, ...db.veiculos.map((x) => x.id)) + 1, ...d, clienteNome: cliente.nome };
+    // Setters da entidade rejeitam valores em branco → Jackson embrulha → 400 genérico do Spring (sem `mensagem`).
+    if (d.chassi !== undefined && !d.chassi.trim()) return erroSpring400();
+    if (!d.placa?.trim() || !d.marcaModelo?.trim()) return erroSpring400();
+    const cliente = db.clientes.find((c) => c.id === d.cliente?.id);
+    if (!cliente) return HttpResponse.json({ error: 'Internal Server Error', status: 500 }, { status: 500 }); // cliente ausente → violação de constraint
+    const v: Veiculo = {
+      id: Math.max(0, ...db.veiculos.map((x) => x.id)) + 1, placa: d.placa, marcaModelo: d.marcaModelo, anoFabricacao: d.anoFabricacao,
+      anoModelo: d.anoModelo, chassi: d.chassi ?? '', clienteId: cliente.id, clienteNome: cliente.nome,
+    };
     db.veiculos.push(v);
-    return HttpResponse.json(v, { status: 201 });
+    // Resposta = entidade JPA crua: `cliente` aninhado, sem `clienteId`/`clienteNome`.
+    const { clienteId: _c, clienteNome: _n, ...resto } = v;
+    return HttpResponse.json({ ...resto, cliente, criadoEm: new Date().toISOString() });
   }),
 
   http.post(url('/veiculos/:id/consultar'), ({ request }) => {
@@ -203,18 +217,14 @@ export const handlers = [
   http.get(url('/clientes/:id'), ({ request, params }) => {
     if (!autenticado(request)) return naoAutorizado();
     const c = db.clientes.find((x) => x.id === Number(params.id));
-    return c ? HttpResponse.json(c) : HttpResponse.json({ mensagem: 'Cliente não encontrado' }, { status: 404 });
+    return c ? HttpResponse.json(c) : naoEncontradoMock('Cliente', params.id);
   }),
 
   http.put(url('/clientes/:id'), async ({ request, params }) => {
     if (!autenticado(request)) return naoAutorizado();
     const c = db.clientes.find((x) => x.id === Number(params.id));
-    if (!c) return HttpResponse.json({ mensagem: 'Cliente não encontrado' }, { status: 404 });
+    if (!c) return naoEncontradoMock('Cliente', params.id);
     const d = (await request.json()) as NovoClienteRequest;
-    const igual = (a: string, b: string) => a.replace(/\D/g, '') === b.replace(/\D/g, '');
-    if (db.clientes.some((x) => x.id !== c.id && igual(x.cpfCnpj, d.cpfCnpj))) {
-      return HttpResponse.json({ mensagem: 'Dados inválidos', campos: { cpfCnpj: 'CPF/CNPJ já cadastrado' } }, { status: 400 });
-    }
     Object.assign(c, d); // pedidos e veículos referenciam o mesmo objeto
     db.veiculos.filter((v) => v.clienteId === c.id).forEach((v) => { v.clienteNome = c.nome; });
     return HttpResponse.json(c);
@@ -223,7 +233,7 @@ export const handlers = [
   http.get(url('/veiculos/:id'), ({ request, params }) => {
     if (!autenticado(request)) return naoAutorizado();
     const v = db.veiculos.find((x) => x.id === Number(params.id));
-    return v ? HttpResponse.json(v) : HttpResponse.json({ mensagem: 'Veículo não encontrado' }, { status: 404 });
+    return v ? HttpResponse.json(v) : naoEncontradoMock('Veiculo', params.id);
   }),
 
   http.get(url('/veiculos/:id/historico-consultas'), ({ request }) => {
@@ -236,7 +246,7 @@ export const handlers = [
     if (!u) return naoAutorizado();
     if (u.papel === 'ATENDENTE') return HttpResponse.json({ mensagem: 'Acesso negado' }, { status: 403 });
     const d = (await request.json()) as NovoServicoRequest;
-    const s: Servico = { id: Math.max(0, ...db.servicos.map((x) => x.id)) + 1, ...d };
+    const s: Servico = { id: Math.max(0, ...db.servicos.map((x) => x.id)) + 1, ...d, ativo: true }; // criar sempre ativa
     db.servicos.push(s);
     return HttpResponse.json(s, { status: 201 });
   }),
@@ -246,20 +256,30 @@ export const handlers = [
     if (!u) return naoAutorizado();
     if (u.papel === 'ATENDENTE') return HttpResponse.json({ mensagem: 'Acesso negado' }, { status: 403 });
     const s = db.servicos.find((x) => x.id === Number(params.id));
-    if (!s) return HttpResponse.json({ mensagem: 'Serviço não encontrado' }, { status: 404 });
-    Object.assign(s, (await request.json()) as NovoServicoRequest);
-    return HttpResponse.json(s);
+    if (!s) return naoEncontradoMock('Serviço', params.id);
+    // O backend (`ServicoService.atualizar`) copia nome/descrição/preço/categoria e **ignora `ativo`**.
+    const { ativo: _ignorado, ...resto } = (await request.json()) as NovoServicoRequest;
+    Object.assign(s, resto);
+    return HttpResponse.json({ ...s, codigoExterno: null });
   }),
 
   http.post(url('/estoque/movimentacoes'), async ({ request }) => {
     if (!autenticado(request)) return naoAutorizado();
     const d = (await request.json()) as MovimentacaoRequest;
-    const item = db.estoque.find((i) => i.id === d.itemId);
-    if (!item) return HttpResponse.json({ mensagem: 'Item não encontrado' }, { status: 400 });
-    if (!Number.isInteger(d.quantidade) || d.quantidade <= 0) return HttpResponse.json({ mensagem: 'Quantidade inválida' }, { status: 400 });
-    if (d.tipo === 'SAIDA' && d.quantidade > item.quantidade) return HttpResponse.json({ mensagem: 'Saldo insuficiente' }, { status: 400 });
+    const item = db.estoque.find((i) => i.id === d.itemEstoqueId);
+    if (!item) return HttpResponse.json({ mensagem: `Item de estoque não encontrado: ${d.itemEstoqueId}` }, { status: 400 });
+    if (!Number.isInteger(d.quantidade) || d.quantidade <= 0) return HttpResponse.json({ mensagem: 'A quantidade movimentada deve ser maior que zero' }, { status: 400 });
+    if (d.tipo === 'SAIDA' && item.quantidade < d.quantidade) {
+      return HttpResponse.json({ mensagem: `Estoque insuficiente para "${item.nome}": disponível ${item.quantidade}, necessário ${d.quantidade}` }, { status: 400 });
+    }
     item.quantidade += d.tipo === 'ENTRADA' ? d.quantidade : -d.quantidade;
-    return HttpResponse.json(item, { status: 201 });
+    return HttpResponse.json({ id: 1, itemEstoqueId: item.id, itemEstoqueNome: item.nome, tipo: d.tipo, quantidade: d.quantidade, pedidoId: d.pedidoId ?? null, criadoEm: new Date().toISOString() });
+  }),
+
+  http.get(url('/estoque/vinculos'), ({ request }) => {
+    if (!autenticado(request)) return naoAutorizado();
+    const servicoId = Number(new URL(request.url).searchParams.get('servicoId'));
+    return HttpResponse.json(db.vinculos.filter((v) => v.servicoId === servicoId));
   }),
 
   http.get(url('/pagamentos'), ({ request }) => {
@@ -304,8 +324,8 @@ export const handlers = [
     if (!u) return naoAutorizado();
     if (u.papel !== 'ADMIN') return HttpResponse.json({ mensagem: 'Acesso negado' }, { status: 403 });
     const d = (await request.json()) as NovoUsuarioRequest;
-    if (db.usuarios.some((x) => x.email.toLowerCase() === d.email.toLowerCase())) {
-      return HttpResponse.json({ mensagem: 'Dados inválidos', campos: { email: 'E-mail já cadastrado' } }, { status: 400 });
+    if (db.usuarios.some((x) => x.email === d.email)) { // backend: findByEmail exato (diferencia maiúsculas) e só `mensagem`
+      return HttpResponse.json({ mensagem: `Já existe um usuário com o e-mail ${d.email}` }, { status: 400 });
     }
     const novo = { id: Math.max(0, ...db.usuarios.map((x) => x.id)) + 1, nome: d.nome, email: d.email, papel: d.papel, ativo: true, senha: d.senha };
     db.usuarios.push(novo);
@@ -317,10 +337,10 @@ export const handlers = [
     if (!u) return naoAutorizado();
     if (u.papel !== 'ADMIN') return HttpResponse.json({ mensagem: 'Acesso negado' }, { status: 403 });
     const alvo = db.usuarios.find((x) => x.id === Number(params.id));
-    if (!alvo) return HttpResponse.json({ mensagem: 'Usuário não encontrado' }, { status: 404 });
+    if (!alvo) return naoEncontradoMock('Usuário', params.id);
     const d = (await request.json()) as AtualizarUsuarioRequest;
-    if (db.usuarios.some((x) => x.id !== alvo.id && x.email.toLowerCase() === d.email.toLowerCase())) {
-      return HttpResponse.json({ mensagem: 'Dados inválidos', campos: { email: 'E-mail já cadastrado' } }, { status: 400 });
+    if (db.usuarios.some((x) => x.id !== alvo.id && x.email === d.email)) {
+      return HttpResponse.json({ mensagem: `Já existe um usuário com o e-mail ${d.email}` }, { status: 400 });
     }
     Object.assign(alvo, d); // a senha não muda pelo PUT
     return HttpResponse.json(semSenha(alvo));
@@ -331,7 +351,7 @@ export const handlers = [
     if (!u) return naoAutorizado();
     if (u.papel !== 'ADMIN') return HttpResponse.json({ mensagem: 'Acesso negado' }, { status: 403 });
     const alvo = db.usuarios.find((x) => x.id === Number(params.id));
-    if (!alvo) return HttpResponse.json({ mensagem: 'Usuário não encontrado' }, { status: 404 });
+    if (!alvo) return naoEncontradoMock('Usuário', params.id);
     alvo.ativo = ((await request.json()) as { ativo: boolean }).ativo;
     return HttpResponse.json(semSenha(alvo));
   }),
@@ -362,7 +382,8 @@ export const handlers = [
     const porDia = new Map<string, number>(); // só dias com pagamento (o front completa os dias sem faturamento)
     db.pagamentos.filter((p) => p.status === 'PAGO' && dia(p.pagoEm) >= de && dia(p.pagoEm) <= ate)
       .forEach((p) => porDia.set(dia(p.pagoEm), (porDia.get(dia(p.pagoEm)) ?? 0) + p.valorCentavos));
-    const corpo: FaturamentoDia[] = [...porDia].sort(([a], [b]) => a.localeCompare(b)).map(([data, valorCentavos]) => ({ data, valorCentavos }));
+    const lista = [...porDia].sort(([a], [b]) => a.localeCompare(b)).map(([data, totalCentavos]) => ({ data, totalCentavos }));
+    const corpo: FaturamentoResponse = { de, ate, totalCentavos: lista.reduce((t, d) => t + d.totalCentavos, 0), porDia: lista };
     return HttpResponse.json(corpo);
   }),
 
@@ -408,8 +429,7 @@ function listarPagamentos(q: URLSearchParams): PagamentoListagem[] {
     .filter((p) => !de || dia(p.pagoEm) >= de)
     .filter((p) => !ate || dia(p.pagoEm) <= ate)
     .filter((p) => !forma || p.formaPagamento === forma)
-    .sort((a, b) => b.pagoEm.localeCompare(a.pagoEm))
-    .map((p) => {
+    .map((p) => { // sem ordenação, como o backend (o front ordena)
       const ped = db.pedidos.find((x) => x.id === p.pedidoId)!;
       return {
         id: p.id, pedidoId: p.pedidoId, placa: ped.veiculo.placa, clienteNome: ped.cliente.nome, servicoNome: ped.servico.nome,
@@ -420,4 +440,9 @@ function listarPagamentos(q: URLSearchParams): PagamentoListagem[] {
 
 function semSenha({ senha: _senha, ...u }: Usuario & { senha: string }): Usuario {
   return u;
+}
+
+/** Corpo padrão de erro do Spring para JSON ilegível (ex.: setter da entidade lançou exceção): sem `mensagem`. */
+function erroSpring400() {
+  return HttpResponse.json({ timestamp: new Date().toISOString(), status: 400, error: 'Bad Request', path: '/api' }, { status: 400 });
 }

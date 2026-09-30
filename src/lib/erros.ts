@@ -7,3 +7,12 @@ export function aplicarErrosDeCampos<T extends FieldValues>(e: ApiError, setErro
   entradas.forEach(([campo, message]) => setError(campo as Path<T>, { type: 'server', message }));
   return entradas.length > 0;
 }
+
+/**
+ * "Não encontrado": o backend lança `IllegalArgumentException("... não encontrado: id")`, que vira **400**
+ * (não 404). Aceita os dois para continuar certo se o backend passar a responder 404.
+ */
+export const naoEncontrado = (e: unknown): boolean => {
+  const { status, mensagem } = (e ?? {}) as Partial<ApiError>;
+  return status === 404 || (status === 400 && /não encontrad/i.test(mensagem ?? ''));
+};

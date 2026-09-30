@@ -55,7 +55,14 @@ export function useAlternarServico() {
       if (ctx?.anterior) qc.setQueryData(qk.servicos, ctx.anterior);
       toast(`Não foi possível alterar "${servico.nome}": ${e.mensagem}`, 'erro');
     },
-    onSuccess: (_d, { servico, ativo }) => {
+    onSuccess: (salvo, { servico, ativo }, ctx) => {
+      // Hoje o backend (`ServicoService.atualizar`) ignora `ativo` no PUT e devolve o serviço inalterado.
+      // Em vez de fingir sucesso, confere a resposta e desfaz a mudança otimista.
+      if (salvo.ativo !== ativo) {
+        if (ctx?.anterior) qc.setQueryData(qk.servicos, ctx.anterior);
+        toast(`O servidor não aplicou a mudança de status de "${servico.nome}" (o backend ainda não permite ativar/desativar serviços).`, 'erro');
+        return;
+      }
       toast(`${servico.nome} ${ativo ? 'ativado' : 'desativado'}`);
       for (const k of [['pedidos'], ['pedido']]) void qc.invalidateQueries({ queryKey: k });
     },

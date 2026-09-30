@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import * as Menu from '@radix-ui/react-dropdown-menu';
 import { ArrowLeft, MoreHorizontal } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
-import type { ApiError } from '@/api/types';
+import { naoEncontrado } from '@/lib/erros';
 import { Cartao } from '@/components/Cartao';
 import { ErrorState } from '@/components/ErrorState';
 import { OrigemTag } from '@/components/OrigemTag';
@@ -11,10 +11,22 @@ import { PlacaBadge } from '@/components/PlacaBadge';
 import { Skeleton } from '@/components/Skeleton';
 import { StatusBadge } from '@/components/StatusBadge';
 import { FLUXO, PROXIMO_PASSO } from '@/components/status';
+import { useVinculosDoServico } from '@/features/estoque/api';
 import { useHistorico, usePagamentosDoPedido, usePedido } from './api';
 import { LinhaDoTempo } from './LinhaDoTempo';
 import { PagamentoCard } from './PagamentoCard';
 import { useTrocaStatus } from './useTrocaStatus';
+
+/** Aviso âmbar com os itens que serão baixados do estoque (vem da API; sem vínculos, não há baixa e o aviso some). */
+function AvisoBaixaEstoque({ servicoId }: { servicoId: number }) {
+  const q = useVinculosDoServico(servicoId);
+  if (!q.data || q.data.length === 0) return null;
+  return (
+    <p role="note" className="rounded-md border border-alerta-borda bg-alerta-bg px-3 py-2 text-sm text-alerta-texto">
+      Baixa automática de estoque: {q.data.map((v) => `−${v.quantidadeNecessaria} ${v.itemEstoqueNome}`).join(', ')}
+    </p>
+  );
+}
 
 function Campo({ rotulo, children }: { rotulo: string; children: React.ReactNode }) {
   return (
@@ -52,7 +64,7 @@ export function PedidoDetalhePage() {
     );
   }
   if (pedidoQ.isError) {
-    const naoExiste = (pedidoQ.error as unknown as ApiError).status === 404;
+    const naoExiste = naoEncontrado(pedidoQ.error);
     return (
       <div className="max-w-[1200px] px-6 py-5">
         <div className="mb-3.5">{voltar}</div>
@@ -144,11 +156,7 @@ export function PedidoDetalhePage() {
               {rotuloPrincipal}
             </button>
           )}
-          {pedido.status === 'RECEBIDO' && (
-            <p role="note" className="rounded-md border border-alerta-borda bg-alerta-bg px-3 py-2 text-sm text-alerta-texto">
-              Baixa automática de estoque ao iniciar o processamento.
-            </p>
-          )}
+          {pedido.status === 'RECEBIDO' && <AvisoBaixaEstoque servicoId={pedido.servico.id} />}
           {pedido.status === 'CANCELADO' && <p className="text-sm text-aco">Este pedido foi cancelado.</p>}
 
           <Cartao titulo="Linha do tempo">

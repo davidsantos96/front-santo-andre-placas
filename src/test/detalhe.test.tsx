@@ -25,13 +25,22 @@ describe('Detalhe do pedido', () => {
 
   it('RECEBIDO: aviso de baixa de estoque e "Iniciar processamento" avança o status e a linha do tempo', async () => {
     await entrarComo('/pedidos/1058');
-    expect(await screen.findByRole('note')).toHaveTextContent('Baixa automática de estoque');
+    expect(await screen.findByRole('note')).toHaveTextContent('Baixa automática de estoque: −1 Placa Mercosul carro (par), −2 Lacre inviolável'); // itens vêm de /estoque/vinculos
     await userEvent.click(screen.getByRole('button', { name: 'Iniciar processamento' }));
     await screen.findByRole('button', { name: 'Marcar placa pronta' });
     expect(status(1058)).toBe('EM_PROCESSAMENTO');
     expect(screen.queryByRole('note')).not.toBeInTheDocument();
     const linha = screen.getByRole('list', { name: 'Histórico do pedido' });
     await waitFor(() => expect(within(linha).getByText('Em processamento').closest('li')).not.toHaveTextContent('(pendente)'));
+  });
+
+  it('iniciar processamento com estoque insuficiente: o backend recusa (400) e o status não muda', async () => {
+    db.estoque.find((i) => i.sku === 'LAC-STD')!.quantidade = 1; // o serviço consome 2
+    await entrarComo('/pedidos/1058');
+    await userEvent.click(await screen.findByRole('button', { name: 'Iniciar processamento' }));
+    expect(await screen.findByText(/Estoque insuficiente para "Lacre inviolável": disponível 1, necessário 2/)).toBeInTheDocument();
+    expect(status(1058)).toBe('RECEBIDO');
+    expect(screen.getByRole('button', { name: 'Iniciar processamento' })).toBeInTheDocument();
   });
 
   it('registra pagamento (forma escolhida) e passa a mostrar "Pago via …"', async () => {

@@ -8,7 +8,11 @@ export const usePagamentos = (f: FiltroPagamentos) =>
   useQuery({
     queryKey: qk.pagamentos(f),
     placeholderData: keepPreviousData,
-    queryFn: async () => (await api.get<PagamentoListagem[]>('/pagamentos', { params: { de: f.de, ate: f.ate, ...(f.forma ? { forma: f.forma } : {}) } })).data,
+    // O backend não ordena `GET /pagamentos`: mais recentes primeiro.
+    queryFn: async () => {
+      const { data } = await api.get<PagamentoListagem[]>('/pagamentos', { params: { de: f.de, ate: f.ate, ...(f.forma ? { forma: f.forma } : {}) } });
+      return [...data].sort((a, b) => b.pagoEm.localeCompare(a.pagoEm));
+    },
   });
 
 /** `GET /financeiro/fechamento-caixa?de=&ate=` — relatório sem estado (sem abrir/fechar caixa). */

@@ -38,6 +38,37 @@ describe('MoneyInput', () => {
   });
 });
 
+describe('MoneyInput — posição do cursor', () => {
+  function Campo() {
+    const [v, setV] = useState(0);
+    return <MoneyInput aria-label="Preço" value={v} onChange={setV} />;
+  }
+  const texto = () => (screen.getByLabelText('Preço') as HTMLInputElement).value.replace(/\u00a0/g, ' ');
+
+  it('cursor no INÍCIO do campo: 31690 continua virando R$ 316,90 (antes virava R$ 300.016,90)', async () => {
+    render(<Campo />);
+    await userEvent.type(screen.getByLabelText('Preço'), '31690', { initialSelectionStart: 0, initialSelectionEnd: 0 });
+    expect(texto()).toBe('R$ 316,90');
+  });
+
+  it('cursor no MEIO do campo também anexa ao final', async () => {
+    render(<Campo />);
+    await userEvent.type(screen.getByLabelText('Preço'), '31690', { initialSelectionStart: 3, initialSelectionEnd: 3 });
+    expect(texto()).toBe('R$ 316,90');
+  });
+
+  it('ignora letras, apaga o último dígito no Backspace e respeita o teto', async () => {
+    render(<Campo />);
+    const campo = screen.getByLabelText('Preço');
+    await userEvent.type(campo, 'a1b2c3');
+    expect(texto()).toBe('R$ 1,23');
+    await userEvent.keyboard('{Backspace}');
+    expect(texto()).toBe('R$ 0,12');
+    await userEvent.type(campo, '99999999999');
+    expect(texto()).toBe('R$ 9.999.999,99');
+  });
+});
+
 describe('SegmentedControl', () => {
   it('navega por setas', async () => {
     function Wrap() {

@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
 import { entrarComo } from './utils';
+import { server } from '@/mocks/server';
 import { db } from '@/mocks/db';
 import { reloginCancelado } from '@/api/sessaoEventos';
 
@@ -92,13 +94,13 @@ describe('Clientes — detalhe', () => {
     expect(db.pedidos.find((p) => p.id === 1058)!.cliente.nome).toBe('Marcos V. Silva');
   });
 
-  it('CPF/CNPJ duplicado na edição vira erro de campo', async () => {
+  it('erro de campo (`campos`) na edição aparece no campo', async () => {
+    server.use(http.put('http://localhost:8080/api/clientes/:id', () => HttpResponse.json({ mensagem: 'Dados inválidos', campos: { cpfCnpj: 'CPF/CNPJ já cadastrado' } }, { status: 400 })));
     await entrarComo('/clientes/1');
     await userEvent.click(await screen.findByRole('button', { name: 'Editar' }));
     const doc = screen.getByLabelText('CPF/CNPJ');
     await userEvent.clear(doc);
     await userEvent.type(doc, '52998224725');
-    db.clientes[1].cpfCnpj = '529.982.247-25'; // já pertence a outro cliente
     await userEvent.click(screen.getByRole('button', { name: 'Salvar alterações' }));
     expect(await screen.findByText('CPF/CNPJ já cadastrado')).toBeInTheDocument();
   });

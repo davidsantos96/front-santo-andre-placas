@@ -8,7 +8,7 @@ import { SegmentedControl } from '@/components/SegmentedControl';
 import { useToast } from '@/components/Toast';
 import { useMovimentar } from './api';
 
-type Dados = { tipo: 'ENTRADA' | 'SAIDA'; quantidade: string; observacao: string };
+type Dados = { tipo: 'ENTRADA' | 'SAIDA'; quantidade: string };
 
 const campo = 'mt-1 block h-9 w-full rounded border border-linha-forte bg-white px-2.5 text-base';
 
@@ -22,7 +22,6 @@ export function MovimentarModal({ item, onFechar }: { item: ItemEstoque | null; 
     () => z.object({
       tipo: z.enum(['ENTRADA', 'SAIDA']),
       quantidade: z.string().regex(/^\d+$/, 'Informe um número inteiro').refine((v) => Number(v) > 0, 'A quantidade deve ser maior que zero'),
-      observacao: z.string().trim(),
     }).superRefine((d, ctx) => {
       if (item && d.tipo === 'SAIDA' && /^\d+$/.test(d.quantidade) && Number(d.quantidade) > item.quantidade) {
         ctx.addIssue({ code: 'custom', path: ['quantidade'], message: `Saldo insuficiente (disponível: ${item.quantidade})` });
@@ -33,14 +32,14 @@ export function MovimentarModal({ item, onFechar }: { item: ItemEstoque | null; 
 
   const { register, control, handleSubmit, formState: { errors } } = useForm<Dados>({
     resolver: zodResolver(schema),
-    defaultValues: { tipo: 'ENTRADA', quantidade: '', observacao: '' },
+    defaultValues: { tipo: 'ENTRADA', quantidade: '' },
   });
 
   const enviar = handleSubmit(async (d) => {
     if (!item) return;
     setErroApi(null);
     try {
-      await mov.mutateAsync({ itemId: item.id, tipo: d.tipo, quantidade: Number(d.quantidade), observacao: d.observacao });
+      await mov.mutateAsync({ itemEstoqueId: item.id, tipo: d.tipo, quantidade: Number(d.quantidade) });
       toast(`${d.tipo === 'ENTRADA' ? 'Entrada' : 'Saída'} de ${d.quantidade} — ${item.nome}`);
       onFechar();
     } catch (e) {
@@ -67,10 +66,6 @@ export function MovimentarModal({ item, onFechar }: { item: ItemEstoque | null; 
               <input {...register('quantidade')} inputMode="numeric" autoFocus aria-invalid={!!errors.quantidade} className={campo} />
             </label>
             {errors.quantidade && <p role="alert" className="-mt-2 text-xs text-erro">{errors.quantidade.message}</p>}
-            <label className="text-xs font-semibold text-aco">
-              Observação <span className="font-normal">(opcional)</span>
-              <input {...register('observacao')} className={campo} />
-            </label>
             {erroApi && <p role="alert" className="rounded bg-erro-bg px-2.5 py-2 text-sm text-erro">{erroApi}</p>}
             <div className="mt-1 flex justify-end gap-2">
               <button type="button" onClick={onFechar} className="h-[30px] rounded border border-linha-forte bg-white px-3 text-sm font-medium text-aco hover:bg-fundo">Cancelar</button>

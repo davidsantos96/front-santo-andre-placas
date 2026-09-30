@@ -38,6 +38,13 @@ export const ESTOQUE: ItemEstoque[] = [
   { id: 6, nome: 'Película refletiva', sku: null, unidade: 'rolo', quantidade: 3, quantidadeMinima: 10 },
 ];
 
+// serviço → item de estoque consumido na baixa automática (GET /estoque/vinculos?servicoId=)
+export const VINCULOS = [
+  { id: 1, servicoId: 1, servicoNome: 'Par de placas Mercosul (carro)', itemEstoqueId: 1, itemEstoqueNome: 'Placa Mercosul carro (par)', quantidadeNecessaria: 1 },
+  { id: 2, servicoId: 2, servicoNome: 'Placa Mercosul (moto)', itemEstoqueId: 2, itemEstoqueNome: 'Placa Mercosul moto', quantidadeNecessaria: 1 },
+  { id: 3, servicoId: 1, servicoNome: 'Par de placas Mercosul (carro)', itemEstoqueId: 3, itemEstoqueNome: 'Lacre inviolável', quantidadeNecessaria: 2 },
+];
+
 export const USUARIOS: (Usuario & { senha: string })[] = [
   { id: 1, nome: 'Bruna Costa', email: 'atendente@sap.com', papel: 'ATENDENTE', ativo: true, senha: '123456' },
   { id: 2, nome: 'Carlos Menezes', email: 'gerente@sap.com', papel: 'GERENTE', ativo: true, senha: '123456' },
@@ -111,6 +118,7 @@ export function criarBanco(agora = Date.now()) {
     clientes, veiculos, pedidos, pagamentos, historico,
     servicos: structuredClone(SERVICOS),
     estoque: structuredClone(ESTOQUE),
+    vinculos: structuredClone(VINCULOS),
     usuarios: structuredClone(USUARIOS),
     tokens: new Map<string, { papel: Papel; nome: string }>(),
   };

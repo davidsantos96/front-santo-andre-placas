@@ -33,7 +33,8 @@ export function LoginPage() {
       navigate(nextSeguro(sp.get('next')) ?? telaInicial(u.papel), { replace: true });
     } catch (e) {
       const status = (e as ApiError).status;
-      setErro(status === 401 || status === 403 ? 'E-mail ou senha incorretos' : (e as ApiError).mensagem ?? 'Não foi possível entrar');
+      // A API responde 400 ("Email ou senha inválidos") para credencial errada; 401/403 por garantia.
+      setErro([400, 401, 403].includes(status) ? 'E-mail ou senha incorretos' : (e as ApiError).mensagem ?? 'Não foi possível entrar');
     }
   });
 
