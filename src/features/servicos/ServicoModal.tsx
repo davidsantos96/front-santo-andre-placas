@@ -1,3 +1,4 @@
+import { useDevolverFoco } from '@/lib/useDevolverFoco';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as Dialog from '@radix-ui/react-dialog';
@@ -43,11 +44,12 @@ export function ServicoModal({ servico, onFechar }: { servico: Servico | 'novo' 
     }
   });
 
+  const devolverFoco = useDevolverFoco(servico !== null);
   return (
     <Dialog.Root open={servico !== null} onOpenChange={(o) => !o && onFechar()}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[420px] max-w-[92vw] -translate-x-1/2 -translate-y-1/2 rounded-lg bg-white p-5 shadow-placa">
+        <Dialog.Content onCloseAutoFocus={devolverFoco} className="fixed left-1/2 top-1/2 z-50 w-[420px] max-w-[92vw] -translate-x-1/2 -translate-y-1/2 rounded-lg bg-white p-5 shadow-placa">
           <Dialog.Title className="font-display text-[18px] font-bold">{editando ? 'Editar serviço' : 'Novo serviço'}</Dialog.Title>
           <Dialog.Description className="sr-only">Nome, categoria e preço do serviço.</Dialog.Description>
           <form onSubmit={enviar} noValidate className="mt-4 flex flex-col gap-3">

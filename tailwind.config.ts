@@ -11,7 +11,7 @@ export default {
         aco: { DEFAULT: '#5C6470', 700: '#41474F', 600: '#495159' },
         linha: { DEFAULT: '#E2E5EA', forte: '#D4D8DF', fraca: '#EFF1F4', badge: '#C7CCD4' },
         fundo: '#F4F5F7',
-        ok: { DEFAULT: '#1E7F4F', bg: '#E7F3ED' },
+        ok: { DEFAULT: '#1E7F4F', texto: '#1A7347', bg: '#E7F3ED' },
         alerta: { DEFAULT: '#B45309', texto: '#8A4B12', bg: '#FBF0E4', bgHover: '#FDF6EC', borda: '#F0DCC0' },
         erro: { DEFAULT: '#B91C1C', bg: '#FBEAEA' },
         grafico: { 1: '#003399', 2: '#4C6EB0', 3: '#7691C8', cartao: '#6B8BC9' }, // 3: escurecido (spec: #93A9D1) p/ contraste ≥ 3:1

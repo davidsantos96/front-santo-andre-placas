@@ -4,11 +4,11 @@ Lista viva. Cada item foi assumido de forma provisória para não travar a imple
 
 Legenda: **Backend** = depende de mudança/confirmação na API · **Front** = decisão só do front · **Produto** = decisão de negócio/UX.
 
-## Resumo do que ainda está aberto (revisado em 2026-09-30)
+## Resumo do que ainda está aberto (revisado em 2026-10-07)
 
 **Backend (para você):** todo o lote de 2026-10-02 foi validado na API real (B16, C2/B15, C3, B7, B8, B9, B10, B11, B13, P2, P15, P21, P24, P35). Restam **B17** (busca por nome casa dígitos soltos) e **B18** (e-mail com caixa diferente), mais P17 (paginação de listas).
 **F1 (front usando o que o backend entregou) está feito:** `incluirInativos`, consulta de placa no cadastro novo (B3), `totalPedidos`, `pedidosNoMes`, `?busca=` em pedidos, tendência do tempo médio e coluna "Último acesso". Decisões do F1: Tempo médio = últimos 7 dias (compara com os 7 anteriores); Serviços mais vendidos = últimos 30 dias; veículo salvo só com a placa fica visível como "Dados incompletos".
-**Front / produto:** B11 (revisar e mesclar o PR #1) · Fase 10 (busca global, atalhos, acessibilidade) · P9 (`/pedidos/completo`, você vai validar) · P14, P20, P33 (itens de baixa prioridade).
+**Front / produto:** B11 (revisar e mesclar o PR #1) · P9 (`/pedidos/completo`, você vai validar) · P14, P20, P33 (itens de baixa prioridade).
 Os checklists por fase mais abaixo foram escritos antes da verificação real; o que já foi confirmado está marcado `[x]` com a nota do que existe de fato.
 
 ---
@@ -74,10 +74,10 @@ Decididas com o usuário (lista de múltipla escolha). `P9` e `P35` seguem abert
 - [x] **B8 · Fila de produção com Placa pronta:** 3 consultas (Recebido, Em processamento, Placa pronta), mais antigos primeiro.
 - [x] **B9 · Usuários:** campo Papel **desabilitado** ao editar o próprio usuário; botão **"Redefinir senha"** (modal com nova senha provisória) chamando um endpoint ainda inexistente (B14).
 - [x] **B10 · e2e com Playwright contra a API real:** pasta `e2e/` com os roteiros (login, serviço, novo pedido, Kanban + estoque insuficiente, detalhe/pagamento, financeiro, dashboard, clientes, veículos, usuários e permissões, sessão expirada), configurados por variáveis de ambiente (`E2E_API_URL`, `E2E_USER`, `E2E_PASSWORD`) e documentados no README.
-- [ ] **B11 · PR #1:** revisar e mesclar inteiro; depois abrir PRs menores.
+- [x] **B11 · PR #1:** mesclado em 2026-10-07 (merge commit `6bc23d1`); depois abrir PRs menores.
 
 **C. Depois**
-- [ ] **Fase 10:** busca global (combobox), atalhos `G P`/`G C` e passada de acessibilidade.
+- [x] **Fase 10:** busca global (combobox), atalhos `G P`/`G C` e passada de acessibilidade. _(Feito na branch `claude/fase-10-busca-atalhos-a11y`: `GlobalSearch` com Pedidos · Veículos · Clientes, atalhos `/`, `N`, `G P`, `G C` cobertos por teste, e2e com axe-core sem violações em todas as rotas. Achados da passada: contraste das pílulas de status "Placa pronta" (4,46:1) e "Entregue"/"Ativo" (4,38:1) — texto escurecido para ≥ 5:1; foco caía no `<body>` ao fechar qualquer modal — agora volta ao gatilho (`useDevolverFoco`).)_
 
 ## Backend: itens novos surgidos dessas decisões
 
