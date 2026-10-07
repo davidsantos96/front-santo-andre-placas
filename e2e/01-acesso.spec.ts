@@ -59,11 +59,8 @@ test('sem token a API responde 401', async () => {
   expect((await chamar('/pedidos')).status).toBe(401);
 });
 
-// BUG DO BACKEND (B16 em PENDENCIAS.md): usuário autenticado sem permissão recebe 401 ("Não autenticado")
-// em vez de 403. O teste descreve o comportamento correto e está marcado como falha esperada: quando o
-// backend for corrigido ele passa a FALHAR aqui — é o sinal para remover o `test.fail`.
+// B16 (corrigido no backend): negação de @PreAuthorize responde 403, não 401 — o front não pode deslogar o usuário.
 test('falta de permissão responde 403 (não 401)', async () => {
-  test.fail(true, 'B16: @PreAuthorize negado vira 401 no backend atual');
   const t = (await chamar<{ token: string }>('/auth/login', { method: 'POST', body: { email: atendente.email, senha: atendente.senha } })).corpo.token;
   expect((await chamar('/usuarios', { token: t })).status).toBe(403); // ATENDENTE não lista usuários
 });

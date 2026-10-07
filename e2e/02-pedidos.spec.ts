@@ -53,7 +53,8 @@ test('Novo pedido pela tela: cliente novo (painel), veículo novo, serviço, Pix
   await page.keyboard.press('Control+Enter');
   await expect(aviso(page, /Pedido #\d+ criado/)).toBeVisible();
 
-  clienteId = (await chamar('/clientes?busca=' + encodeURIComponent(nomeCliente), { token })).corpo[0].id;
+  const achados = (await chamar<{ id: number; nome: string }[]>('/clientes?busca=' + encodeURIComponent(nomeCliente), { token })).corpo;
+  clienteId = achados.find((c) => c.nome === nomeCliente)!.id; // a busca por nome também casa dígitos soltos do nome (B17)
   const pedidos = (await chamar(`/pedidos?clienteId=${clienteId}`, { token })).corpo.content;
   expect(pedidos).toHaveLength(1);
   pedidoId = pedidos[0].id;
@@ -77,8 +78,11 @@ test('Kanban: "$ pendente", confirmação de entrega sem quitar e recusa por est
   expect((await chamar(`/pedidos/${pedidoId}`, { token })).corpo.status).toBe('RECEBIDO');
 
   // iniciar produção: o serviço consome 2 lacres e há 1 → o backend recusa e o card volta
-  await arrastarCard(page, pedidoId, 'EM_PROCESSAMENTO');
-  await expect(aviso(page, /Estoque insuficiente para "Lacre .*": disponível 1, necessário 2/)).toBeVisible();
+  const recusa = aviso(page, /Estoque insuficiente para "Lacre .*": disponível 1, necessário 2/);
+  await expect(async () => { // o gesto logo após fechar o diálogo às vezes não "pega" no dnd-kit: repete o arraste
+    if (!(await recusa.isVisible())) await arrastarCard(page, pedidoId, 'EM_PROCESSAMENTO');
+    await expect(recusa).toBeVisible({ timeout: 3000 });
+  }).toPass({ timeout: 20000 });
   await expect(page.locator(`[data-coluna=RECEBIDO] [aria-label^="Pedido ${pedidoId},"]`)).toHaveCount(1);
   expect((await chamar(`/pedidos/${pedidoId}`, { token })).corpo.status).toBe('RECEBIDO');
 });

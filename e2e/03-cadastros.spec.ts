@@ -117,6 +117,6 @@ test('Veículos: busca por placa, detalhe e "Consultar placa" (400 esperado = av
   await expect(page).toHaveURL(new RegExp(`/veiculos/${veiculo.id}$`));
   await expect(page.getByText('Nenhuma consulta realizada para este veículo.')).toBeVisible();
   await page.getByRole('button', { name: 'Consultar placa' }).click();
-  await expect(page.getByText('Consulta veicular ainda não está disponível.')).toBeVisible();
+  await expect(aviso(page, 'Consulta veicular ainda não está disponível.')).toBeVisible();
   void irPara;
 });
