@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { RUN, chamar, criarClienteComVeiculo, entrar, irPara, moeda, placaAleatoria, tokenAdmin, aviso } from './helpers';
+import { RUN, chamar, criarClienteComVeiculo, criarPedido, criarServico, entrar, irPara, moeda, placaAleatoria, tokenAdmin, aviso } from './helpers';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -119,4 +119,72 @@ test('Veículos: busca por placa, detalhe e "Consultar placa" (400 esperado = av
   await page.getByRole('button', { name: 'Consultar placa' }).click();
   await expect(aviso(page, 'Consulta veicular ainda não está disponível.')).toBeVisible();
   void irPara;
+});
+
+test('F1 · Serviços: inativo continua listado (incluirInativos), "Pedidos no mês" vem da API e dá para reativar', async ({ page }) => {
+  const nomeSrv = `Srv inativo ${RUN}`;
+  const nomeCli = `Cliente Mes ${RUN}`;
+  const s = await criarServico(token, nomeSrv);
+  const { cliente, veiculo } = await criarClienteComVeiculo(token, nomeCli);
+  await criarPedido(token, cliente.id, veiculo.id, s.id);
+  await chamar(`/servicos/${s.id}/status`, { method: 'PATCH', token, body: { ativo: false } });
+
+  await entrar(page, undefined, undefined, '/servicos');
+  const linha = page.locator('tr').filter({ hasText: nomeSrv }); // linhas clicáveis têm role="link"
+  await expect(linha).toBeVisible(); // GET /servicos puro não traz inativos
+  await expect(linha.getByRole('switch')).not.toBeChecked();
+  const pedidosNoMes = ((await chamar('/servicos?incluirInativos=true', { token })).corpo as { id: number; pedidosNoMes: number }[]).find((x) => x.id === s.id)!.pedidosNoMes;
+  expect(pedidosNoMes).toBe(1);
+  await expect(linha.getByRole('cell').nth(3)).toHaveText(String(pedidosNoMes));
+
+  await linha.getByRole('switch').click();
+  await expect(aviso(page, `${nomeSrv} ativado`)).toBeVisible();
+  await expect(linha.getByRole('switch')).toBeChecked();
+  const depois = ((await chamar('/servicos', { token })).corpo as { id: number }[]).some((x) => x.id === s.id);
+  expect(depois).toBe(true); // voltou a aparecer na lista de ativos
+});
+
+test('F1 · Clientes: a coluna "Pedidos" usa totalPedidos da API', async ({ page }) => {
+  const nome = `Cliente Total ${RUN}`;
+  const s = await criarServico(token, `Srv total ${RUN}`);
+  const { cliente, veiculo } = await criarClienteComVeiculo(token, nome);
+  await criarPedido(token, cliente.id, veiculo.id, s.id);
+  await criarPedido(token, cliente.id, veiculo.id, s.id, 'WHATSAPP');
+  expect(((await chamar(`/clientes/${cliente.id}`, { token })).corpo as { totalPedidos: number }).totalPedidos).toBe(2);
+  await entrar(page, undefined, undefined, '/clientes');
+  await page.getByLabel('Buscar cliente').fill(nome);
+  const linha = page.locator('tr').filter({ hasText: nome });
+  await expect(linha).toBeVisible();
+  await expect(linha.getByRole('cell').nth(4)).toHaveText('2'); // colunas: nome, CPF/CNPJ, telefone, veículos, pedidos
+});
+
+test('F1 · Veículo novo: "Consultar placa" grava só a placa (cadastro parcial) e o cadastro é completado com PUT', async ({ page }) => {
+  const { cliente } = await criarClienteComVeiculo(token, `Cliente Parcial ${RUN}`);
+  const placa = placaAleatoria();
+  await entrar(page, undefined, undefined, `/clientes/${cliente.id}?aba=veiculos`);
+  await page.getByRole('button', { name: '+ Novo veículo' }).click();
+  const f = page.getByRole('form', { name: 'Novo veículo' });
+  await f.getByLabel('Placa').pressSequentially(placa);
+  await f.getByRole('button', { name: 'Consultar placa' }).click();
+  await expect(aviso(page, /Consulta veicular ainda não está disponível\. A placa foi salva/)).toBeVisible();
+
+  const gravados = ((await chamar(`/veiculos?placa=${placa}`, { token })).corpo as { id: number; marcaModelo: string | null; anoFabricacao: number | null }[]);
+  expect(gravados).toHaveLength(1);
+  expect(gravados[0]).toMatchObject({ marcaModelo: null, anoFabricacao: null });
+
+  await f.getByLabel('Marca / modelo').fill('VW Gol 1.6');
+  await f.getByLabel('Ano de fabricação').fill('2018');
+  await f.getByLabel('Ano do modelo').fill('2019');
+  await f.getByRole('button', { name: 'Salvar veículo' }).click();
+  await expect.poll(async () => ((await chamar(`/veiculos?placa=${placa}`, { token })).corpo as { marcaModelo: string | null }[]).map((v) => v.marcaModelo)).toEqual(['VW Gol 1.6']); // PUT, não um segundo POST
+  const completo = ((await chamar(`/veiculos?placa=${placa}`, { token })).corpo as { marcaModelo: string; anoFabricacao: number; anoModelo: number }[]);
+  expect(completo).toHaveLength(1);
+  expect(completo[0]).toMatchObject({ marcaModelo: 'VW Gol 1.6', anoFabricacao: 2018, anoModelo: 2019 });
+
+  // a mesma placa de novo: a API recusa e a mensagem aparece no campo
+  await page.getByRole('button', { name: '+ Novo veículo' }).click();
+  const f2 = page.getByRole('form', { name: 'Novo veículo' });
+  await f2.getByLabel('Placa').pressSequentially(placa);
+  await f2.getByRole('button', { name: 'Consultar placa' }).click();
+  await expect(f2.getByText(new RegExp(`Já existe um veículo cadastrado com a placa ${placa}`))).toBeVisible();
 });

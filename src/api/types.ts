@@ -3,12 +3,14 @@ import type { Papel } from '@/auth/papeis';
 
 /** DTOs da API — espelho dos records Java (spec §11). Sem tradução de nomes. */
 
-export type Cliente = { id: number; nome: string; telefone: string; cpfCnpj: string; email: string; criadoEm: string };
+/** `totalPedidos` (inclui cancelados) só vem nas leituras de `/clientes`; fica `null` quando o cliente vem embutido em outra resposta. */
+export type Cliente = { id: number; nome: string; telefone: string; cpfCnpj: string; email: string; criadoEm: string; totalPedidos?: number | null };
 export type Veiculo = {
-  id: number; placa: string; marcaModelo: string; anoFabricacao: number; anoModelo: number;
+  id: number; placa: string; marcaModelo: string | null; anoFabricacao: number | null; anoModelo: number | null;
   chassi: string | null; clienteId: number; clienteNome: string;
 };
-export type Servico = { id: number; nome: string; descricao: string; precoCentavos: number; categoria: string; ativo: boolean };
+/** `pedidosNoMes` (não cancelados, mês de São Paulo) só vem nas leituras de `/servicos`. */
+export type Servico = { id: number; nome: string; descricao: string; precoCentavos: number; categoria: string; ativo: boolean; pedidosNoMes?: number | null };
 
 export type Pedido = {
   id: number; status: StatusPedido; origem: string; criadoEm: string; atualizadoEm: string;
@@ -43,9 +45,10 @@ export type ResumoDashboard = {
   pedidosHoje: number; pedidosPorStatus: Record<StatusPedido, number>;
   faturamentoHojeCentavos: number; itensBaixoEstoque: number;
 };
-export type TempoMedioProducao = { horasMedia: number; pedidosConsiderados: number };
+/** `horasMediaPeriodoAnterior`: média do período de mesma duração imediatamente anterior (só com `de`/`ate`; `null` sem dados). */
+export type TempoMedioProducao = { horasMedia: number; pedidosConsiderados: number; horasMediaPeriodoAnterior?: number | null };
 
-export type Usuario = { id: number; nome: string; email: string; papel: Papel; ativo: boolean };
+export type Usuario = { id: number; nome: string; email: string; papel: Papel; ativo: boolean; ultimoAcessoEm?: string | null };
 
 export type LoginRequest = { email: string; senha: string };
 export type LoginResponse = { token: string; papel: Papel; nome: string };
@@ -60,7 +63,7 @@ export type Paginado<T> = {
 };
 
 export type FiltroPedidos = {
-  status?: StatusPedido; clienteId?: number; de?: string; ate?: string; page?: number; size?: number;
+  status?: StatusPedido; clienteId?: number; de?: string; ate?: string; busca?: string; page?: number; size?: number;
 };
 export type FiltroPagamentos = { de: string; ate: string; forma?: FormaPagamento };
 
@@ -70,9 +73,12 @@ export type ApiError = { status: number; mensagem: string; campos?: Record<strin
 /** Corpos de POST assumidos (o backend ainda usa a entidade crua — ver PENDENCIAS.md). */
 export type NovoClienteRequest = { nome: string; telefone: string; cpfCnpj: string; email: string };
 /** `chassi` é opcional (o backend aceita em branco). */
+/** Só a `placa` (e o cliente) é obrigatória; o restante pode ser completado depois com `PUT /veiculos/{id}`. */
 export type NovoVeiculoRequest = {
-  clienteId: number; placa: string; marcaModelo: string; anoFabricacao: number; anoModelo: number; chassi?: string;
+  clienteId: number; placa: string; marcaModelo?: string; anoFabricacao?: number; anoModelo?: number; chassi?: string;
 };
+/** `PUT /veiculos/{id}` aplica só os campos enviados (não nulos). */
+export type AtualizarVeiculoRequest = { marcaModelo?: string; anoFabricacao?: number; anoModelo?: number; chassi?: string };
 export type PagamentoRequest = { valorCentavos: number; formaPagamento: import('@/components/status').FormaPagamento };
 
 /** Histórico de consultas veiculares (sempre vazio até haver provedor). Formato assumido — ver PENDENCIAS.md. */

@@ -88,3 +88,16 @@ test('Desativar (com confirmação) e reativar', async ({ page }) => {
   await expect(aviso(page, `${outro.nome} reativado`)).toBeVisible();
   await expect(linha).toContainText('Ativo');
 });
+
+test('F1 · Último acesso: "Nunca acessou" até o primeiro login, depois "Hoje · hh:mm" (registrado pela API)', async ({ page }) => {
+  const u = await criarUsuario(token, `Acesso ${RUN}`, `acesso.${RUN}@e2e.test`, 'ATENDENTE');
+  await entrar(page, undefined, undefined, '/usuarios');
+  const linha = page.getByRole('row').filter({ hasText: u.email });
+  await expect(linha).toContainText('Nunca acessou');
+  await chamar('/auth/login', { method: 'POST', body: { email: u.email, senha: 'senha123' } });
+  const doApi = ((await chamar('/usuarios', { token })).corpo as { email: string; ultimoAcessoEm: string | null }[]).find((x) => x.email === u.email)!;
+  expect(doApi.ultimoAcessoEm).not.toBeNull();
+  await page.reload(); // token só em memória: volta ao login
+  await entrar(page, undefined, undefined, '/usuarios');
+  await expect(page.getByRole('row').filter({ hasText: u.email })).toContainText(/Hoje · \d{2}:\d{2}/);
+});

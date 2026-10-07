@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
 import { qk } from '@/api/keys';
 import type { ApiError, Cliente, NovoClienteRequest } from '@/api/types';
-import { usePedidos } from '@/features/pedidos/api';
 
 /** Assume `GET /clientes?busca=` → `Cliente[]` (o backend não especifica paginação para clientes). */
 export const useClientes = (busca?: string, enabled = true) =>
@@ -33,10 +32,4 @@ export const useAtualizarCliente = (id: number) => {
       for (const k of [['clientes'], qk.cliente(id), ['pedidos'], ['pedido'], ['veiculos']]) void qc.invalidateQueries({ queryKey: k });
     },
   });
-};
-
-/** Total de pedidos do cliente via `GET /pedidos?clienteId=&size=1` (uma chamada por cliente — ver PENDENCIAS.md). */
-export const useTotalPedidosDoCliente = (clienteId: number) => {
-  const q = usePedidos({ clienteId, size: 1 });
-  return { total: q.data?.page.totalElements, carregando: q.isPending };
 };

@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/Skeleton';
 import { ORIGEM } from '@/components/status';
 import { duracaoHoras, tempoDecorrido } from '@/lib/datas';
 import { useAgora } from '@/lib/useAgora';
-import { useFilaDeProducao, useOrigemDosPedidos, useServicosMaisVendidos, useTempoMedio } from './api';
+import { DIAS_MAIS_VENDIDOS, DIAS_TEMPO_MEDIO, useFilaDeProducao, useOrigemDosPedidos, useServicosMaisVendidos, useTempoMedio } from './api';
 
 /** Barras horizontais em HTML/CSS: largura = % do maior valor; o texto (nome e contagem) é sempre visível. */
 export function ServicosMaisVendidosCard() {
@@ -19,8 +19,10 @@ export function ServicosMaisVendidosCard() {
     <Cartao titulo="Serviços mais vendidos" className="min-w-0">
       {q.isPending ? <Skeleton className="h-[200px]" />
         : q.isError ? <ErrorState onRetry={() => void q.refetch()} />
-        : top.length === 0 ? <EmptyState mensagem="Ainda não há vendas." />
+        : top.length === 0 ? <EmptyState mensagem={`Sem vendas nos últimos ${DIAS_MAIS_VENDIDOS} dias.`} />
         : (
+          <>
+          <p className="-mt-1 mb-3 text-xs text-aco">Últimos {DIAS_MAIS_VENDIDOS} dias · pedidos cancelados não contam</p>
           <ul className="flex flex-col gap-3.5">
             {top.map((s) => (
               <li key={s.servicoId}>
@@ -34,8 +36,23 @@ export function ServicosMaisVendidosCard() {
               </li>
             ))}
           </ul>
+          </>
         )}
     </Cartao>
+  );
+}
+
+/** "▼ 12 min vs semana anterior": menos tempo é melhor (verde); mais tempo é pior (vermelho). Sem base de comparação, não aparece. */
+function Tendencia({ atual, anterior, considerados }: { atual: number; anterior?: number | null; considerados: number }) {
+  if (considerados === 0 || anterior == null) return null;
+  const min = Math.round((atual - anterior) * 60);
+  if (min === 0) return <p className="mt-1.5 text-xs font-semibold text-aco">Igual aos {DIAS_TEMPO_MEDIO} dias anteriores</p>;
+  const melhorou = min < 0;
+  return (
+    <p className={`mt-1.5 text-xs font-semibold ${melhorou ? 'text-ok' : 'text-erro'}`}>
+      <span aria-hidden="true">{melhorou ? '▼' : '▲'} </span>
+      {duracaoHoras(Math.abs(min) / 60)} {melhorou ? 'mais rápido' : 'mais lento'} que nos {DIAS_TEMPO_MEDIO} dias anteriores
+    </p>
   );
 }
 
@@ -50,10 +67,11 @@ export function TempoMedioCard() {
             <div className="font-display text-[36px] font-bold leading-none tabular-nums">
               {q.data.pedidosConsiderados > 0 ? duracaoHoras(q.data.horasMedia) : '—'}
             </div>
+            <Tendencia atual={q.data.horasMedia} anterior={q.data.horasMediaPeriodoAnterior} considerados={q.data.pedidosConsiderados} />
             <p className="mt-2 text-xs text-aco">
               {q.data.pedidosConsiderados > 0
-                ? `Em produção → placa pronta · ${q.data.pedidosConsiderados} ${q.data.pedidosConsiderados === 1 ? 'pedido considerado' : 'pedidos considerados'}`
-                : 'Sem pedidos concluídos para calcular.'}
+                ? `Em produção → placa pronta · últimos ${DIAS_TEMPO_MEDIO} dias · ${q.data.pedidosConsiderados} ${q.data.pedidosConsiderados === 1 ? 'pedido considerado' : 'pedidos considerados'}`
+                : `Sem placas prontas nos últimos ${DIAS_TEMPO_MEDIO} dias.`}
             </p>
           </>
         )}

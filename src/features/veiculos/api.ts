@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
 import { qk } from '@/api/keys';
-import type { ApiError, ConsultaHistorico, ConsultaVeicularResultado, NovoVeiculoRequest, Veiculo } from '@/api/types';
+import type { ApiError, AtualizarVeiculoRequest, ConsultaHistorico, ConsultaVeicularResultado, NovoVeiculoRequest, Veiculo } from '@/api/types';
 
 /** Assume `GET /veiculos?placa=&clienteId=` → `Veiculo[]`. */
 export const useVeiculos = (filtro?: { placa?: string; clienteId?: number }, enabled = true) =>
@@ -16,6 +16,17 @@ export const useCriarVeiculo = () => {
   return useMutation<Veiculo, ApiError, NovoVeiculoRequest>({
     mutationFn: async (dados) => (await api.post<Veiculo>('/veiculos', dados)).data,
     onSuccess: () => { void qc.invalidateQueries({ queryKey: ['veiculos'] }); void qc.invalidateQueries({ queryKey: ['clientes'] }); },
+  });
+};
+
+/** Completa um cadastro parcial: `PUT /veiculos/{id}` aplica só os campos enviados. */
+export const useAtualizarVeiculo = (id: number) => {
+  const qc = useQueryClient();
+  return useMutation<Veiculo, ApiError, AtualizarVeiculoRequest>({
+    mutationFn: async (dados) => (await api.put<Veiculo>(`/veiculos/${id}`, dados)).data,
+    onSuccess: () => {
+      for (const k of [['veiculos'], qk.veiculo(id), ['pedidos'], ['pedido'], ['clientes']]) void qc.invalidateQueries({ queryKey: k });
+    },
   });
 };
 

@@ -92,3 +92,29 @@ test('Dashboard: KPIs e faturamento batem com a API; período personalizado e vi
   await cartao.getByLabel('Até', { exact: true }).fill(iso(hoje));
   await expect(cartao.getByRole('alert')).toContainText('no máximo 366 dias');
 });
+
+test('F1 · Dashboard: tempo médio dos últimos 7 dias e tendência batem com a API', async ({ page }) => {
+  const srv = await criarServico(token, `Srv tempo ${RUN}`);
+  const { cliente, veiculo } = await criarClienteComVeiculo(token, `Cliente Tempo ${RUN}`);
+  const ped = await criarPedido(token, cliente.id, veiculo.id, srv.id);
+  for (const novoStatus of ['EM_PROCESSAMENTO', 'PLACA_PRONTA']) await chamar(`/pedidos/${ped.id}/status`, { method: 'PATCH', token, body: { novoStatus } });
+  const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const hoje = new Date();
+  const de = new Date(hoje); de.setDate(de.getDate() - 6);
+  const api = (await chamar(`/dashboard/tempo-medio-producao?de=${iso(de)}&ate=${iso(hoje)}`, { token })).corpo as
+    { horasMedia: number; pedidosConsiderados: number; horasMediaPeriodoAnterior: number | null };
+  await entrar(page, undefined, undefined, '/dashboard');
+  const card = page.getByRole('heading', { name: 'Tempo médio de produção' }).locator('xpath=ancestor::section');
+  if (api.pedidosConsiderados === 0) {
+    await expect(card).toContainText('Sem placas prontas nos últimos 7 dias.');
+  } else {
+    await expect(card).toContainText(`últimos 7 dias · ${api.pedidosConsiderados}`);
+    if (api.horasMediaPeriodoAnterior == null) await expect(card).not.toContainText('dias anteriores');
+    else {
+      const min = Math.round((api.horasMedia - api.horasMediaPeriodoAnterior) * 60);
+      await expect(card).toContainText(min === 0 ? 'Igual aos 7 dias anteriores' : min < 0 ? 'mais rápido que nos 7 dias anteriores' : 'mais lento que nos 7 dias anteriores');
+    }
+  }
+  const mais = page.getByRole('heading', { name: 'Serviços mais vendidos' }).locator('xpath=ancestor::section');
+  await expect(mais).toContainText('Últimos 30 dias');
+});

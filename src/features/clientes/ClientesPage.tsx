@@ -9,13 +9,8 @@ import { PlacaBadge } from '@/components/PlacaBadge';
 import { useToast } from '@/components/Toast';
 import { useVeiculos } from '@/features/veiculos/api';
 import { useDebounce } from '@/lib/useDebounce';
-import { useClientes, useTotalPedidosDoCliente } from './api';
+import { useClientes } from './api';
 import { ClientePainel } from './ClientePainel';
-
-function TotalPedidos({ clienteId }: { clienteId: number }) {
-  const { total, carregando } = useTotalPedidosDoCliente(clienteId);
-  return <span className="tabular-nums">{carregando ? '…' : total ?? '—'}</span>;
-}
 
 export function ClientesPage() {
   const navigate = useNavigate();
@@ -56,7 +51,7 @@ export function ClientesPage() {
         </span>
       ),
     },
-    { header: 'Pedidos', meta: { align: 'right' }, cell: ({ row }) => <TotalPedidos clienteId={row.original.id} /> },
+    { header: 'Pedidos', meta: { align: 'right' }, cell: ({ row }) => <span className="tabular-nums">{row.original.totalPedidos ?? '—'}</span> },
   ], [porCliente, veiculosQ.isSuccess]);
 
   const lista = clientesQ.data ?? [];

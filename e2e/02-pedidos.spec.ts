@@ -150,3 +150,18 @@ test('Cancelar pelo menu (pedido recebido) e o quadro não mostra cancelados; ca
   await page.getByRole('link', { name: /Pedidos/ }).first().click();
   await expect(page.locator(`[aria-label^="Pedido ${p2.id},"]`)).toHaveCount(0);
 });
+
+test('F1 · Tabela de pedidos: a busca vai para a API e acha por placa, cliente e número', async ({ page }) => {
+  await entrar(page, undefined, undefined, '/pedidos?visao=tabela');
+  const busca = page.getByLabel('Buscar pedidos');
+  await busca.fill(placa.toLowerCase());
+  const linhas = page.locator('tr').filter({ hasText: nomeCliente });
+  await expect(linhas).toHaveCount(1);
+  await expect(page.locator('tbody tr')).toHaveCount(1); // só o pedido dessa placa, em qualquer página
+  await busca.fill(`#${pedidoId}`);
+  await expect(page.locator('tbody tr').filter({ hasText: nomeCliente })).toHaveCount(1);
+  await busca.fill(`Cliente Pedido ${RUN}`);
+  await expect(page.locator('tbody tr').filter({ hasText: nomeCliente })).toHaveCount(1);
+  await busca.fill('zzzz-nada');
+  await expect(page.getByText('Nenhum pedido encontrado com esses filtros.')).toBeVisible();
+});

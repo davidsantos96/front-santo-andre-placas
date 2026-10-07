@@ -93,12 +93,12 @@ describe('Dashboard', () => {
     expect(largura(itens[4])).toBe('25%'); // 1 de 4
   });
 
-  it('tempo médio de produção em horas/minutos, sem tendência', async () => {
+  it('tempo médio de produção em horas/minutos, sem tendência quando não há período anterior', async () => {
     await entrarComo('/dashboard', gerente);
     const card = await cartao('Tempo médio de produção');
     await within(card).findByText(/5 pedidos considerados/);
     expect(within(card).getByText(/min|h/, { selector: 'div' })).toBeInTheDocument();
-    expect(card).not.toHaveTextContent('vs semana passada');
+    expect(card).not.toHaveTextContent(/mais rápido|mais lento/);
   });
 
   it('origem dos pedidos (últimos 7 dias): contagem e % por origem', async () => {

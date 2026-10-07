@@ -95,12 +95,20 @@ describe('Pedidos — tabela', () => {
     expect(await screen.findByText('Renata Sampaio')).toBeInTheDocument();
   });
 
-  it('busca filtra por placa (normalizada) na página carregada', async () => {
+  it('busca vai para a API (?busca=) e filtra em todas as páginas', async () => {
+    const buscas: (string | null)[] = [];
+    server.events.on('request:start', ({ request }) => {
+      const u = new URL(request.url);
+      if (u.pathname.endsWith('/pedidos')) buscas.push(u.searchParams.get('busca'));
+    });
     await entrar('/pedidos?visao=tabela');
     await screen.findByText('Renata Sampaio');
-    await userEvent.type(screen.getByLabelText('Filtrar nesta página'), 'dpt-7b02');
+    await userEvent.type(screen.getByLabelText('Buscar pedidos'), 'dpt');
     await waitFor(() => expect(screen.queryByText('Marcos Vilela')).not.toBeInTheDocument());
     expect(screen.getByText('Renata Sampaio')).toBeInTheDocument();
+    expect(buscas).toContain('dpt');
+    expect(buscas.filter((b) => b === 'd')).toHaveLength(0); // debounce: não consulta a cada tecla
+    server.events.removeAllListeners();
   });
 
   it('paginação do servidor (size=50, páginas)', async () => {

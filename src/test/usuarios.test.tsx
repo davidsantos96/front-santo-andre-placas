@@ -12,14 +12,16 @@ const admin = 'admin@sap.com';
 const linha = async (texto: string) => (await screen.findByText(texto)).closest('tr')!;
 
 describe('Usuários (ADMIN)', () => {
-  it('lista nome, e-mail, papel e status — sem "Último acesso" (não é rastreado)', async () => {
+  it('lista nome, e-mail, papel, status e último acesso (registrado no login)', async () => {
     await entrarComo('/usuarios', admin);
     expect(await screen.findByText('3 usuários')).toBeInTheDocument();
     const r = await linha('Carlos Menezes');
     expect(within(r).getByText('gerente@sap.com')).toBeInTheDocument();
     expect(within(r).getByText('Gerente')).toBeInTheDocument();
     expect(within(r).getByText('Ativo')).toBeInTheDocument();
-    expect(screen.queryByRole('columnheader', { name: /último acesso/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Último acesso' })).toBeInTheDocument();
+    expect(within(r).getByText('Nunca acessou')).toBeInTheDocument(); // gerente ainda não entrou
+    expect(within(await screen.findByRole('row', { name: /Admin SAP.*admin@sap\.com/ })).getByText(/^Hoje · \d{2}:\d{2}$/)).toBeInTheDocument(); // o admin acabou de logar
     expect(screen.getByRole('columnheader', { name: 'Papel' })).toHaveAttribute('scope', 'col');
   });
 

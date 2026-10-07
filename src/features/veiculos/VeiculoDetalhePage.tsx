@@ -1,3 +1,4 @@
+import { anosDoVeiculo, modeloDoVeiculo } from '@/lib/veiculo';
 import { ArrowLeft } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { naoEncontrado } from '@/lib/erros';
@@ -43,7 +44,7 @@ export function VeiculoDetalhePage() {
 
   return (
     <Pagina
-      titulo={v.marcaModelo}
+      titulo={modeloDoVeiculo(v)}
       acoes={
         <button type="button" onClick={consultarPlaca} disabled={consultar.isPending}
           className="h-8 rounded bg-mercosul px-3.5 text-sm font-semibold text-white hover:bg-mercosul-hover disabled:opacity-60">
@@ -57,8 +58,8 @@ export function VeiculoDetalhePage() {
           <div className="flex flex-wrap items-center gap-6">
             <PlacaBadge placa={v.placa} tam="lg" />
             <dl className="grid grid-cols-2 gap-x-8 gap-y-2.5">
-              <div><dt className="text-xs text-aco">Marca / modelo</dt><dd className="text-base">{v.marcaModelo}</dd></div>
-              <div><dt className="text-xs text-aco">Ano</dt><dd className="text-base tabular-nums">{v.anoFabricacao}/{v.anoModelo}</dd></div>
+              <div><dt className="text-xs text-aco">Marca / modelo</dt><dd className="text-base">{modeloDoVeiculo(v)}</dd></div>
+              <div><dt className="text-xs text-aco">Ano</dt><dd className="text-base tabular-nums">{anosDoVeiculo(v)}</dd></div>
               <div><dt className="text-xs text-aco">Chassi</dt><dd className="font-mono text-sm">{v.chassi || '—'}</dd></div>
               <div><dt className="text-xs text-aco">Cliente</dt><dd className="text-base"><Link to={`/clientes/${v.clienteId}`} className="font-medium text-mercosul hover:underline">{v.clienteNome}</Link></dd></div>
             </dl>

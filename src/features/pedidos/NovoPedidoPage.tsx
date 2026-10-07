@@ -1,3 +1,4 @@
+import { anosDoVeiculo, modeloDoVeiculo } from '@/lib/veiculo';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -190,13 +191,13 @@ export function NovoPedidoPage() {
                     <div key={v.id} className={clsx('flex flex-col rounded-md border-2 bg-white p-2.5', sel ? 'border-mercosul bg-mercosul-claro' : 'border-linha')}>
                       <button
                         type="button" role="radio" aria-checked={sel}
-                        aria-label={`${v.placa}, ${v.marcaModelo}, ${v.anoFabricacao}/${v.anoModelo}`}
+                        aria-label={`${v.placa}, ${modeloDoVeiculo(v)}, ${anosDoVeiculo(v)}`}
                         onClick={() => escolherVeiculo(v)}
                         className="flex flex-col items-start gap-1.5 text-left"
                       >
                         <PlacaBadge placa={v.placa} tam="md" />
-                        <span className="text-base font-semibold">{v.marcaModelo}</span>
-                        <span className="text-xs text-aco">{v.anoFabricacao}/{v.anoModelo}</span>
+                        <span className="text-base font-semibold">{modeloDoVeiculo(v)}</span>
+                        <span className="text-xs text-aco">{anosDoVeiculo(v)}</span>
                       </button>
                       <button
                         type="button"

@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw';
-import type { AtualizarUsuarioRequest, NovoUsuarioRequest, Usuario, FaturamentoResponse, ResumoDashboard, ServicoMaisVendido, TempoMedioProducao, FechamentoCaixa, MovimentacaoRequest, NovoServicoRequest, PagamentoListagem, Servico, Cliente, LoginRequest, LoginResponse, NovoClienteRequest, NovoPedidoRequest, NovoVeiculoRequest, Pagamento, PagamentoRequest, Paginado, Pedido, Veiculo } from '@/api/types';
+import type { AtualizarUsuarioRequest, AtualizarVeiculoRequest, NovoUsuarioRequest, Usuario, FaturamentoResponse, ResumoDashboard, ServicoMaisVendido, TempoMedioProducao, FechamentoCaixa, MovimentacaoRequest, NovoServicoRequest, PagamentoListagem, Servico, Cliente, LoginRequest, LoginResponse, NovoClienteRequest, NovoPedidoRequest, NovoVeiculoRequest, Pagamento, PagamentoRequest, Paginado, Pedido, Veiculo } from '@/api/types';
 import type { StatusPedido } from '@/components/status';
 import { db } from './db';
 import { gerarJwt } from './jwt';
@@ -42,6 +42,7 @@ export const handlers = [
     const u = db.usuarios.find((x) => x.email === email && x.senha === senha);
     if (!u) return HttpResponse.json({ mensagem: 'Email ou senha inválidos' }, { status: 400 });
     if (!u.ativo) return HttpResponse.json({ mensagem: 'Usuário inativo. Contate um administrador.' }, { status: 400 });
+    u.ultimoAcessoEm = new Date().toISOString(); // o backend registra a cada login
     const token = `${gerarJwt(u.email, u.papel)}.${++seq}`;
     db.tokens.set(token, { papel: u.papel, nome: u.nome, email: u.email });
     const corpo: LoginResponse = { token, papel: u.papel, nome: u.nome };
@@ -64,6 +65,7 @@ export const handlers = [
     const clienteId = q.get('clienteId');
     const de = q.get('de');
     const ate = q.get('ate');
+    const busca = q.get('busca')?.trim().toLowerCase();
     const size = Number(q.get('size') ?? 50);
     const page = Number(q.get('page') ?? 0);
 
@@ -72,6 +74,7 @@ export const handlers = [
       .filter((p) => !clienteId || p.cliente.id === Number(clienteId))
       .filter((p) => !de || dia(p.criadoEm) >= de)
       .filter((p) => !ate || dia(p.criadoEm) <= ate)
+      .filter((p) => !busca || p.veiculo.placa.toLowerCase().includes(busca) || p.cliente.nome.toLowerCase().includes(busca) || String(p.id) === busca.replace(/^#/, ''))
       .sort((a, b) => b.id - a.id);
 
     const corpo: Paginado<Pedido> = {
@@ -171,7 +174,7 @@ export const handlers = [
     const lista = !busca ? db.clientes : db.clientes.filter((c) =>
       c.nome.toLowerCase().includes(busca) ||
       (!!digitos && (c.telefone.replace(/\D/g, '').includes(digitos) || c.cpfCnpj.replace(/\D/g, '').includes(digitos))));
-    return HttpResponse.json(lista);
+    return HttpResponse.json(lista.map(comTotalPedidos));
   }),
 
   http.post(url('/clientes'), async ({ request }) => {
@@ -198,16 +201,31 @@ export const handlers = [
     const d = (await request.json()) as NovoVeiculoRequest;
     const cliente = db.clientes.find((c) => c.id === d.clienteId);
     if (!cliente) return naoEncontradoMock('Cliente', d.clienteId);
-    // Validações dos setters da entidade (o `chassi` voltou a ser opcional).
+    // Como o backend: só a placa é obrigatória (cadastro parcial); duplicidade de placa é recusada sem diferenciar caixa.
     if (!d.placa?.trim()) return HttpResponse.json({ mensagem: 'Digite a placa do veiculo' }, { status: 400 });
-    if (!d.marcaModelo?.trim()) return HttpResponse.json({ mensagem: 'Marca e modelo não pode ser vazio' }, { status: 400 });
-    if (!(d.anoFabricacao >= 1900)) return HttpResponse.json({ mensagem: 'Ano de fabricação inválido.' }, { status: 400 });
-    if (!(d.anoModelo >= 1900)) return HttpResponse.json({ mensagem: 'Ano do modelo inválido.' }, { status: 400 });
+    const placa = d.placa.trim().toUpperCase();
+    if (db.veiculos.some((x) => x.placa.toUpperCase() === placa)) return HttpResponse.json({ mensagem: `Já existe um veículo cadastrado com a placa ${placa}.` }, { status: 400 });
+    if (d.marcaModelo !== undefined && !d.marcaModelo.trim()) return HttpResponse.json({ mensagem: 'Marca e modelo não pode ser vazio' }, { status: 400 });
+    if (d.anoFabricacao !== undefined && !(d.anoFabricacao >= 1900)) return HttpResponse.json({ mensagem: 'Ano de fabricação inválido.' }, { status: 400 });
+    if (d.anoModelo !== undefined && !(d.anoModelo >= 1900)) return HttpResponse.json({ mensagem: 'Ano do modelo inválido.' }, { status: 400 });
     const v: Veiculo = {
-      id: Math.max(0, ...db.veiculos.map((x) => x.id)) + 1, placa: d.placa, marcaModelo: d.marcaModelo, anoFabricacao: d.anoFabricacao,
-      anoModelo: d.anoModelo, chassi: d.chassi ?? null, clienteId: cliente.id, clienteNome: cliente.nome,
+      id: Math.max(0, ...db.veiculos.map((x) => x.id)) + 1, placa, marcaModelo: d.marcaModelo ?? null, anoFabricacao: d.anoFabricacao ?? null,
+      anoModelo: d.anoModelo ?? null, chassi: d.chassi ?? null, clienteId: cliente.id, clienteNome: cliente.nome,
     };
     db.veiculos.push(v);
+    return HttpResponse.json(v);
+  }),
+
+  http.put(url('/veiculos/:id'), async ({ request, params }) => {
+    if (!autenticado(request)) return naoAutorizado();
+    const v = db.veiculos.find((x) => x.id === Number(params.id));
+    if (!v) return naoEncontradoMock('Veículo', params.id);
+    const d = (await request.json()) as AtualizarVeiculoRequest;
+    // Aplica só os campos enviados (não nulos), como o backend.
+    if (d.marcaModelo != null) v.marcaModelo = d.marcaModelo;
+    if (d.anoFabricacao != null) v.anoFabricacao = d.anoFabricacao;
+    if (d.anoModelo != null) v.anoModelo = d.anoModelo;
+    if (d.chassi != null) v.chassi = d.chassi;
     return HttpResponse.json(v);
   }),
 
@@ -218,13 +236,14 @@ export const handlers = [
 
   http.get(url('/servicos'), ({ request }) => {
     if (!autenticado(request)) return naoAutorizado();
-    return HttpResponse.json(db.servicos.filter((s) => s.ativo));
+    const todos = new URL(request.url).searchParams.get('incluirInativos') === 'true';
+    return HttpResponse.json(db.servicos.filter((s) => todos || s.ativo).map(comPedidosNoMes));
   }),
 
   http.get(url('/clientes/:id'), ({ request, params }) => {
     if (!autenticado(request)) return naoAutorizado();
     const c = db.clientes.find((x) => x.id === Number(params.id));
-    return c ? HttpResponse.json(c) : naoEncontradoMock('Cliente', params.id);
+    return c ? HttpResponse.json(comTotalPedidos(c)) : naoEncontradoMock('Cliente', params.id);
   }),
 
   http.put(url('/clientes/:id'), async ({ request, params }) => {
@@ -434,7 +453,11 @@ export const handlers = [
     if (!u) return naoAutorizado();
     if (u.papel === 'ATENDENTE') return HttpResponse.json({ mensagem: 'Acesso negado' }, { status: 403 });
     const mapa = new Map<number, ServicoMaisVendido>();
-    db.pedidos.filter((p) => p.status !== 'CANCELADO').forEach((p) => {
+    const q = new URL(request.url).searchParams;
+    const de = q.get('de');
+    const ate = q.get('ate');
+    if (!!de !== !!ate) return HttpResponse.json({ mensagem: 'Informe as duas datas (de e ate) ou nenhuma.' }, { status: 400 });
+    db.pedidos.filter((p) => p.status !== 'CANCELADO' && (!de || (dia(p.criadoEm) >= de && dia(p.criadoEm) <= ate!))).forEach((p) => {
       const a = mapa.get(p.servico.id) ?? { servicoId: p.servico.id, servicoNome: p.servico.nome, quantidadePedidos: 0, faturamentoNominalCentavos: 0 };
       a.quantidadePedidos += 1;
       a.faturamentoNominalCentavos += p.servico.precoCentavos; // preço ATUAL do serviço, como o backend
@@ -447,17 +470,33 @@ export const handlers = [
     const u = autenticado(request);
     if (!u) return naoAutorizado();
     if (u.papel === 'ATENDENTE') return HttpResponse.json({ mensagem: 'Acesso negado' }, { status: 403 });
-    const duracoes: number[] = [];
-    db.pedidos.forEach((p) => {
-      const h = db.historico.filter((x) => x.pedidoId === p.id);
-      const ini = h.find((x) => x.statusNovo === 'RECEBIDO');
-      const fim = h.find((x) => x.statusNovo === 'PLACA_PRONTA');
-      if (ini && fim) duracoes.push((new Date(fim.alteradoEm).getTime() - new Date(ini.alteradoEm).getTime()) / 3_600_000);
-    });
-    const corpo: TempoMedioProducao = {
-      horasMedia: duracoes.length ? duracoes.reduce((a, b) => a + b, 0) / duracoes.length : 0,
-      pedidosConsiderados: duracoes.length,
+    const q = new URL(request.url).searchParams;
+    const de = q.get('de');
+    const ate = q.get('ate');
+    if (!!de !== !!ate) return HttpResponse.json({ mensagem: 'Informe as duas datas (de e ate) ou nenhuma.' }, { status: 400 });
+    // Como o backend: mede EM_PROCESSAMENTO → PLACA_PRONTA dos pedidos que ficaram prontos no período.
+    const medir = (d?: string, a?: string) => {
+      const duracoes: number[] = [];
+      db.pedidos.forEach((p) => {
+        const h = db.historico.filter((x) => x.pedidoId === p.id);
+        const ini = h.find((x) => x.statusNovo === 'EM_PROCESSAMENTO');
+        const fim = h.find((x) => x.statusNovo === 'PLACA_PRONTA');
+        if (!ini || !fim || (d && (dia(fim.alteradoEm) < d || dia(fim.alteradoEm) > a!))) return;
+        duracoes.push((new Date(fim.alteradoEm).getTime() - new Date(ini.alteradoEm).getTime()) / 3_600_000);
+      });
+      return duracoes;
     };
+    const media = (l: number[]) => (l.length ? l.reduce((x, y) => x + y, 0) / l.length : 0);
+    const atual = medir(de ?? undefined, ate ?? undefined);
+    let anterior: number | null = null;
+    if (de && ate) { // janela de mesma duração imediatamente anterior
+      const dias = Math.round((Date.parse(ate) - Date.parse(de)) / 86_400_000) + 1;
+      const fimAnt = new Date(Date.parse(de) - 86_400_000).toISOString().slice(0, 10);
+      const iniAnt = new Date(Date.parse(de) - dias * 86_400_000).toISOString().slice(0, 10);
+      const l = medir(iniAnt, fimAnt);
+      anterior = l.length ? media(l) : null;
+    }
+    const corpo: TempoMedioProducao = { horasMedia: media(atual), pedidosConsiderados: atual.length, horasMediaPeriodoAnterior: anterior };
     return HttpResponse.json(corpo);
   }),
 ];
@@ -471,13 +510,25 @@ function listarPagamentos(q: URLSearchParams): PagamentoListagem[] {
     .filter((p) => !de || dia(p.pagoEm) >= de)
     .filter((p) => !ate || dia(p.pagoEm) <= ate)
     .filter((p) => !forma || p.formaPagamento === forma)
-    .map((p) => { // sem ordenação, como o backend (o front ordena)
+    .sort((a, b) => b.pagoEm.localeCompare(a.pagoEm)) // mais recente primeiro, como o backend
+    .map((p) => {
       const ped = db.pedidos.find((x) => x.id === p.pedidoId)!;
       return {
         id: p.id, pedidoId: p.pedidoId, placa: ped.veiculo.placa, clienteNome: ped.cliente.nome, servicoNome: ped.servico.nome,
         formaPagamento: p.formaPagamento, valorCentavos: p.valorCentavos, pagoEm: p.pagoEm, registradoPor: p.registradoPor,
       };
     });
+}
+
+/** Como o backend: `totalPedidos` conta todos os pedidos do cliente (inclusive cancelados). */
+function comTotalPedidos(c: Cliente): Cliente {
+  return { ...c, totalPedidos: db.pedidos.filter((p) => p.cliente.id === c.id).length };
+}
+
+/** Como o backend: pedidos não cancelados criados no mês corrente. */
+function comPedidosNoMes(sv: Servico): Servico {
+  const mes = new Date().toISOString().slice(0, 7);
+  return { ...sv, pedidosNoMes: db.pedidos.filter((p) => p.servico.id === sv.id && p.status !== 'CANCELADO' && p.criadoEm.startsWith(mes)).length };
 }
 
 function semSenha({ senha: _senha, ...u }: Usuario & { senha: string }): Usuario {

@@ -1,3 +1,4 @@
+import { anosDoVeiculo, modeloDoVeiculo } from '@/lib/veiculo';
 import { useMemo } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { Link, useNavigate } from 'react-router-dom';
@@ -21,8 +22,8 @@ export function VeiculosTable({ veiculos, estado, vazio, onRetry, mostrarCliente
   const colunas = useMemo<ColumnDef<Veiculo>[]>(() => {
     const base: ColumnDef<Veiculo>[] = [
       { header: 'Placa', cell: ({ row }) => <PlacaBadge placa={row.original.placa} /> },
-      { header: 'Marca / modelo', cell: ({ row }) => <span className="font-medium">{row.original.marcaModelo}</span> },
-      { header: 'Ano', cell: ({ row }) => <span className="tabular-nums">{row.original.anoFabricacao}/{row.original.anoModelo}</span> },
+      { header: 'Marca / modelo', cell: ({ row }) => <span className="font-medium">{modeloDoVeiculo(row.original)}</span> },
+      { header: 'Ano', cell: ({ row }) => <span className="tabular-nums">{anosDoVeiculo(row.original)}</span> },
     ];
     if (mostrarCliente) {
       base.push({

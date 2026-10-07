@@ -10,7 +10,7 @@ import { PlacaBadge } from '@/components/PlacaBadge';
 import { StatusBadge } from '@/components/StatusBadge';
 import { STATUS, type StatusPedido } from '@/components/status';
 import { intervaloDoPeriodo, tempoDecorrido, type Periodo } from '@/lib/datas';
-import { normalizarPlaca } from '@/lib/placa';
+import { useDebounce } from '@/lib/useDebounce';
 import { useAgora } from '@/lib/useAgora';
 import { usePedidos } from './api';
 
@@ -44,21 +44,14 @@ export function PedidosTable({ clienteId, onContagem }: { clienteId?: number; on
       return n;
     }, { replace: true });
 
+  // `?busca=` filtra no servidor (placa, nome do cliente ou nº do pedido), em todas as páginas.
+  const buscaApi = useDebounce(busca.trim().replace(/^#/, ''), 300);
   const { data, isPending, isError, refetch } = usePedidos({
     status, clienteId, ...(periodo ? intervaloDoPeriodo(periodo) : {}),
+    ...(buscaApi ? { busca: buscaApi } : {}),
     page: pagina - 1, size: TAMANHO,
   });
-
-  // A API não tem filtro de texto (§14.2): a busca filtra só a página carregada.
-  const linhas = useMemo(() => {
-    const t = busca.trim().toLowerCase();
-    if (!t) return data?.content ?? [];
-    const placa = normalizarPlaca(t);
-    return (data?.content ?? []).filter(
-      (p) => String(p.id) === t.replace('#', '') || p.cliente.nome.toLowerCase().includes(t) ||
-        (placa.length > 0 && p.veiculo.placa.includes(placa)),
-    );
-  }, [data, busca]);
+  const linhas = data?.content ?? [];
 
   const total = data?.page.totalElements;
   useEffect(() => {
@@ -92,9 +85,9 @@ export function PedidosTable({ clienteId, onContagem }: { clienteId?: number; on
         <select id="f-periodo" value={periodo ?? 'todos'} onChange={(e) => set('periodo', e.target.value === 'todos' ? undefined : e.target.value)} className={selectCls}>
           {PERIODOS.map((p) => <option key={p.valor} value={p.valor}>{p.label}</option>)}
         </select>
-        <label className="sr-only" htmlFor="f-busca">Filtrar nesta página</label>
+        <label className="sr-only" htmlFor="f-busca">Buscar pedidos</label>
         <input
-          id="f-busca" type="search" value={busca} placeholder="Filtrar por placa, cliente ou nº"
+          id="f-busca" type="search" value={busca} placeholder="Buscar por placa, cliente ou nº"
           onChange={(e) => set('busca', e.target.value || undefined)}
           className={`${selectCls} w-[240px]`}
         />

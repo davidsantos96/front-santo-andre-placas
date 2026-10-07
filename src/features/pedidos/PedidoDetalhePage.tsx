@@ -1,3 +1,4 @@
+import { anosDoVeiculo, modeloDoVeiculo } from '@/lib/veiculo';
 import { useRef } from 'react';
 import * as Menu from '@radix-ui/react-dropdown-menu';
 import { ArrowLeft, MoreHorizontal } from 'lucide-react';
@@ -126,8 +127,8 @@ export function PedidoDetalhePage() {
             <div className="flex flex-wrap items-center gap-5">
               <PlacaBadge placa={pedido.veiculo.placa} tam="lg" />
               <dl className="grid grid-cols-2 gap-x-6 gap-y-2">
-                <Campo rotulo="Marca / modelo">{pedido.veiculo.marcaModelo}</Campo>
-                <Campo rotulo="Ano">{pedido.veiculo.anoFabricacao}/{pedido.veiculo.anoModelo}</Campo>
+                <Campo rotulo="Marca / modelo">{modeloDoVeiculo(pedido.veiculo)}</Campo>
+                <Campo rotulo="Ano">{anosDoVeiculo(pedido.veiculo)}</Campo>
                 {pedido.veiculo.chassi && <Campo rotulo="Chassi"><span className="font-mono text-sm">{pedido.veiculo.chassi}</span></Campo>}
               </dl>
             </div>

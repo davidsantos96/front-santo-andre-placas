@@ -7,7 +7,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { Money } from '@/components/Money';
 import { Pagina } from '@/components/Pagina';
 import { PlacaCard } from '@/components/PlacaCard';
-import { useAlternarServico, usePedidosNoMes, useServicos } from './api';
+import { useAlternarServico, useServicos } from './api';
 import { ServicoModal } from './ServicoModal';
 
 function Switch({ ativo, nome, onChange }: { ativo: boolean; nome: string; onChange: (v: boolean) => void }) {
@@ -25,28 +25,22 @@ function Switch({ ativo, nome, onChange }: { ativo: boolean; nome: string; onCha
   );
 }
 
-// Células com o próprio estado: as colunas ficam estáticas e as células não remontam quando os
-// dados mudam (senão o foco do switch se perderia a cada alteração).
-function CelulaPedidosNoMes({ servicoId }: { servicoId: number }) {
-  const mes = usePedidosNoMes();
-  return <span className="tabular-nums">{mes.isSuccess ? mes.data.porServico.get(servicoId) ?? 0 : '…'}</span>;
-}
-
+// Célula com o próprio estado: as colunas ficam estáticas e a célula não remonta quando os dados mudam
+// (senão o foco do switch se perderia a cada alteração).
 function CelulaStatus({ servico }: { servico: Servico }) {
   const { mutate } = useAlternarServico();
   return <Switch ativo={servico.ativo} nome={servico.nome} onChange={(ativo) => mutate({ servico, ativo })} />;
 }
 
 export function ServicosPage() {
-  const q = useServicos();
-  const mes = usePedidosNoMes();
+  const q = useServicos({ incluirInativos: true });
   const [modal, setModal] = useState<Servico | 'novo' | null>(null);
 
   const colunas = useMemo<ColumnDef<Servico>[]>(() => [
     { header: 'Nome', cell: ({ row }) => <span className={clsx('font-medium', !row.original.ativo && 'text-aco')}>{row.original.nome}</span> },
     { header: 'Categoria', cell: ({ row }) => <span className="text-xs font-semibold tracking-[0.6px] text-aco-700">{row.original.categoria}</span> },
     { header: 'Preço', meta: { align: 'right' }, cell: ({ row }) => <Money centavos={row.original.precoCentavos} /> },
-    { header: 'Pedidos no mês', meta: { align: 'right' }, cell: ({ row }) => <CelulaPedidosNoMes servicoId={row.original.id} /> },
+    { header: 'Pedidos no mês', meta: { align: 'right' }, cell: ({ row }) => <span className="tabular-nums">{row.original.pedidosNoMes ?? '—'}</span> },
     { header: 'Status', cell: ({ row }) => <CelulaStatus servico={row.original} /> },
   ], []);
 
@@ -66,9 +60,6 @@ export function ServicosPage() {
           vazio={<EmptyState mensagem="Nenhum serviço cadastrado." acao={{ label: 'Criar serviço', onClick: () => setModal('novo') }} />}
         />
       </PlacaCard>
-      {mes.isSuccess && mes.data.truncado && (
-        <p role="note" className="mt-2 text-xs text-alerta-texto">Contagem do mês parcial: há mais pedidos do que o limite consultado.</p>
-      )}
       <ServicoModal key={modal === 'novo' ? 'novo' : modal?.id ?? 'fechado'} servico={modal} onFechar={() => setModal(null)} />
     </Pagina>
   );

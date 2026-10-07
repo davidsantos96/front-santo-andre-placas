@@ -8,6 +8,7 @@ import { DataTable } from '@/components/DataTable';
 import { EmptyState } from '@/components/EmptyState';
 import { Pagina } from '@/components/Pagina';
 import { useToast } from '@/components/Toast';
+import { dataHora } from '@/lib/datas';
 import { rotuloPapel, useAlterarStatusUsuario, useUsuarios } from './api';
 import { RedefinirSenhaModal } from './RedefinirSenhaModal';
 import { UsuarioModal } from './UsuarioModal';
@@ -41,6 +42,10 @@ export function UsuariosPage() {
           {row.original.ativo ? 'Ativo' : 'Inativo'}
         </span>
       ),
+    },
+    {
+      header: 'Último acesso',
+      cell: ({ row }) => <span className="tabular-nums text-aco">{row.original.ultimoAcessoEm ? dataHora(row.original.ultimoAcessoEm) : 'Nunca acessou'}</span>,
     },
     {
       header: 'Ações',
