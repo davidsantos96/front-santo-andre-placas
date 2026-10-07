@@ -98,8 +98,8 @@ test('Estoque: entrada libera a produção; arrastar baixa o estoque e grava o h
   await page.getByRole('navigation').getByRole('link', { name: /Pedidos/ }).click();
   await arrastarCard(page, pedidoId, 'EM_PROCESSAMENTO');
   await expect(page.locator(`[data-coluna=EM_PROCESSAMENTO] [aria-label^="Pedido ${pedidoId},"]`)).toHaveCount(1);
-  const itens = (await chamar('/estoque/itens', { token })).corpo as { id: number; quantidade: number }[];
-  expect(itens.find((i) => i.id === itemId)!.quantidade).toBe(4); // 1 + 5 − 2
+  // o card muda de coluna de forma otimista, antes de o servidor concluir: confere a API com espera
+  await expect.poll(async () => ((await chamar('/estoque/itens', { token })).corpo as { id: number; quantidade: number }[]).find((i) => i.id === itemId)!.quantidade).toBe(4); // 1 + 5 − 2
   const historico = (await chamar(`/pedidos/${pedidoId}/historico`, { token })).corpo;
   expect(historico.map((h: { statusNovo: string }) => h.statusNovo)).toEqual(['RECEBIDO', 'EM_PROCESSAMENTO']);
   expect(historico[1].alteradoPor).toBeTruthy();
