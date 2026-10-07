@@ -7,8 +7,12 @@ import { EmptyState } from '@/components/EmptyState';
 import { RequirePapel } from '@/auth/RequirePapel';
 import { Pagina } from '@/components/Pagina';
 import { PlacaCard } from '@/components/PlacaCard';
+import { Tabs } from '@/components/Tabs';
+import { nomeAutor } from '@/lib/autor';
+import { dataBR } from '@/lib/datas';
 import { abaixoDoMinimo, useEstoque } from './api';
 import { ItemModal } from './ItemModal';
+import { MovimentacoesTab } from './MovimentacoesTab';
 import { MovimentarModal } from './MovimentarModal';
 
 /** Barra de nível: o mínimo fica na metade (100% = 2× o mínimo). */
@@ -52,6 +56,12 @@ export function EstoquePage() {
     },
     { header: 'Mínimo', meta: { align: 'right' }, cell: ({ row }) => <span className="tabular-nums">{row.original.quantidadeMinima}</span> },
     { header: 'Unidade', cell: ({ row }) => row.original.unidade || '—' },
+    {
+      header: 'Cadastro',
+      cell: ({ row }) => row.original.criadoEm || row.original.criadoPor
+        ? <span className="text-xs text-aco">{nomeAutor(row.original.criadoPor)}{row.original.criadoEm ? ` · ${dataBR(row.original.criadoEm)}` : ''}</span>
+        : '—',
+    },
     { header: 'Nível', cell: ({ row }) => <Nivel item={row.original} /> },
     {
       header: 'Ação',
@@ -85,13 +95,23 @@ export function EstoquePage() {
         </>
       }
     >
-      <PlacaCard titulo="CONTROLE DE ESTOQUE · SP">
-        <DataTable
-          columns={colunas} data={lista} estado={estado} onRetry={() => void q.refetch()}
-          rowClassName={(i) => (abaixoDoMinimo(i) ? 'bg-alerta-bgHover' : undefined)}
-          vazio={<EmptyState mensagem="Nenhum item de estoque cadastrado." />}
-        />
-      </PlacaCard>
+      <Tabs
+        abas={[
+          {
+            id: 'itens', label: 'Itens',
+            conteudo: (
+              <PlacaCard titulo="CONTROLE DE ESTOQUE · SP">
+                <DataTable
+                  columns={colunas} data={lista} estado={estado} onRetry={() => void q.refetch()}
+                  rowClassName={(i) => (abaixoDoMinimo(i) ? 'bg-alerta-bgHover' : undefined)}
+                  vazio={<EmptyState mensagem="Nenhum item de estoque cadastrado." />}
+                />
+              </PlacaCard>
+            ),
+          },
+          { id: 'movimentacoes', label: 'Movimentações', conteudo: <MovimentacoesTab itens={lista} /> },
+        ]}
+      />
       <ItemModal key={novoItem ? 'aberto' : 'fechado'} aberto={novoItem} onFechar={() => setNovoItem(false)} />
       <MovimentarModal key={item?.id ?? 'fechado'} item={item} onFechar={() => setItem(null)} />
     </Pagina>

@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { Money } from '@/components/Money';
 import { Pagina } from '@/components/Pagina';
 import { PlacaCard } from '@/components/PlacaCard';
+import { HistoricoModal } from '@/features/auditoria/HistoricoModal';
 import { useAlternarServico, useServicos } from './api';
 import { ServicoModal } from './ServicoModal';
 
@@ -35,6 +36,7 @@ function CelulaStatus({ servico }: { servico: Servico }) {
 export function ServicosPage() {
   const q = useServicos({ incluirInativos: true });
   const [modal, setModal] = useState<Servico | 'novo' | null>(null);
+  const [historico, setHistorico] = useState<Servico | null>(null);
 
   const colunas = useMemo<ColumnDef<Servico>[]>(() => [
     { header: 'Nome', cell: ({ row }) => <span className={clsx('font-medium', !row.original.ativo && 'text-aco')}>{row.original.nome}</span> },
@@ -42,6 +44,18 @@ export function ServicosPage() {
     { header: 'Preço', meta: { align: 'right' }, cell: ({ row }) => <Money centavos={row.original.precoCentavos} /> },
     { header: 'Pedidos no mês', meta: { align: 'right' }, cell: ({ row }) => <span className="tabular-nums">{row.original.pedidosNoMes ?? '—'}</span> },
     { header: 'Status', cell: ({ row }) => <CelulaStatus servico={row.original} /> },
+    {
+      header: 'Histórico',
+      cell: ({ row }) => (
+        <button
+          type="button" aria-label={`Histórico de ${row.original.nome}`}
+          onClick={(e) => { e.stopPropagation(); setHistorico(row.original); }}
+          className="h-[26px] rounded border border-linha-forte bg-white px-2.5 text-sm font-medium text-aco hover:bg-fundo"
+        >
+          Histórico
+        </button>
+      ),
+    },
   ], []);
 
   const lista = q.data ?? [];
@@ -60,6 +74,7 @@ export function ServicosPage() {
           vazio={<EmptyState mensagem="Nenhum serviço cadastrado." acao={{ label: 'Criar serviço', onClick: () => setModal('novo') }} />}
         />
       </PlacaCard>
+      <HistoricoModal entidade="SERVICO" alvo={historico && { id: historico.id, descricao: historico.nome }} onFechar={() => setHistorico(null)} />
       <ServicoModal key={modal === 'novo' ? 'novo' : modal?.id ?? 'fechado'} servico={modal} onFechar={() => setModal(null)} />
     </Pagina>
   );

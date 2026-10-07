@@ -121,7 +121,7 @@ export function criarBanco(agora = Date.now()) {
     movimentacoes: [] as MovimentacaoEstoque[],
     auditoria: [] as RegistroAuditoria[],
     servicos: structuredClone(SERVICOS),
-    estoque: structuredClone(ESTOQUE),
+    estoque: structuredClone(ESTOQUE).map((i) => ({ ...i, criadoEm: iso(60 * 24 * 45, agora), criadoPor: 'Carlos Menezes', criadoPorId: 2 as number | null })),
     vinculos: structuredClone(VINCULOS),
     usuarios: structuredClone(USUARIOS),
     tokens: new Map<string, { papel: Papel; nome: string; email: string }>(),

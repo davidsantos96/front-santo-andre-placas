@@ -1,10 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
 import { qk } from '@/api/keys';
-import type { ApiError, ItemEstoque, MovimentacaoRequest, VinculoServicoItem } from '@/api/types';
+import type { ApiError, ItemEstoque, MovimentacaoEstoque, MovimentacaoRequest, VinculoServicoItem } from '@/api/types';
 
 export const useEstoque = () =>
   useQuery({ queryKey: qk.estoque, queryFn: async () => (await api.get<ItemEstoque[]>('/estoque/itens')).data });
+
+/**
+ * `GET /estoque/movimentacoes[?itemEstoqueId=]` (todos os papéis), do mais recente para o mais antigo: entradas, saídas
+ * manuais e baixas automáticas (essas trazem o `pedidoId` de origem). Fica sob a chave `estoque`, então movimentar invalida.
+ */
+export const useMovimentacoes = (itemEstoqueId?: number) =>
+  useQuery({
+    queryKey: [...qk.estoque, 'movimentacoes', itemEstoqueId ?? null],
+    queryFn: async () => (await api.get<MovimentacaoEstoque[]>('/estoque/movimentacoes', { params: itemEstoqueId ? { itemEstoqueId } : {} })).data,
+  });
 
 export const useEstoqueBaixo = (enabled = true) =>
   useQuery({

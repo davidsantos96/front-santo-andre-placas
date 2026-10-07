@@ -35,7 +35,7 @@ Os roteiros em `e2e/` usam a API de verdade e **gravam dados** (clientes, pedido
 2. `npm run e2e:install` (baixa o Chromium; em ambientes com Chromium já instalado, use `E2E_CHROMIUM_PATH`).
 3. `E2E_CONFIRM=1 npm run e2e` — o Playwright sobe o Vite sozinho (mocks desligados, porta 5173).
 
-A pasta inclui `06-acessibilidade.spec.ts`: axe-core (WCAG 2.1 A/AA, com contraste) em todas as rotas, modais e no mobile, mais testes de teclado e `prefers-reduced-motion`.
+`07-rastreabilidade.spec.ts` cobre autoria, snapshot de preço, movimentações de estoque e o histórico (auditoria). A pasta inclui `06-acessibilidade.spec.ts`: axe-core (WCAG 2.1 A/AA, com contraste) em todas as rotas, modais e no mobile, mais testes de teclado e `prefers-reduced-motion`.
 
 Variáveis: `E2E_CONFIRM` (obrigatória), `E2E_API_URL` (padrão `http://localhost:8080/api`), `E2E_WEB_URL`, `E2E_USER`/`E2E_PASSWORD` (padrão `admin@santoandreplacas.com.br` / `admin123`), `E2E_CHROMIUM_PATH`. Tipos: `npm run e2e:typecheck`.
 

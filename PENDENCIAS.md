@@ -13,6 +13,20 @@ Os checklists por fase mais abaixo foram escritos antes da verificação real; o
 
 ---
 
+# Rastreabilidade (backend `bcf5dbf` → `ca959de`) — integrada em 2026-10-07
+
+Contrato: autoria (`<x>Por` = nome congelado, `<x>PorId`), `Pedido.precoCentavos` (snapshot), `GET /estoque/movimentacoes` e `GET /auditoria` (ADMIN/GERENTE). Tudo conferido na API real.
+
+**Feito no front:** rodapé "Cadastrado por … / Última alteração por …" em cliente e veículo; coluna "Cadastro" no estoque; aba **Movimentações** (tipo, quantidade, item, autor, data, baixa automática com link para o pedido; filtro por item; todos os papéis); botão **Histórico** em Serviços e Usuários (`/auditoria`, uma linha por campo, "Só preço" na evolução do preço, preço formatado a partir do texto); valores de pedido usam `pedido.precoCentavos` (tabela e saldo do pagamento); autor `null`/"sistema" aparece como "Sistema"; timestamps lidos como hora de São Paulo sem conversão (`lerData` corta nanossegundos). 7 testes e2e novos contra a API real e 16 de unidade.
+
+**Backend — achados desta integração:**
+- [ ] **B19 · SEGURANÇA — `POST /clientes` e `PUT /clientes/{id}` vazam o hash da senha do usuário logado.** Essas duas rotas ainda devolvem a **entidade crua**, e o relacionamento novo serializa o `Usuario` inteiro em `criadoPorUsuario`/`atualizadoPorUsuario`: `senhaHash` (bcrypt), `email`, `papel`, `ultimoAcessoEm`. Verificado: um ATENDENTE que cadastra um cliente recebe o próprio `senhaHash` na resposta (os `GET` e o `PedidoResponse` estão corretos). Corrigir devolvendo `ClienteResponse` nessas rotas (o doc da rastreabilidade já assume isso) e/ou `@JsonIgnore` no relacionamento e em `Usuario.senhaHash`. O front não lê esses campos nem os guarda.
+- [ ] **B20 · Mesma causa, contrato diferente do documento:** a resposta de `POST`/`PUT /clientes` não traz `criadoPorId`/`atualizadoPorId` (vêm só dentro do objeto aninhado). O front não depende disso (refaz o `GET`), mas o doc diz que vêm.
+
+**Decisões do front:** não existe tela de usuário para "linkar" o autor (o módulo é ADMIN), então o autor aparece como texto; o `...PorId` fica disponível nos tipos para quando houver. Cliente/veículo não têm trilha campo a campo (fora do escopo do backend).
+
+---
+
 # Backend atualizado (commits `e73bb9c`, `df3c800`) — verificado em 2026-09-30
 
 Conferido lendo o diff e rodando o front contra a API nova. **Resolvido no backend:** B1 (login de inativo recusado + token de usuário desativado → 401), B2 (`401` com `{ mensagem }` para token ausente/inválido/expirado — o contorno do 403 saiu do front), B3 parcial (`PATCH /servicos/{id}/status`; `DELETE` virou desativação), B4 (`pago` no pedido), B5 (handler devolve a mensagem real da validação), B6 (`POST /veiculos` com `clienteId` e resposta `VeiculoResponse`), B14 (reset de senha).

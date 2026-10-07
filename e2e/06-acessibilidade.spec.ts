@@ -49,6 +49,7 @@ const ROTAS: [string, () => string][] = [
   ['Detalhe do veículo', () => `/veiculos/${ids.veiculo}`],
   ['Serviços', () => '/servicos'],
   ['Estoque', () => '/estoque'],
+  ['Estoque → movimentações', () => '/estoque?aba=movimentacoes'],
   ['Financeiro', () => '/financeiro'],
   ['Usuários', () => '/usuarios'],
 ];
@@ -79,6 +80,18 @@ test('Sobreposições: busca com resultados, modais e confirmação', async ({ p
   await expect(page.getByRole('dialog', { name: 'Novo serviço' })).toBeVisible();
   await auditar(page, 'modal Novo serviço');
   await page.keyboard.press('Escape');
+
+  // históricos (auditoria) de serviço e de usuário
+  await page.getByRole('button', { name: /^Histórico de / }).first().click();
+  await expect(page.getByRole('dialog', { name: /^Histórico de / })).toBeVisible();
+  await auditar(page, 'modal Histórico do serviço');
+  await page.keyboard.press('Escape');
+  await irPara(page, '/usuarios');
+  await page.getByRole('button', { name: /^Histórico de / }).first().click();
+  await expect(page.getByRole('dialog', { name: /^Histórico de / })).toBeVisible();
+  await auditar(page, 'modal Histórico do usuário');
+  await page.keyboard.press('Escape');
+  await irPara(page, '/servicos');
 
   // modal de movimentação de estoque
   await irPara(page, '/estoque');

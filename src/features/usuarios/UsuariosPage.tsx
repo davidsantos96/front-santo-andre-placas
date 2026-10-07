@@ -10,6 +10,7 @@ import { Pagina } from '@/components/Pagina';
 import { useToast } from '@/components/Toast';
 import { dataHora } from '@/lib/datas';
 import { rotuloPapel, useAlterarStatusUsuario, useUsuarios } from './api';
+import { HistoricoModal } from '@/features/auditoria/HistoricoModal';
 import { RedefinirSenhaModal } from './RedefinirSenhaModal';
 import { UsuarioModal } from './UsuarioModal';
 
@@ -23,6 +24,7 @@ export function UsuariosPage() {
   const [modal, setModal] = useState<Usuario | 'novo' | null>(null);
   const [desativando, setDesativando] = useState<Usuario | null>(null);
   const [senhaDe, setSenhaDe] = useState<Usuario | null>(null);
+  const [historico, setHistorico] = useState<Usuario | null>(null);
 
   const alterar = (u: Usuario, ativo: boolean) =>
     alterarStatus({ id: u.id, ativo }, {
@@ -56,6 +58,7 @@ export function UsuariosPage() {
           <span className="flex gap-2">
             <button type="button" className={btn} onClick={() => setModal(u)} aria-label={`Editar ${u.nome}`}>Editar</button>
             <button type="button" className={btn} onClick={() => setSenhaDe(u)} aria-label={`Redefinir senha de ${u.nome}`}>Redefinir senha</button>
+            <button type="button" className={btn} onClick={() => setHistorico(u)} aria-label={`Histórico de ${u.nome}`}>Histórico</button>
             {u.ativo ? (
               <button
                 type="button" className={btn} onClick={() => setDesativando(u)} aria-label={`Desativar ${u.nome}`}
@@ -89,6 +92,7 @@ export function UsuariosPage() {
       </div>
 
       <UsuarioModal key={modal === 'novo' ? 'novo' : modal?.id ?? 'fechado'} usuario={modal} onFechar={() => setModal(null)} />
+      <HistoricoModal entidade="USUARIO" alvo={historico && { id: historico.id, descricao: historico.nome }} onFechar={() => setHistorico(null)} />
       <RedefinirSenhaModal key={senhaDe?.id ?? 'fechado'} usuario={senhaDe} onFechar={() => setSenhaDe(null)} />
       <ConfirmDialog
         aberto={desativando !== null} perigo onFechar={() => setDesativando(null)}
