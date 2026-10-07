@@ -17,9 +17,18 @@ export function tempoDecorrido(iso: string, agora = new Date()): string {
   return `${dias} dias`;
 }
 
+/**
+ * Lê um timestamp da API. Vêm **sem fuso** (`2026-10-07T16:34:28.957968`) e já são hora de São Paulo: não aplicar
+ * conversão de fuso. Frações além de milissegundos (a API manda até nanossegundos) são cortadas para o parse ser estável.
+ */
+export const lerData = (iso: string): Date => new Date(iso.replace(/(\.\d{3})\d+/, '$1'));
+
+/** "07/10/2026 16:34" — com ano, para trilhas de auditoria (onde "Hoje/Ontem" perderia a referência). */
+export const dataHoraCompleta = (iso: string): string => format(lerData(iso), 'dd/MM/yyyy HH:mm');
+
 /** "Hoje · 10:15", "Ontem · 16:40" ou "dd/MM · HH:mm". */
 export function dataHora(iso: string, agora = new Date()): string {
-  const d = new Date(iso);
+  const d = lerData(iso);
   const hora = format(d, 'HH:mm');
   if (isSameDay(d, agora)) return `Hoje · ${hora}`;
   if (differenceInCalendarDays(agora, d) === 1) return `Ontem · ${hora}`;

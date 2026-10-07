@@ -66,7 +66,7 @@ export function PedidosTable({ clienteId, onContagem }: { clienteId?: number; on
     { header: 'Status', cell: ({ row }) => <StatusBadge status={row.original.status} /> },
     { header: 'Origem', cell: ({ row }) => <OrigemTag origem={row.original.origem} /> },
     { header: 'Tempo', cell: ({ row }) => <span className="tabular-nums text-aco">{tempoDecorrido(row.original.criadoEm, agora)}</span> },
-    { header: 'Valor', meta: { align: 'right' }, cell: ({ row }) => <Money centavos={row.original.servico.precoCentavos} /> },
+    { header: 'Valor', meta: { align: 'right' }, cell: ({ row }) => <Money centavos={row.original.precoCentavos} /> },
   ], [agora]);
 
   const filtrado = !!(status || busca || periodo);

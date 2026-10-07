@@ -1,3 +1,4 @@
+import { Autoria } from '@/components/Autoria';
 import { useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
@@ -33,6 +34,7 @@ function Dados({ cliente }: { cliente: Cliente }) {
             <div><dt className="text-xs text-aco">Telefone</dt><dd className="text-base tabular-nums">{cliente.telefone}</dd></div>
             <div><dt className="text-xs text-aco">E-mail</dt><dd className="text-base">{cliente.email || '—'}</dd></div>
           </dl>
+          <Autoria {...cliente} />
           <button type="button" onClick={() => setEditando(true)} className="mt-4 h-[30px] rounded border border-linha-forte bg-white px-3 text-sm font-medium text-aco hover:bg-fundo">
             Editar
           </button>

@@ -1,3 +1,4 @@
+import { nomeAutor } from '@/lib/autor';
 import clsx from 'clsx';
 import type { HistoricoStatus } from '@/api/types';
 import { FLUXO, STATUS, type StatusPedido } from '@/components/status';
@@ -29,7 +30,7 @@ export function LinhaDoTempo({ historico, status }: { historico: HistoricoStatus
                 {STATUS[s].label}
                 {!feito && <span className="sr-only"> (pendente)</span>}
               </div>
-              {h && <div className="text-xs text-aco">{h.alteradoPor} · {dataHora(h.alteradoEm)}</div>}
+              {h && <div className="text-xs text-aco">{nomeAutor(h.alteradoPor)} · {dataHora(h.alteradoEm)}</div>}
             </div>
           </li>
         );

@@ -1,3 +1,4 @@
+import { nomeAutor } from '@/lib/autor';
 import { useMemo, type ReactNode } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useNavigate } from 'react-router-dom';
@@ -38,7 +39,7 @@ export function PagamentosTabela({ titulo, pagamentos, estado, vazio, onRetry }:
         );
       },
     },
-    { header: 'Registrado por', cell: ({ row }) => <span className="text-aco">{row.original.registradoPor}</span> },
+    { header: 'Registrado por', cell: ({ row }) => <span className="text-aco">{nomeAutor(row.original.registradoPor)}</span> },
     { header: 'Valor', meta: { align: 'right' }, cell: ({ row }) => <Money centavos={row.original.valorCentavos} className="font-medium" /> },
   ], []);
 

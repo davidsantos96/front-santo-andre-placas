@@ -3,9 +3,19 @@ import type { Papel } from '@/auth/papeis';
 
 /** DTOs da API — espelho dos records Java (spec §11). Sem tradução de nomes. */
 
+/**
+ * Autoria (rastreabilidade): `<x>Por` é o NOME congelado na hora da ação (snapshot — não resolver pelo id) e `<x>PorId` o id
+ * do usuário. Ambos podem ser `null`; registros criados fora de uma requisição vêm como "sistema". `atualizadoEm === null`
+ * = nunca editado.
+ */
+export type Autoria = {
+  criadoEm?: string | null; criadoPor?: string | null; criadoPorId?: number | null;
+  atualizadoEm?: string | null; atualizadoPor?: string | null; atualizadoPorId?: number | null;
+};
+
 /** `totalPedidos` (inclui cancelados) só vem nas leituras de `/clientes`; fica `null` quando o cliente vem embutido em outra resposta. */
-export type Cliente = { id: number; nome: string; telefone: string; cpfCnpj: string; email: string; criadoEm: string; totalPedidos?: number | null };
-export type Veiculo = {
+export type Cliente = Autoria & { id: number; nome: string; telefone: string; cpfCnpj: string; email: string; criadoEm: string; totalPedidos?: number | null };
+export type Veiculo = Autoria & {
   id: number; placa: string; marcaModelo: string | null; anoFabricacao: number | null; anoModelo: number | null;
   chassi: string | null; clienteId: number; clienteNome: string;
 };
@@ -14,6 +24,8 @@ export type Servico = { id: number; nome: string; descricao: string; precoCentav
 
 export type Pedido = {
   id: number; status: StatusPedido; origem: string; criadoEm: string; atualizadoEm: string;
+  /** Preço cobrado NESTE pedido (snapshot). `servico.precoCentavos` é o preço de tabela de hoje e pode ter mudado. */
+  precoCentavos: number;
   cliente: Cliente; veiculo: Veiculo; servico: Servico;
   /** Vem da API: soma dos pagamentos `PAGO` ≥ preço do serviço (`PedidoService.estaPago`). */
   pago: boolean;
@@ -21,19 +33,36 @@ export type Pedido = {
 
 export type Pagamento = {
   id: number; pedidoId: number; valorCentavos: number; formaPagamento: FormaPagamento;
-  status: 'PAGO' | 'CANCELADO'; pagoEm: string; registradoPor: string;
+  status: 'PAGO' | 'CANCELADO'; pagoEm: string; registradoPor: string; registradoPorId?: number | null;
 };
 export type PagamentoListagem = {
   id: number; pedidoId: number; placa: string; clienteNome: string; servicoNome: string;
-  formaPagamento: FormaPagamento; valorCentavos: number; pagoEm: string; registradoPor: string;
+  formaPagamento: FormaPagamento; valorCentavos: number; pagoEm: string; registradoPor: string; registradoPorId?: number | null;
 };
 
 export type HistoricoStatus = {
-  id: number; statusAnterior: StatusPedido | null; statusNovo: StatusPedido; alteradoPor: string; alteradoEm: string;
+  id: number; statusAnterior: StatusPedido | null; statusNovo: StatusPedido; alteradoPor: string; alteradoPorId?: number | null; alteradoEm: string;
 };
 
 export type ItemEstoque = {
   id: number; nome: string; sku: string | null; unidade: string | null; quantidade: number; quantidadeMinima: number;
+  /** Item de estoque só tem autoria de criação (não há edição); a mudança de quantidade fica nas movimentações. */
+  criadoEm?: string | null; criadoPor?: string | null; criadoPorId?: number | null;
+};
+
+/** `GET /estoque/movimentacoes` (mais recente primeiro): entradas, saídas manuais e baixas automáticas (com `pedidoId`). */
+export type MovimentacaoEstoque = {
+  id: number; itemEstoqueId: number; itemEstoqueNome: string; tipo: 'ENTRADA' | 'SAIDA'; quantidade: number;
+  pedidoId: number | null; registradoPor: string | null; registradoPorId: number | null; criadoEm: string;
+};
+
+export type EntidadeAuditada = 'SERVICO' | 'USUARIO';
+export type AcaoAuditada = 'CRIACAO' | 'ATUALIZACAO' | 'ATIVACAO' | 'DESATIVACAO' | 'RESET_SENHA';
+/** `GET /auditoria` (ADMIN/GERENTE). Uma linha por campo alterado; `valorAnterior`/`valorNovo` são sempre texto (inclusive `precoCentavos`). */
+export type RegistroAuditoria = {
+  id: number; entidade: EntidadeAuditada; entidadeId: number; entidadeDescricao: string | null; acao: AcaoAuditada;
+  campo: string | null; valorAnterior: string | null; valorNovo: string | null;
+  feitoPor: string | null; feitoPorId: number | null; feitoEm: string;
 };
 
 export type FechamentoCaixa = {
@@ -94,6 +123,7 @@ export type FaturamentoDia = { data: string; totalCentavos: number };
 export type FaturamentoResponse = { de: string; ate: string; totalCentavos: number; porDia: FaturamentoDia[] };
 export type VinculoServicoItem = {
   id: number; servicoId: number; servicoNome: string; itemEstoqueId: number; itemEstoqueNome: string; quantidadeNecessaria: number;
+  criadoEm?: string | null; criadoPor?: string | null; criadoPorId?: number | null;
 };
 export type ServicoMaisVendido = { servicoId: number; servicoNome: string; quantidadePedidos: number; faturamentoNominalCentavos: number };
 

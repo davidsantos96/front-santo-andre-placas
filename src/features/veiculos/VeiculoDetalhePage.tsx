@@ -1,3 +1,4 @@
+import { Autoria } from '@/components/Autoria';
 import { anosDoVeiculo, modeloDoVeiculo } from '@/lib/veiculo';
 import { ArrowLeft } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
@@ -64,6 +65,7 @@ export function VeiculoDetalhePage() {
               <div><dt className="text-xs text-aco">Cliente</dt><dd className="text-base"><Link to={`/clientes/${v.clienteId}`} className="font-medium text-mercosul hover:underline">{v.clienteNome}</Link></dd></div>
             </dl>
           </div>
+          <Autoria {...v} />
         </Cartao>
 
         <Cartao titulo="Histórico de consultas veiculares">

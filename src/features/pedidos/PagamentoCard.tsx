@@ -1,3 +1,4 @@
+import { nomeAutor } from '@/lib/autor';
 import { forwardRef, useState } from 'react';
 import type { Pagamento, Pedido } from '@/api/types';
 import { Cartao } from '@/components/Cartao';
@@ -20,7 +21,7 @@ export const PagamentoCard = forwardRef<HTMLSelectElement, Props>(function Pagam
   const [erro, setErro] = useState<string | null>(null);
   const registrar = useRegistrarPagamento(pedido.id);
 
-  const preco = pedido.servico.precoCentavos;
+  const preco = pedido.precoCentavos; // preço cobrado neste pedido (snapshot), não o de tabela de hoje
   const pagos = pagamentos.filter((p) => p.status === 'PAGO').sort((a, b) => a.pagoEm.localeCompare(b.pagoEm));
   const totalPago = pagos.reduce((t, p) => t + p.valorCentavos, 0);
   const saldo = Math.max(0, preco - totalPago);
@@ -47,7 +48,7 @@ export const PagamentoCard = forwardRef<HTMLSelectElement, Props>(function Pagam
             <ul aria-label="Pagamentos registrados" className="mb-2 mt-1 flex flex-col gap-0.5 text-sm text-aco">
               {pagos.map((p) => (
                 <li key={p.id}>
-                  {FORMA_PAGAMENTO[p.formaPagamento].label} · <span className="tabular-nums">{fmt(p.valorCentavos)}</span> · {dataHora(p.pagoEm).toLowerCase()} · {p.registradoPor}
+                  {FORMA_PAGAMENTO[p.formaPagamento].label} · <span className="tabular-nums">{fmt(p.valorCentavos)}</span> · {dataHora(p.pagoEm).toLowerCase()} · {nomeAutor(p.registradoPor)}
                 </li>
               ))}
             </ul>

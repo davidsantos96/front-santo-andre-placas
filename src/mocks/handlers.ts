@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw';
-import type { AtualizarUsuarioRequest, AtualizarVeiculoRequest, NovoUsuarioRequest, Usuario, FaturamentoResponse, ResumoDashboard, ServicoMaisVendido, TempoMedioProducao, FechamentoCaixa, MovimentacaoRequest, NovoServicoRequest, PagamentoListagem, Servico, Cliente, LoginRequest, LoginResponse, NovoClienteRequest, NovoPedidoRequest, NovoVeiculoRequest, Pagamento, PagamentoRequest, Paginado, Pedido, Veiculo } from '@/api/types';
+import type { RegistroAuditoria, AtualizarUsuarioRequest, AtualizarVeiculoRequest, NovoUsuarioRequest, Usuario, FaturamentoResponse, ResumoDashboard, ServicoMaisVendido, TempoMedioProducao, FechamentoCaixa, MovimentacaoRequest, NovoServicoRequest, PagamentoListagem, Servico, Cliente, LoginRequest, LoginResponse, NovoClienteRequest, NovoPedidoRequest, NovoVeiculoRequest, Pagamento, PagamentoRequest, Paginado, Pedido, Veiculo } from '@/api/types';
 import type { StatusPedido } from '@/components/status';
 import { db } from './db';
 import { gerarJwt } from './jwt';
@@ -18,16 +18,32 @@ const autenticado = (req: Request) => {
   return db.usuarios.find((u) => u.email === sessao.email)?.ativo ? sessao : null;
 };
 
-/** `PedidoResponse.pago` do backend: soma dos pagamentos PAGO ≥ preço do serviço. */
+/** `PedidoResponse.pago` do backend: soma dos pagamentos PAGO ≥ preço cobrado no pedido (snapshot). */
 const comPago = (p: Pedido): Pedido => ({
   ...p,
-  pago: db.pagamentos.filter((x) => x.pedidoId === p.id && x.status === 'PAGO').reduce((t, x) => t + x.valorCentavos, 0) >= p.servico.precoCentavos,
+  pago: db.pagamentos.filter((x) => x.pedidoId === p.id && x.status === 'PAGO').reduce((t, x) => t + x.valorCentavos, 0) >= p.precoCentavos, // snapshot do pedido, não o preço atual do serviço
 });
 
 /** Invalida todos os tokens (simula JWT de 8h expirado). */
 export const expirarSessoes = () => db.tokens.clear();
 
 let seq = 0;
+
+/** Usuário da requisição (nome congelado + id) para gravar a autoria, como o backend. */
+const autor = (u: { email: string; nome: string }) => ({ nome: u.nome, id: db.usuarios.find((x) => x.email === u.email)?.id ?? null });
+
+/** Trilha genérica `/auditoria`: uma linha por campo alterado; só o que mudou de fato. */
+function auditar(
+  u: { email: string; nome: string }, entidade: RegistroAuditoria['entidade'], entidadeId: number, entidadeDescricao: string,
+  acao: RegistroAuditoria['acao'], campos: { campo: string; antes: unknown; depois: unknown }[] = [],
+) {
+  const a = autor(u);
+  const base = { entidade, entidadeId, entidadeDescricao, feitoPor: a.nome, feitoPorId: a.id, feitoEm: new Date().toISOString() };
+  const novos = acao === 'ATUALIZACAO'
+    ? campos.filter((c) => String(c.antes ?? '') !== String(c.depois ?? '')).map((c) => ({ ...base, acao, campo: c.campo, valorAnterior: String(c.antes ?? ''), valorNovo: String(c.depois ?? '') }))
+    : [{ ...base, acao, campo: null, valorAnterior: null, valorNovo: null }];
+  novos.forEach((r) => db.auditoria.push({ id: db.auditoria.length + 1, ...r }));
+}
 
 const dia = (iso: string) => {
   const d = new Date(iso);
@@ -109,12 +125,19 @@ export const handlers = [
         return HttpResponse.json({ mensagem: `Estoque insuficiente para "${item.nome}": disponível ${item.quantidade}, necessário ${v.quantidadeNecessaria}` }, { status: 400 });
       }
     }
-    baixas.forEach((v) => { db.estoque.find((i) => i.id === v.itemEstoqueId)!.quantidade -= v.quantidadeNecessaria; });
+    baixas.forEach((v) => {
+      const item = db.estoque.find((i) => i.id === v.itemEstoqueId)!;
+      item.quantidade -= v.quantidadeNecessaria;
+      db.movimentacoes.push({
+        id: db.movimentacoes.length + 1, itemEstoqueId: item.id, itemEstoqueNome: item.nome, tipo: 'SAIDA', quantidade: v.quantidadeNecessaria,
+        pedidoId: p.id, registradoPor: u.nome, registradoPorId: autor(u).id, criadoEm: new Date().toISOString(),
+      });
+    });
     p.status = novoStatus;
     p.atualizadoEm = new Date().toISOString();
     db.historico.push({
       id: db.historico.length + 1, pedidoId: p.id, statusAnterior: anterior, statusNovo: novoStatus,
-      alteradoPor: u.nome, alteradoEm: p.atualizadoEm,
+      alteradoPor: u.nome, alteradoPorId: autor(u).id, alteradoEm: p.atualizadoEm,
     });
     return HttpResponse.json(comPago(p));
   }),
@@ -141,7 +164,7 @@ export const handlers = [
     // O backend aceita vários pagamentos por pedido (parcelas); `pago` só fica true quando a soma chega ao preço.
     const pg: Pagamento = {
       id: db.pagamentos.length + 1, pedidoId: pedido.id, valorCentavos: dados.valorCentavos,
-      formaPagamento: dados.formaPagamento, status: 'PAGO', pagoEm: new Date().toISOString(), registradoPor: u.nome,
+      formaPagamento: dados.formaPagamento, status: 'PAGO', pagoEm: new Date().toISOString(), registradoPor: u.nome, registradoPorId: autor(u).id,
     };
     db.pagamentos.push(pg);
     return HttpResponse.json(pg, { status: 201 });
@@ -160,10 +183,10 @@ export const handlers = [
     const agora = new Date().toISOString();
     const pedido: Pedido = {
       id: Math.max(...db.pedidos.map((p) => p.id)) + 1, status: 'RECEBIDO', origem: d.origem, criadoEm: agora,
-      atualizadoEm: agora, cliente, veiculo, servico, pago: false,
+      atualizadoEm: agora, cliente, veiculo, servico, pago: false, precoCentavos: servico.precoCentavos,
     };
     db.pedidos.push(pedido);
-    db.historico.push({ id: db.historico.length + 1, pedidoId: pedido.id, statusAnterior: null, statusNovo: 'RECEBIDO', alteradoPor: u.nome, alteradoEm: agora });
+    db.historico.push({ id: db.historico.length + 1, pedidoId: pedido.id, statusAnterior: null, statusNovo: 'RECEBIDO', alteradoPor: u.nome, alteradoPorId: autor(u).id, alteradoEm: agora });
     return HttpResponse.json(comPago(pedido), { status: 201 });
   }),
 
@@ -178,10 +201,15 @@ export const handlers = [
   }),
 
   http.post(url('/clientes'), async ({ request }) => {
-    if (!autenticado(request)) return naoAutorizado();
+    const u = autenticado(request);
+    if (!u) return naoAutorizado();
     const d = (await request.json()) as NovoClienteRequest;
     // O backend (entidade crua) não valida CPF/CNPJ duplicado.
-    const c: Cliente = { id: Math.max(0, ...db.clientes.map((x) => x.id)) + 1, ...d, criadoEm: new Date().toISOString() };
+    const a = autor(u);
+    const c: Cliente = {
+      id: Math.max(0, ...db.clientes.map((x) => x.id)) + 1, ...d, criadoEm: new Date().toISOString(),
+      criadoPor: a.nome, criadoPorId: a.id, atualizadoEm: null, atualizadoPor: null, atualizadoPorId: null,
+    };
     db.clientes.push(c);
     return HttpResponse.json(c, { status: 201 });
   }),
@@ -197,7 +225,8 @@ export const handlers = [
   }),
 
   http.post(url('/veiculos'), async ({ request }) => {
-    if (!autenticado(request)) return naoAutorizado();
+    const u = autenticado(request);
+    if (!u) return naoAutorizado();
     const d = (await request.json()) as NovoVeiculoRequest;
     const cliente = db.clientes.find((c) => c.id === d.clienteId);
     if (!cliente) return naoEncontradoMock('Cliente', d.clienteId);
@@ -211,13 +240,15 @@ export const handlers = [
     const v: Veiculo = {
       id: Math.max(0, ...db.veiculos.map((x) => x.id)) + 1, placa, marcaModelo: d.marcaModelo ?? null, anoFabricacao: d.anoFabricacao ?? null,
       anoModelo: d.anoModelo ?? null, chassi: d.chassi ?? null, clienteId: cliente.id, clienteNome: cliente.nome,
+      criadoEm: new Date().toISOString(), criadoPor: autor(u).nome, criadoPorId: autor(u).id, atualizadoEm: null, atualizadoPor: null, atualizadoPorId: null,
     };
     db.veiculos.push(v);
     return HttpResponse.json(v);
   }),
 
   http.put(url('/veiculos/:id'), async ({ request, params }) => {
-    if (!autenticado(request)) return naoAutorizado();
+    const u = autenticado(request);
+    if (!u) return naoAutorizado();
     const v = db.veiculos.find((x) => x.id === Number(params.id));
     if (!v) return naoEncontradoMock('Veículo', params.id);
     const d = (await request.json()) as AtualizarVeiculoRequest;
@@ -226,6 +257,7 @@ export const handlers = [
     if (d.anoFabricacao != null) v.anoFabricacao = d.anoFabricacao;
     if (d.anoModelo != null) v.anoModelo = d.anoModelo;
     if (d.chassi != null) v.chassi = d.chassi;
+    Object.assign(v, { atualizadoEm: new Date().toISOString(), atualizadoPor: autor(u).nome, atualizadoPorId: autor(u).id });
     return HttpResponse.json(v);
   }),
 
@@ -247,11 +279,12 @@ export const handlers = [
   }),
 
   http.put(url('/clientes/:id'), async ({ request, params }) => {
-    if (!autenticado(request)) return naoAutorizado();
+    const u = autenticado(request);
+    if (!u) return naoAutorizado();
     const c = db.clientes.find((x) => x.id === Number(params.id));
     if (!c) return naoEncontradoMock('Cliente', params.id);
     const d = (await request.json()) as NovoClienteRequest;
-    Object.assign(c, d); // pedidos e veículos referenciam o mesmo objeto
+    Object.assign(c, d, { atualizadoEm: new Date().toISOString(), atualizadoPor: autor(u).nome, atualizadoPorId: autor(u).id }); // pedidos e veículos referenciam o mesmo objeto
     db.veiculos.filter((v) => v.clienteId === c.id).forEach((v) => { v.clienteNome = c.nome; });
     return HttpResponse.json(c);
   }),
@@ -274,6 +307,7 @@ export const handlers = [
     const d = (await request.json()) as NovoServicoRequest;
     const s: Servico = { id: Math.max(0, ...db.servicos.map((x) => x.id)) + 1, ...d, ativo: true }; // criar sempre ativa
     db.servicos.push(s);
+    auditar(u, 'SERVICO', s.id, s.nome, 'CRIACAO');
     return HttpResponse.json(s, { status: 201 });
   }),
 
@@ -285,7 +319,9 @@ export const handlers = [
     if (!s) return naoEncontradoMock('Serviço', params.id);
     // O backend (`ServicoService.atualizar`) copia nome/descrição/preço/categoria e **ignora `ativo`**.
     const { ativo: _ignorado, ...resto } = (await request.json()) as NovoServicoRequest;
+    const antes = { ...s };
     Object.assign(s, resto);
+    auditar(u, 'SERVICO', s.id, s.nome, 'ATUALIZACAO', ['nome', 'descricao', 'precoCentavos', 'categoria'].map((campo) => ({ campo, antes: antes[campo as keyof Servico], depois: s[campo as keyof Servico] })));
     return HttpResponse.json({ ...s, codigoExterno: null });
   }),
 
@@ -295,12 +331,35 @@ export const handlers = [
     if (u.papel === 'ATENDENTE') return HttpResponse.json({ mensagem: 'Acesso negado' }, { status: 403 });
     const s = db.servicos.find((x) => x.id === Number(params.id));
     if (!s) return naoEncontradoMock('Serviço', params.id);
-    s.ativo = ((await request.json()) as { ativo: boolean }).ativo;
+    const novoAtivo = ((await request.json()) as { ativo: boolean }).ativo;
+    if (novoAtivo !== s.ativo) auditar(u, 'SERVICO', s.id, s.nome, novoAtivo ? 'ATIVACAO' : 'DESATIVACAO');
+    s.ativo = novoAtivo;
     return HttpResponse.json({ ...s, codigoExterno: null });
   }),
 
-  http.post(url('/estoque/movimentacoes'), async ({ request }) => {
+  http.get(url('/estoque/movimentacoes'), ({ request }) => {
     if (!autenticado(request)) return naoAutorizado();
+    const itemId = new URL(request.url).searchParams.get('itemEstoqueId');
+    return HttpResponse.json(
+      db.movimentacoes.filter((m) => !itemId || m.itemEstoqueId === Number(itemId)).sort((a, b) => b.id - a.id),
+    );
+  }),
+
+  http.get(url('/auditoria'), ({ request }) => {
+    const u = autenticado(request);
+    if (!u) return naoAutorizado();
+    if (u.papel === 'ATENDENTE') return HttpResponse.json({ mensagem: 'Você não tem permissão para acessar este recurso.' }, { status: 403 });
+    const q = new URL(request.url).searchParams;
+    const entidade = q.get('entidade');
+    const entidadeId = q.get('entidadeId');
+    return HttpResponse.json(
+      db.auditoria.filter((r) => (!entidade || r.entidade === entidade) && (!entidadeId || r.entidadeId === Number(entidadeId))).sort((a, b) => b.id - a.id),
+    );
+  }),
+
+  http.post(url('/estoque/movimentacoes'), async ({ request }) => {
+    const u = autenticado(request);
+    if (!u) return naoAutorizado();
     const d = (await request.json()) as MovimentacaoRequest;
     const item = db.estoque.find((i) => i.id === d.itemEstoqueId);
     if (!item) return HttpResponse.json({ mensagem: `Item de estoque não encontrado: ${d.itemEstoqueId}` }, { status: 400 });
@@ -309,7 +368,12 @@ export const handlers = [
       return HttpResponse.json({ mensagem: `Estoque insuficiente para "${item.nome}": disponível ${item.quantidade}, necessário ${d.quantidade}` }, { status: 400 });
     }
     item.quantidade += d.tipo === 'ENTRADA' ? d.quantidade : -d.quantidade;
-    return HttpResponse.json({ id: 1, itemEstoqueId: item.id, itemEstoqueNome: item.nome, tipo: d.tipo, quantidade: d.quantidade, pedidoId: d.pedidoId ?? null, criadoEm: new Date().toISOString() });
+    const mov = {
+      id: db.movimentacoes.length + 1, itemEstoqueId: item.id, itemEstoqueNome: item.nome, tipo: d.tipo, quantidade: d.quantidade,
+      pedidoId: d.pedidoId ?? null, registradoPor: u.nome, registradoPorId: autor(u).id, criadoEm: new Date().toISOString(),
+    };
+    db.movimentacoes.push(mov);
+    return HttpResponse.json(mov);
   }),
 
   http.post(url('/estoque/itens'), async ({ request }) => {
@@ -320,7 +384,7 @@ export const handlers = [
     if (!d.nome?.trim()) return HttpResponse.json({ mensagem: 'O nome do item de estoque não pode ser vazio' }, { status: 400 });
     if (d.quantidade < 0) return HttpResponse.json({ mensagem: 'A quantidade em estoque não pode ser negativa' }, { status: 400 });
     if (d.quantidadeMinima < 0) return HttpResponse.json({ mensagem: 'A quantidade mínima não pode ser negativa' }, { status: 400 });
-    const item = { id: Math.max(0, ...db.estoque.map((i) => i.id)) + 1, nome: d.nome, sku: d.sku ?? null, unidade: d.unidade ?? null, quantidade: d.quantidade, quantidadeMinima: d.quantidadeMinima };
+    const item = { id: Math.max(0, ...db.estoque.map((i) => i.id)) + 1, nome: d.nome, sku: d.sku ?? null, unidade: d.unidade ?? null, quantidade: d.quantidade, quantidadeMinima: d.quantidadeMinima, criadoEm: new Date().toISOString(), criadoPor: u.nome, criadoPorId: autor(u).id };
     db.estoque.push(item);
     return HttpResponse.json(item);
   }),
@@ -378,6 +442,7 @@ export const handlers = [
     }
     const novo = { id: Math.max(0, ...db.usuarios.map((x) => x.id)) + 1, nome: d.nome, email: d.email, papel: d.papel, ativo: true, senha: d.senha };
     db.usuarios.push(novo);
+    auditar(u, 'USUARIO', novo.id, novo.email, 'CRIACAO');
     return HttpResponse.json(semSenha(novo), { status: 201 });
   }),
 
@@ -391,7 +456,9 @@ export const handlers = [
     if (db.usuarios.some((x) => x.id !== alvo.id && x.email === d.email)) {
       return HttpResponse.json({ mensagem: `Já existe um usuário com o e-mail ${d.email}` }, { status: 400 });
     }
+    const antes = { ...alvo };
     Object.assign(alvo, d); // a senha não muda pelo PUT
+    auditar(u, 'USUARIO', alvo.id, alvo.email, 'ATUALIZACAO', (['nome', 'email', 'papel'] as const).map((campo) => ({ campo, antes: antes[campo], depois: alvo[campo] })));
     return HttpResponse.json(semSenha(alvo));
   }),
 
@@ -404,6 +471,7 @@ export const handlers = [
     const { novaSenha } = (await request.json()) as { novaSenha?: string };
     if (!novaSenha?.trim()) return HttpResponse.json({ mensagem: 'Informe a nova senha.' }, { status: 400 });
     alvo.senha = novaSenha;
+    auditar(u, 'USUARIO', alvo.id, alvo.email, 'RESET_SENHA'); // registra só que ocorreu, nunca a senha
     return HttpResponse.json(semSenha(alvo));
   }),
 
@@ -413,7 +481,9 @@ export const handlers = [
     if (u.papel !== 'ADMIN') return HttpResponse.json({ mensagem: 'Acesso negado' }, { status: 403 });
     const alvo = db.usuarios.find((x) => x.id === Number(params.id));
     if (!alvo) return naoEncontradoMock('Usuário', params.id);
-    alvo.ativo = ((await request.json()) as { ativo: boolean }).ativo;
+    const novoAtivo = ((await request.json()) as { ativo: boolean }).ativo;
+    if (novoAtivo !== alvo.ativo) auditar(u, 'USUARIO', alvo.id, alvo.email, novoAtivo ? 'ATIVACAO' : 'DESATIVACAO');
+    alvo.ativo = novoAtivo;
     return HttpResponse.json(semSenha(alvo));
   }),
 

@@ -1,4 +1,4 @@
-import type { Cliente, ItemEstoque, Pagamento, Pedido, Servico, Usuario, Veiculo } from '@/api/types';
+import type { Cliente, ItemEstoque, Pagamento, Pedido, Servico, Usuario, Veiculo, MovimentacaoEstoque, RegistroAuditoria } from '@/api/types';
 import type { Papel } from '@/auth/papeis';
 import type { FormaPagamento, StatusPedido } from '@/components/status';
 
@@ -69,7 +69,7 @@ const LINHAS: Linha[] = [
 
 const ORDEM: StatusPedido[] = ['RECEBIDO', 'EM_PROCESSAMENTO', 'PLACA_PRONTA', 'ENTREGUE'];
 
-export type HistoricoMock = { id: number; pedidoId: number; statusAnterior: StatusPedido | null; statusNovo: StatusPedido; alteradoPor: string; alteradoEm: string };
+export type HistoricoMock = { id: number; pedidoId: number; statusAnterior: StatusPedido | null; statusNovo: StatusPedido; alteradoPor: string; alteradoPorId: number | null; alteradoEm: string };
 
 export function criarBanco(agora = Date.now()) {
   const clientes: Cliente[] = [];
@@ -81,12 +81,13 @@ export function criarBanco(agora = Date.now()) {
   for (const [id, placa, nome, cpfCnpj, telefone, servicoId, origem, status, tempo, pago, mm, ano, forma] of LINHAS) {
     let cliente = clientes.find((c) => c.cpfCnpj === cpfCnpj);
     if (!cliente) {
-      cliente = { id: clientes.length + 1, nome, telefone, cpfCnpj, email: '', criadoEm: iso(60 * 24 * 30, agora) };
+      cliente = { id: clientes.length + 1, nome, telefone, cpfCnpj, email: '', criadoEm: iso(60 * 24 * 30, agora), criadoPor: 'Bruna Costa', criadoPorId: 1, atualizadoEm: null, atualizadoPor: null, atualizadoPorId: null };
       clientes.push(cliente);
     }
     const veiculo: Veiculo = {
       id: veiculos.length + 1, placa, marcaModelo: mm, anoFabricacao: ano, anoModelo: ano + 1,
       chassi: `9BW${String(id).padStart(14, '0')}`, clienteId: cliente.id, clienteNome: cliente.nome,
+      criadoEm: iso(60 * 24 * 20, agora), criadoPor: 'Bruna Costa', criadoPorId: 1, atualizadoEm: null, atualizadoPor: null, atualizadoPorId: null,
     };
     veiculos.push(veiculo);
 
@@ -94,6 +95,7 @@ export function criarBanco(agora = Date.now()) {
     pedidos.push({
       id, status, origem, criadoEm: criado, atualizadoEm: criado, cliente, veiculo, pago,
       servico: SERVICOS.find((s) => s.id === servicoId)!,
+      precoCentavos: SERVICOS.find((s) => s.id === servicoId)!.precoCentavos, // snapshot do preço cobrado
     });
 
     // Histórico: um passo por status atingido.
@@ -101,7 +103,7 @@ export function criarBanco(agora = Date.now()) {
     ORDEM.slice(0, ate + 1).forEach((s, i) => {
       historico.push({
         id: historico.length + 1, pedidoId: id, statusAnterior: i === 0 ? null : ORDEM[i - 1], statusNovo: s,
-        alteradoPor: 'Bruna Costa', alteradoEm: iso(Math.max(minutos(tempo, agora) - i * 25, 1), agora),
+        alteradoPor: 'Bruna Costa', alteradoPorId: 1, alteradoEm: iso(Math.max(minutos(tempo, agora) - i * 25, 1), agora),
       });
     });
 
@@ -109,13 +111,15 @@ export function criarBanco(agora = Date.now()) {
       const servico = SERVICOS.find((s) => s.id === servicoId)!;
       pagamentos.push({
         id: pagamentos.length + 1, pedidoId: id, valorCentavos: servico.precoCentavos, formaPagamento: forma,
-        status: 'PAGO', pagoEm: iso(Math.max(minutos(tempo, agora) - 5, 1), agora), registradoPor: 'Bruna Costa',
+        status: 'PAGO', pagoEm: iso(Math.max(minutos(tempo, agora) - 5, 1), agora), registradoPor: 'Bruna Costa', registradoPorId: 1,
       });
     }
   }
 
   return {
     clientes, veiculos, pedidos, pagamentos, historico,
+    movimentacoes: [] as MovimentacaoEstoque[],
+    auditoria: [] as RegistroAuditoria[],
     servicos: structuredClone(SERVICOS),
     estoque: structuredClone(ESTOQUE),
     vinculos: structuredClone(VINCULOS),
