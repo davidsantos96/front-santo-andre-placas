@@ -1,3 +1,4 @@
+import { useDevolverFoco } from '@/lib/useDevolverFoco';
 import { useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -47,11 +48,12 @@ export function MovimentarModal({ item, onFechar }: { item: ItemEstoque | null; 
     }
   });
 
+  const devolverFoco = useDevolverFoco(item !== null);
   return (
     <Dialog.Root open={item !== null} onOpenChange={(o) => !o && onFechar()}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[400px] max-w-[92vw] -translate-x-1/2 -translate-y-1/2 rounded-lg bg-white p-5 shadow-placa">
+        <Dialog.Content onCloseAutoFocus={devolverFoco} className="fixed left-1/2 top-1/2 z-50 w-[400px] max-w-[92vw] -translate-x-1/2 -translate-y-1/2 rounded-lg bg-white p-5 shadow-placa">
           <Dialog.Title className="font-display text-[18px] font-bold">Movimentar estoque</Dialog.Title>
           <Dialog.Description className="mt-1 text-sm text-aco">
             {item?.nome} · saldo atual <span className="font-semibold tabular-nums">{item?.quantidade}</span>{item?.unidade ? ` ${item.unidade}` : ''}

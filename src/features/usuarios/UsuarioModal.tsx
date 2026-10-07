@@ -1,3 +1,4 @@
+import { useDevolverFoco } from '@/lib/useDevolverFoco';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -51,11 +52,12 @@ export function UsuarioModal({ usuario, onFechar }: { usuario: Usuario | 'novo' 
     }
   });
 
+  const devolverFoco = useDevolverFoco(usuario !== null);
   return (
     <Dialog.Root open={usuario !== null} onOpenChange={(o) => !o && onFechar()}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[420px] max-w-[92vw] -translate-x-1/2 -translate-y-1/2 rounded-lg bg-white p-5 shadow-placa">
+        <Dialog.Content onCloseAutoFocus={devolverFoco} className="fixed left-1/2 top-1/2 z-50 w-[420px] max-w-[92vw] -translate-x-1/2 -translate-y-1/2 rounded-lg bg-white p-5 shadow-placa">
           <Dialog.Title className="font-display text-[18px] font-bold">{editando ? 'Editar usuário' : 'Novo usuário'}</Dialog.Title>
           <Dialog.Description className="sr-only">Nome, e-mail, papel e senha provisória do usuário.</Dialog.Description>
           <form onSubmit={enviar} noValidate className="mt-4 flex flex-col gap-3">

@@ -1,3 +1,4 @@
+import { useDevolverFoco } from '@/lib/useDevolverFoco';
 import * as Dialog from '@radix-ui/react-dialog';
 import clsx from 'clsx';
 
@@ -12,11 +13,12 @@ type Props = {
 };
 
 export function ConfirmDialog({ aberto, onFechar, onConfirmar, titulo, descricao, confirmar, perigo }: Props) {
+  const devolverFoco = useDevolverFoco(aberto);
   return (
     <Dialog.Root open={aberto} onOpenChange={(o) => !o && onFechar()}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40" />
-        <Dialog.Content
+        <Dialog.Content onCloseAutoFocus={devolverFoco}
           className="fixed left-1/2 top-1/2 z-50 w-[400px] max-w-[92vw] -translate-x-1/2 -translate-y-1/2 rounded-lg bg-white p-5 shadow-placa"
           onOpenAutoFocus={(e) => {
             if (perigo) {

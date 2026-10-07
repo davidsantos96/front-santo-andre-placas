@@ -38,7 +38,7 @@ export function UsuariosPage() {
     {
       header: 'Status',
       cell: ({ row }) => (
-        <span className={clsx('inline-block rounded-[10px] px-[9px] py-[2px] text-[11px] font-semibold', row.original.ativo ? 'bg-ok-bg text-ok' : 'bg-linha text-aco-700')}>
+        <span className={clsx('inline-block rounded-[10px] px-[9px] py-[2px] text-[11px] font-semibold', row.original.ativo ? 'bg-ok-bg text-ok-texto' : 'bg-linha text-aco-700')}>
           {row.original.ativo ? 'Ativo' : 'Inativo'}
         </span>
       ),

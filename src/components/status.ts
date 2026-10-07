@@ -1,8 +1,8 @@
 export const STATUS = {
   RECEBIDO:         { label: 'Recebido',         cor: '#003399', bg: '#E8EDF9' },
   EM_PROCESSAMENTO: { label: 'Em processamento', cor: '#003399', bg: '#E8EDF9' },
-  PLACA_PRONTA:     { label: 'Placa pronta',     cor: '#B45309', bg: '#FBF0E4' },
-  ENTREGUE:         { label: 'Entregue',         cor: '#1E7F4F', bg: '#E7F3ED' },
+  PLACA_PRONTA:     { label: 'Placa pronta',     cor: '#A74A08', bg: '#FBF0E4' },
+  ENTREGUE:         { label: 'Entregue',         cor: '#1A7347', bg: '#E7F3ED' },
   CANCELADO:        { label: 'Cancelado',        cor: '#B91C1C', bg: '#FBEAEA' },
 } as const;
 export type StatusPedido = keyof typeof STATUS;
