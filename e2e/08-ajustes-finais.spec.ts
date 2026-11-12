@@ -66,24 +66,44 @@ test('Erro de uso da API sai como 400/404 com mensagem (não 401): a tela mostra
   await expect(page.getByRole('dialog', { name: 'Sessão expirada' })).toHaveCount(0);
 });
 
-test('Usuários: senha mínima, e-mail sem diferenciar maiúsculas e proteção contra desativar a si mesmo valem na API', async () => {
-  const email = `caixa.${RUN}@e2e.com`;
-  await criarUsuario(token, `Caixa ${RUN}`, email, 'ATENDENTE');
+test('Login de rede: sem e-mail para a equipe, e-mail só do dono; entra por login ou e-mail, sem diferenciar maiúsculas', async ({ page }) => {
+  const login = `caixa.${RUN}`;
+  await criarUsuario(token, `Caixa ${RUN}`, login, 'ATENDENTE');
 
-  const duplicado = await chamar('/usuarios', { method: 'POST', token, body: { nome: 'Outro', email: email.toUpperCase(), papel: 'ATENDENTE', senha: 'senha123' } });
+  // o login é único sem diferenciar caixa e a mensagem diz qual campo repetiu
+  const duplicado = await chamar('/usuarios', { method: 'POST', token, body: { login: login.toUpperCase(), nome: 'Outro', papel: 'ATENDENTE', senha: 'senha123' } });
   expect(duplicado.status).toBe(400);
   expect(duplicado.corpo.mensagem).toContain('Já existe');
-  await expect(tokenDe(email.toUpperCase(), 'senha123')).resolves.toBeTruthy(); // login com outra caixa
+  await expect(tokenDe(login.toUpperCase(), 'senha123')).resolves.toBeTruthy();
 
-  const curta = await chamar('/usuarios', { method: 'POST', token, body: { nome: 'Curta', email: `curta.${RUN}@e2e.com`, papel: 'ATENDENTE', senha: '123' } });
+  // quem tem e-mail entra pelos dois; ADMIN exige e-mail; formato é validado
+  const comEmail = await chamar('/usuarios', { method: 'POST', token, body: { login: `gerente.${RUN}`, nome: `Gerente ${RUN}`, email: `Gerente.${RUN}@exemplo.com`, papel: 'GERENTE', senha: 'senha123' } });
+  expect(comEmail.status).toBe(200);
+  await expect(tokenDe(`gerente.${RUN}`, 'senha123')).resolves.toBeTruthy();
+  await expect(tokenDe(`GERENTE.${RUN}@exemplo.com`, 'senha123')).resolves.toBeTruthy();
+  const adminSemEmail = await chamar('/usuarios', { method: 'POST', token, body: { login: `dono.${RUN}`, nome: 'Dono', papel: 'ADMIN', senha: 'senha123' } });
+  expect(adminSemEmail.status).toBe(400);
+  expect(adminSemEmail.corpo.mensagem).toContain('e-mail');
+  expect((await chamar('/usuarios', { method: 'POST', token, body: { login: 'a b', nome: 'X', papel: 'ATENDENTE', senha: 'senha123' } })).status).toBe(400);
+
+  // pela tela: digitando o e-mail (outra caixa) o gerente entra
+  await entrar(page, `GERENTE.${RUN}@exemplo.com`, 'senha123', '/dashboard');
+  await expect(page.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible();
+});
+
+test('Usuários: senha mínima e proteção contra desativar a si mesmo ou alterar o próprio login valem na API', async () => {
+  const curta = await chamar('/usuarios', { method: 'POST', token, body: { login: `curta.${RUN}`, nome: 'Curta', papel: 'ATENDENTE', senha: '123' } });
   expect(curta.status).toBe(400);
   expect(curta.corpo.mensagem).toContain('pelo menos 6');
 
-  const eu = ((await chamar('/usuarios', { token })).corpo as { id: number; email: string }[]).find((u) => u.email.toLowerCase() === ADMIN.email.toLowerCase())!;
+  const eu = ((await chamar('/usuarios', { token })).corpo as { id: number; login: string; email: string }[]).find((u) => u.login === ADMIN.login)!;
   const auto = await chamar(`/usuarios/${eu.id}/status`, { method: 'PATCH', token, body: { ativo: false } });
   expect(auto.status).toBe(400);
   expect(auto.corpo.mensagem).toContain('próprio');
-  await expect(tokenAdmin()).resolves.toBeTruthy(); // segue ativo
+  const trocaLogin = await chamar(`/usuarios/${eu.id}`, { method: 'PUT', token, body: { login: `${ADMIN.login}.novo`, nome: 'Administrador', email: eu.email, papel: 'ADMIN' } });
+  expect(trocaLogin.status).toBe(400);
+  expect(trocaLogin.corpo.mensagem).toContain('próprio login');
+  await expect(tokenAdmin()).resolves.toBeTruthy(); // segue ativo e com o mesmo login
 });
 
 test('Clientes: busca por nome não casa dígitos soltos com telefone/CPF (B17)', async () => {

@@ -4,6 +4,11 @@ Lista viva. Cada item foi assumido de forma provisória para não travar a imple
 
 Legenda: **Backend** = depende de mudança/confirmação na API · **Front** = decisão só do front · **Produto** = decisão de negócio/UX.
 
+## Login de rede (2026-11-12)
+
+- [x] **Login separado do e-mail.** A equipe entra com um login próprio (ex.: `bruna.silva`), sem e-mail pessoal; quem tem e-mail também pode digitar o e-mail. E-mail é opcional, **obrigatório só para ADMIN**. Tela de login ("Usuário ou e-mail"), modal de re-login, cadastro/edição de usuário (campo Login, e-mail opcional, login travado no próprio usuário) e tabela (coluna Login) atualizados; mocks e e2e acompanham. O backend recusa trocar o próprio login e devolve `login` na resposta do login.
+- [ ] Recuperação de senha por e-mail e confirmação de e-mail real (precisa de provedor de e-mail e domínio): fica para quando o sistema for hospedado.
+
 ## Fechamento para o teste final (2026-11-11)
 
 Revisão conjunta de API e front. A suíte e2e já passava inteira antes; o que entrou:

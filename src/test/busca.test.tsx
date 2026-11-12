@@ -68,7 +68,7 @@ describe('Busca global (combobox)', () => {
   it('menos de 2 caracteres não consulta nem abre; sem resultado mostra a mensagem', async () => {
     const chamadas: string[] = [];
     server.events.on('request:start', ({ request }) => { const u = new URL(request.url); if (/\/(veiculos|clientes|pedidos)$/.test(u.pathname) && u.searchParams.has('busca') || u.searchParams.has('placa')) chamadas.push(u.pathname); });
-    await entrarComo('/dashboard', 'gerente@sap.com');
+    await entrarComo('/dashboard', 'carlos');
     const busca = await campo();
     await userEvent.type(busca, 'z');
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
@@ -118,7 +118,7 @@ describe('Atalhos globais', () => {
   });
 
   it('"N" abre Novo pedido; "G" depois "P"/"C" navega; fora de inputs apenas', async () => {
-    const { router } = await entrarComo('/dashboard', 'gerente@sap.com');
+    const { router } = await entrarComo('/dashboard', 'carlos');
     await campo();
     await userEvent.keyboard('gc');
     await waitFor(() => expect(router.state.location.pathname).toBe('/clientes'));
@@ -134,7 +134,7 @@ describe('Atalhos globais', () => {
   });
 
   it('G sozinho expira e não navega; teclas com Ctrl/Meta são ignoradas', async () => {
-    const { router } = await entrarComo('/dashboard', 'gerente@sap.com');
+    const { router } = await entrarComo('/dashboard', 'carlos');
     await campo();
     await userEvent.keyboard('g');
     await userEvent.keyboard('{Control>}p{/Control}');
@@ -144,7 +144,7 @@ describe('Atalhos globais', () => {
 
 describe('Acessibilidade — foco', () => {
   it('fechar um modal devolve o foco a quem o abriu (não deixa cair no <body>)', async () => {
-    await entrarComo('/servicos', 'gerente@sap.com');
+    await entrarComo('/servicos', 'carlos');
     const gatilho = await screen.findByRole('button', { name: '+ Novo serviço' });
     gatilho.focus();
     await userEvent.keyboard('{Enter}');

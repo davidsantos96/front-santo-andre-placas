@@ -16,7 +16,7 @@ afterEach(() => reloginCancelado());
 
 async function entrar(inicial: string) {
   const app = renderApp(`/login?next=${encodeURIComponent(inicial)}`);
-  await userEvent.type(await screen.findByLabelText('E-mail'), 'atendente@sap.com');
+  await userEvent.type(await screen.findByLabelText('Usuário ou e-mail'), 'bruna');
   await userEvent.type(screen.getByLabelText('Senha'), '123456');
   await userEvent.click(screen.getByRole('button', { name: 'Entrar' }));
   return app;
@@ -142,7 +142,7 @@ function Harness({ id, de, para }: { id: number; de: StatusPedido; para: StatusP
 }
 
 async function renderHarness(props: { id: number; de: StatusPedido; para: StatusPedido }) {
-  const { data } = await api.post('/auth/login', { email: 'atendente@sap.com', senha: '123456' });
+  const { data } = await api.post('/auth/login', { login: 'bruna', senha: '123456' });
   setAccessToken(data.token);
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(<QueryClientProvider client={qc}><ToastProvider><Harness {...props} /></ToastProvider></QueryClientProvider>);

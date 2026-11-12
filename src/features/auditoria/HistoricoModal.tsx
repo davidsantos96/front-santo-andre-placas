@@ -16,7 +16,7 @@ import { useAuditoria } from './api';
 const ROTULO_CAMPO: Record<EntidadeAuditada, Record<string, string>> = {
   // `itemEstoque`: vínculo com item de estoque incluído ("— → Lacre × 2") ou removido ("Lacre × 2 → —")
   SERVICO: { nome: 'Nome', descricao: 'Descrição', precoCentavos: 'Preço', categoria: 'Categoria', itemEstoque: 'Baixa de estoque' },
-  USUARIO: { nome: 'Nome', email: 'E-mail', papel: 'Papel' },
+  USUARIO: { login: 'Login', nome: 'Nome', email: 'E-mail', papel: 'Papel' },
 };
 
 /** Os valores vêm SEMPRE como texto (inclusive `precoCentavos`): converte na hora de exibir. */

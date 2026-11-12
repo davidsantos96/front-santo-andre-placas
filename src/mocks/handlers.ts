@@ -15,7 +15,7 @@ const autenticado = (req: Request) => {
   const sessao = t ? db.tokens.get(t) : undefined;
   if (!sessao) return null;
   // usuário desativado depois do login: o token continua assinado, mas não autentica mais (→ 401)
-  return db.usuarios.find((u) => u.email === sessao.email)?.ativo ? sessao : null;
+  return db.usuarios.find((u) => u.login === sessao.login)?.ativo ? sessao : null;
 };
 
 /** `PedidoResponse.pago` do backend: soma dos pagamentos PAGO ≥ preço cobrado no pedido (snapshot). */
@@ -30,11 +30,11 @@ export const expirarSessoes = () => db.tokens.clear();
 let seq = 0;
 
 /** Usuário da requisição (nome congelado + id) para gravar a autoria, como o backend. */
-const autor = (u: { email: string; nome: string }) => ({ nome: u.nome, id: db.usuarios.find((x) => x.email === u.email)?.id ?? null });
+const autor = (u: { login: string; nome: string }) => ({ nome: u.nome, id: db.usuarios.find((x) => x.login === u.login)?.id ?? null });
 
 /** Trilha genérica `/auditoria`: uma linha por campo alterado; só o que mudou de fato. */
 function auditar(
-  u: { email: string; nome: string }, entidade: RegistroAuditoria['entidade'], entidadeId: number, entidadeDescricao: string,
+  u: { login: string; nome: string }, entidade: RegistroAuditoria['entidade'], entidadeId: number, entidadeDescricao: string,
   acao: RegistroAuditoria['acao'], campos: { campo: string; antes: unknown; depois: unknown }[] = [],
 ) {
   const a = autor(u);
@@ -45,6 +45,20 @@ function auditar(
   novos.forEach((r) => db.auditoria.push({ id: db.auditoria.length + 1, ...r }));
 }
 
+/** Regras de `UsuarioService` (login/e-mail): devolve a mensagem de erro ou `null`. `idIgnorado` = o próprio usuário na edição. */
+function validarUsuario(d: { login?: string; nome?: string; email?: string; papel?: string }, idIgnorado: number | null): string | null {
+  const login = (d.login ?? '').trim().toLowerCase();
+  if (!login) return 'Informe o login.';
+  if (!/^[a-z0-9][a-z0-9._-]{2,39}$/.test(login)) return 'O login deve ter de 3 a 40 caracteres: letras, números, ponto, hífen ou underscore (sem espaços).';
+  if (!d.nome?.trim()) return 'Informe o nome.';
+  const email = d.email?.trim() ?? '';
+  if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email)) return 'E-mail inválido.';
+  if (d.papel === 'ADMIN' && !email) return 'Administradores precisam ter um e-mail (usado na recuperação de acesso).';
+  if (db.usuarios.some((x) => x.id !== idIgnorado && x.login === login)) return `Já existe um usuário com o login ${login}`;
+  if (email && db.usuarios.some((x) => x.id !== idIgnorado && x.email?.toLowerCase() === email.toLowerCase())) return `Já existe um usuário com o e-mail ${email}`;
+  return null;
+}
+
 const dia = (iso: string) => {
   const d = new Date(iso);
   const p = (n: number) => String(n).padStart(2, '0');
@@ -53,15 +67,17 @@ const dia = (iso: string) => {
 
 export const handlers = [
   http.post(url('/auth/login'), async ({ request }) => {
-    const { email, senha } = (await request.json()) as LoginRequest;
+    const { login: identificador, senha } = (await request.json()) as LoginRequest;
     // Como o backend: credencial errada → 400 "Email ou senha inválidos"; usuário inativo → 400 "Usuário inativo…".
-    const u = db.usuarios.find((x) => x.email === email && x.senha === senha);
-    if (!u) return HttpResponse.json({ mensagem: 'Email ou senha inválidos' }, { status: 400 });
+    // login ou e-mail (se tiver @), sem diferenciar maiúsculas, como a API
+    const chave = identificador.trim().toLowerCase();
+    const u = db.usuarios.find((x) => (chave.includes('@') ? x.email?.toLowerCase() === chave : x.login === chave) && x.senha === senha);
+    if (!u) return HttpResponse.json({ mensagem: 'Usuário ou senha inválidos' }, { status: 400 });
     if (!u.ativo) return HttpResponse.json({ mensagem: 'Usuário inativo. Contate um administrador.' }, { status: 400 });
     u.ultimoAcessoEm = new Date().toISOString(); // o backend registra a cada login
-    const token = `${gerarJwt(u.email, u.papel)}.${++seq}`;
-    db.tokens.set(token, { papel: u.papel, nome: u.nome, email: u.email });
-    const corpo: LoginResponse = { token, papel: u.papel, nome: u.nome };
+    const token = `${gerarJwt(u.login, u.papel)}.${++seq}`;
+    db.tokens.set(token, { papel: u.papel, nome: u.nome, login: u.login });
+    const corpo: LoginResponse = { token, papel: u.papel, nome: u.nome, login: u.login };
     return HttpResponse.json(corpo);
   }),
 
@@ -470,12 +486,12 @@ export const handlers = [
     if (!u) return naoAutorizado();
     if (u.papel !== 'ADMIN') return HttpResponse.json({ mensagem: 'Acesso negado' }, { status: 403 });
     const d = (await request.json()) as NovoUsuarioRequest;
-    if (db.usuarios.some((x) => x.email === d.email)) { // backend: findByEmail exato (diferencia maiúsculas) e só `mensagem`
-      return HttpResponse.json({ mensagem: `Já existe um usuário com o e-mail ${d.email}` }, { status: 400 });
-    }
-    const novo = { id: Math.max(0, ...db.usuarios.map((x) => x.id)) + 1, nome: d.nome, email: d.email, papel: d.papel, ativo: true, senha: d.senha };
+    const erro = validarUsuario(d, null);
+    if (erro) return HttpResponse.json({ mensagem: erro }, { status: 400 });
+    if (!d.senha || d.senha.length < 6) return HttpResponse.json({ mensagem: 'A senha deve ter pelo menos 6 caracteres.' }, { status: 400 });
+    const novo = { id: Math.max(0, ...db.usuarios.map((x) => x.id)) + 1, login: d.login.trim().toLowerCase(), nome: d.nome, email: d.email?.trim() || null, papel: d.papel, ativo: true, senha: d.senha };
     db.usuarios.push(novo);
-    auditar(u, 'USUARIO', novo.id, novo.email, 'CRIACAO');
+    auditar(u, 'USUARIO', novo.id, novo.login, 'CRIACAO');
     return HttpResponse.json(semSenha(novo), { status: 201 });
   }),
 
@@ -486,12 +502,14 @@ export const handlers = [
     const alvo = db.usuarios.find((x) => x.id === Number(params.id));
     if (!alvo) return naoEncontradoMock('Usuário', params.id);
     const d = (await request.json()) as AtualizarUsuarioRequest;
-    if (db.usuarios.some((x) => x.id !== alvo.id && x.email === d.email)) {
-      return HttpResponse.json({ mensagem: `Já existe um usuário com o e-mail ${d.email}` }, { status: 400 });
+    const erro = validarUsuario(d, alvo.id);
+    if (erro) return HttpResponse.json({ mensagem: erro }, { status: 400 });
+    if (alvo.login === u.login && d.login.trim().toLowerCase() !== alvo.login) {
+      return HttpResponse.json({ mensagem: 'Você não pode alterar o próprio login.' }, { status: 400 });
     }
     const antes = { ...alvo };
-    Object.assign(alvo, d); // a senha não muda pelo PUT
-    auditar(u, 'USUARIO', alvo.id, alvo.email, 'ATUALIZACAO', (['nome', 'email', 'papel'] as const).map((campo) => ({ campo, antes: antes[campo], depois: alvo[campo] })));
+    Object.assign(alvo, { login: d.login.trim().toLowerCase(), nome: d.nome, email: d.email?.trim() || null, papel: d.papel }); // a senha não muda pelo PUT
+    auditar(u, 'USUARIO', alvo.id, alvo.login, 'ATUALIZACAO', (['login', 'nome', 'email', 'papel'] as const).map((campo) => ({ campo, antes: antes[campo], depois: alvo[campo] })));
     return HttpResponse.json(semSenha(alvo));
   }),
 
@@ -504,7 +522,7 @@ export const handlers = [
     const { novaSenha } = (await request.json()) as { novaSenha?: string };
     if (!novaSenha?.trim()) return HttpResponse.json({ mensagem: 'Informe a nova senha.' }, { status: 400 });
     alvo.senha = novaSenha;
-    auditar(u, 'USUARIO', alvo.id, alvo.email, 'RESET_SENHA'); // registra só que ocorreu, nunca a senha
+    auditar(u, 'USUARIO', alvo.id, alvo.login, 'RESET_SENHA'); // registra só que ocorreu, nunca a senha
     return HttpResponse.json(semSenha(alvo));
   }),
 
@@ -515,7 +533,7 @@ export const handlers = [
     const alvo = db.usuarios.find((x) => x.id === Number(params.id));
     if (!alvo) return naoEncontradoMock('Usuário', params.id);
     const novoAtivo = ((await request.json()) as { ativo: boolean }).ativo;
-    if (novoAtivo !== alvo.ativo) auditar(u, 'USUARIO', alvo.id, alvo.email, novoAtivo ? 'ATIVACAO' : 'DESATIVACAO');
+    if (novoAtivo !== alvo.ativo) auditar(u, 'USUARIO', alvo.id, alvo.login, novoAtivo ? 'ATIVACAO' : 'DESATIVACAO');
     alvo.ativo = novoAtivo;
     return HttpResponse.json(semSenha(alvo));
   }),

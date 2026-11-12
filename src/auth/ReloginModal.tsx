@@ -6,7 +6,7 @@ import { useSessao } from './SessionProvider';
 /** Modal de re-login sobre a tela atual (sem desmontá-la). Login completo, não refresh. */
 export function ReloginModal() {
   const { sessaoExpirada, usuario, login, logout } = useSessao();
-  const [email, setEmail] = useState(usuario?.email ?? '');
+  const [identificador, setIdentificador] = useState(usuario?.login ?? '');
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -16,7 +16,7 @@ export function ReloginModal() {
     setErro(null);
     setEnviando(true);
     try {
-      await login({ email, senha });
+      await login({ login: identificador, senha });
       setSenha('');
     } catch (e) {
       setErro(mensagemDeLogin(e));
@@ -43,8 +43,8 @@ export function ReloginModal() {
           </Dialog.Description>
           <form onSubmit={enviar} className="mt-4 flex flex-col gap-3">
             <label className="text-xs font-semibold text-aco">
-              E-mail
-              <input type="email" required autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} className={`${campo} mt-1`} />
+              Usuário ou e-mail
+              <input type="text" required autoComplete="username" autoCapitalize="none" spellCheck={false} value={identificador} onChange={(e) => setIdentificador(e.target.value)} className={`${campo} mt-1`} />
             </label>
             <label className="text-xs font-semibold text-aco">
               Senha

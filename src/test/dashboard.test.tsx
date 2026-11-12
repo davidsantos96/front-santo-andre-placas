@@ -8,7 +8,7 @@ import { reloginCancelado } from '@/api/sessaoEventos';
 
 afterEach(() => reloginCancelado());
 
-const gerente = 'gerente@sap.com';
+const gerente = 'carlos';
 const kpi = async (rotulo: string) => (await screen.findByText(rotulo)).parentElement!;
 const cartao = async (titulo: string) => (await screen.findByRole('heading', { name: titulo })).closest('section')!;
 

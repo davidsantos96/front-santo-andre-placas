@@ -77,10 +77,11 @@ export type ResumoDashboard = {
 /** `horasMediaPeriodoAnterior`: média do período de mesma duração imediatamente anterior (só com `de`/`ate`; `null` sem dados). */
 export type TempoMedioProducao = { horasMedia: number; pedidosConsiderados: number; horasMediaPeriodoAnterior?: number | null };
 
-export type Usuario = { id: number; nome: string; email: string; papel: Papel; ativo: boolean; ultimoAcessoEm?: string | null };
+export type Usuario = { id: number; login: string; nome: string; /** Opcional: só os donos (ADMIN) precisam ter. */ email: string | null; papel: Papel; ativo: boolean; ultimoAcessoEm?: string | null };
 
-export type LoginRequest = { email: string; senha: string };
-export type LoginResponse = { token: string; papel: Papel; nome: string };
+/** `login` aceita o login ou o e-mail da pessoa. */
+export type LoginRequest = { login: string; senha: string };
+export type LoginResponse = { token: string; papel: Papel; nome: string; login: string };
 
 export type NovoPedidoRequest = { clienteId: number; veiculoId: number; servicoId: number; origem: string };
 export type ConsultaVeicularResultado = { marcaModelo: string; anoFabricacao: number; anoModelo: number; chassi: string };
@@ -128,5 +129,5 @@ export type VinculoServicoItem = {
 export type ServicoMaisVendido = { servicoId: number; servicoNome: string; quantidadePedidos: number; faturamentoNominalCentavos: number };
 
 /** Corpos assumidos de /usuarios (contrato não documentado — ver PENDENCIAS.md). `senha` só na criação. */
-export type NovoUsuarioRequest = { nome: string; email: string; papel: Usuario['papel']; senha: string };
-export type AtualizarUsuarioRequest = { nome: string; email: string; papel: Usuario['papel'] };
+export type NovoUsuarioRequest = { login: string; nome: string; email?: string; papel: Usuario['papel']; senha: string };
+export type AtualizarUsuarioRequest = { login: string; nome: string; email?: string; papel: Usuario['papel'] };

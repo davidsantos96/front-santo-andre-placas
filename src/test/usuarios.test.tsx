@@ -8,7 +8,7 @@ import { reloginCancelado } from '@/api/sessaoEventos';
 
 afterEach(() => reloginCancelado());
 
-const admin = 'admin@sap.com';
+const admin = 'admin';
 const linha = async (texto: string) => (await screen.findByText(texto)).closest('tr')!;
 
 describe('Usuários (ADMIN)', () => {
@@ -16,7 +16,7 @@ describe('Usuários (ADMIN)', () => {
     await entrarComo('/usuarios', admin);
     expect(await screen.findByText('3 usuários')).toBeInTheDocument();
     const r = await linha('Carlos Menezes');
-    expect(within(r).getByText('gerente@sap.com')).toBeInTheDocument();
+    expect(within(r).getByText('carlos')).toBeInTheDocument();
     expect(within(r).getByText('Gerente')).toBeInTheDocument();
     expect(within(r).getByText('Ativo')).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Último acesso' })).toBeInTheDocument();
@@ -26,7 +26,7 @@ describe('Usuários (ADMIN)', () => {
   });
 
   it('GERENTE e ATENDENTE não veem o módulo e são redirecionados', async () => {
-    const { router } = await entrarComo('/dashboard', 'gerente@sap.com');
+    const { router } = await entrarComo('/dashboard', 'carlos');
     const nav = await screen.findByRole('navigation', { name: 'Navegação principal' });
     expect(within(nav).queryByRole('link', { name: /Usuários/ })).not.toBeInTheDocument();
     await router.navigate('/usuarios');
@@ -39,12 +39,13 @@ describe('Usuários (ADMIN)', () => {
     const m = await screen.findByRole('dialog', { name: 'Novo usuário' });
     await userEvent.click(within(m).getByRole('button', { name: 'Salvar' }));
     expect(await within(m).findByText('Informe o nome')).toBeInTheDocument();
-    expect(within(m).getByText('Informe o e-mail')).toBeInTheDocument();
+    expect(within(m).getByText(/De 3 a 40 caracteres/)).toBeInTheDocument();
     expect(within(m).getByText('Escolha o papel')).toBeInTheDocument();
     expect(within(m).getByText(/ao menos 6 caracteres/)).toBeInTheDocument();
 
     await userEvent.type(within(m).getByLabelText('Nome'), 'Dora Lima');
-    await userEvent.type(within(m).getByLabelText('E-mail'), 'dora@sap.com');
+    await userEvent.type(within(m).getByLabelText('Login'), 'Dora.Lima');
+    await userEvent.type(within(m).getByLabelText(/^E-mail/), 'dora@sap.com');
     await userEvent.selectOptions(within(m).getByLabelText('Papel'), 'GERENTE');
     const senha = within(m).getByLabelText('Senha provisória');
     expect(senha).toHaveAttribute('type', 'password');
@@ -54,20 +55,20 @@ describe('Usuários (ADMIN)', () => {
     await userEvent.click(within(m).getByRole('button', { name: 'Salvar' }));
 
     await screen.findByText('Usuário Dora Lima criado');
-    expect(db.usuarios.at(-1)).toMatchObject({ nome: 'Dora Lima', email: 'dora@sap.com', papel: 'GERENTE', ativo: true, senha: 'temp1234' });
+    expect(db.usuarios.at(-1)).toMatchObject({ login: 'dora.lima', nome: 'Dora Lima', email: 'dora@sap.com', papel: 'GERENTE', ativo: true, senha: 'temp1234' });
     expect(await linha('Dora Lima')).toHaveTextContent('Gerente');
   });
 
-  it('e-mail duplicado: o backend manda só `mensagem`, exibida no formulário (que continua aberto)', async () => {
+  it('login duplicado: o backend manda só `mensagem`, exibida no formulário (que continua aberto)', async () => {
     await entrarComo('/usuarios', admin);
     await userEvent.click(await screen.findByRole('button', { name: '+ Novo usuário' }));
     const m = await screen.findByRole('dialog', { name: 'Novo usuário' });
     await userEvent.type(within(m).getByLabelText('Nome'), 'Outro');
-    await userEvent.type(within(m).getByLabelText('E-mail'), 'gerente@sap.com');
+    await userEvent.type(within(m).getByLabelText('Login'), 'CARLOS');
     await userEvent.selectOptions(within(m).getByLabelText('Papel'), 'ATENDENTE');
     await userEvent.type(within(m).getByLabelText('Senha provisória'), '123456');
     await userEvent.click(within(m).getByRole('button', { name: 'Salvar' }));
-    expect(await within(m).findByText('Já existe um usuário com o e-mail gerente@sap.com')).toBeInTheDocument();
+    expect(await within(m).findByText('Já existe um usuário com o login carlos')).toBeInTheDocument();
     expect(screen.getByRole('dialog', { name: 'Novo usuário' })).toBeInTheDocument(); // formulário permanece
   });
 
@@ -150,8 +151,62 @@ describe('Usuários (ADMIN)', () => {
     await userEvent.click(within(m).getByRole('button', { name: 'Redefinir senha' }));
     await screen.findByText('Senha de Bruna Costa redefinida');
     expect(db.usuarios[0].senha).toBe('123456789');
-    await expect(api.post('/auth/login', { email: 'atendente@sap.com', senha: '123456' })).rejects.toMatchObject({ status: 400 });
-    const r = await api.post('/auth/login', { email: 'atendente@sap.com', senha: '123456789' });
+    await expect(api.post('/auth/login', { login: 'bruna', senha: '123456' })).rejects.toMatchObject({ status: 400 });
+    const r = await api.post('/auth/login', { login: 'bruna', senha: '123456789' });
     expect(r.status).toBe(200);
+  });
+});
+
+describe('Usuários — login de rede (e-mail opcional)', () => {
+  const abrirNovo = async () => {
+    await entrarComo('/usuarios', admin);
+    await userEvent.click(await screen.findByRole('button', { name: '+ Novo usuário' }));
+    return screen.findByRole('dialog', { name: 'Novo usuário' });
+  };
+
+  it('cria atendente só com login (sem e-mail) e a tabela mostra "—" no e-mail', async () => {
+    const m = await abrirNovo();
+    await userEvent.type(within(m).getByLabelText('Nome'), 'Eva Souza');
+    await userEvent.type(within(m).getByLabelText('Login'), 'eva.souza');
+    await userEvent.selectOptions(within(m).getByLabelText('Papel'), 'ATENDENTE');
+    await userEvent.type(within(m).getByLabelText('Senha provisória'), 'temp1234');
+    await userEvent.click(within(m).getByRole('button', { name: 'Salvar' }));
+    await screen.findByText('Usuário Eva Souza criado');
+    expect(db.usuarios.at(-1)).toMatchObject({ login: 'eva.souza', email: null, papel: 'ATENDENTE' });
+    const r = await linha('Eva Souza');
+    expect(within(r).getByText('eva.souza')).toBeInTheDocument();
+    expect(within(r).getByText('—')).toBeInTheDocument();
+  });
+
+  it('administrador exige e-mail; e-mail inválido e login com espaço são recusados antes de chamar a API', async () => {
+    const m = await abrirNovo();
+    await userEvent.type(within(m).getByLabelText('Nome'), 'Dono Novo');
+    await userEvent.type(within(m).getByLabelText('Login'), 'com espaco');
+    await userEvent.selectOptions(within(m).getByLabelText('Papel'), 'ADMIN');
+    await userEvent.type(within(m).getByLabelText('Senha provisória'), 'temp1234');
+    await userEvent.click(within(m).getByRole('button', { name: 'Salvar' }));
+    expect(await within(m).findByText(/De 3 a 40 caracteres/)).toBeInTheDocument();
+    expect(within(m).getByText('Administradores precisam de um e-mail')).toBeInTheDocument();
+
+    const login = within(m).getByLabelText('Login');
+    await userEvent.clear(login);
+    await userEvent.type(login, 'dono.novo');
+    await userEvent.type(within(m).getByLabelText(/^E-mail/), 'isto-nao-e-email');
+    await userEvent.click(within(m).getByRole('button', { name: 'Salvar' }));
+    expect(await within(m).findByText('E-mail inválido')).toBeInTheDocument();
+    expect(db.usuarios.some((u) => u.login === 'dono.novo')).toBe(false);
+  });
+
+  it('quem entra pode digitar o login ou o e-mail (sem diferenciar maiúsculas)', async () => {
+    const { unmount } = await entrarComo('/dashboard', 'ADMIN@sap.com');
+    expect(await screen.findByRole('navigation', { name: 'Navegação principal' })).toBeInTheDocument();
+    unmount();
+  });
+
+  it('o próprio login fica travado na edição', async () => {
+    await entrarComo('/usuarios', admin);
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar Admin SAP' }));
+    const m = await screen.findByRole('dialog', { name: 'Editar usuário' });
+    expect(within(m).getByLabelText('Login')).toHaveAttribute('readonly');
   });
 });

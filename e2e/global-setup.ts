@@ -9,7 +9,7 @@ export default async function globalSetup() {
     );
   }
   const r = await fetch(`${API}/auth/login`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: ADMIN.email, senha: ADMIN.senha }),
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login: ADMIN.login, senha: ADMIN.senha }),
   }).catch(() => null);
   if (!r) throw new Error(`API fora do ar em ${API}. Suba a API antes (ou ajuste E2E_API_URL).`);
   if (!r.ok) throw new Error(`Login do usuário de teste falhou (${r.status}). Ajuste E2E_USER / E2E_PASSWORD.`);

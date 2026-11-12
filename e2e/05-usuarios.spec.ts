@@ -4,43 +4,43 @@ import { ADMIN, RUN, aviso, chamar, criarUsuario, entrar, tokenAdmin } from './h
 test.describe.configure({ mode: 'serial' });
 
 let token: string;
-const email = `novo.${RUN}@e2e.test`;
-const outro = { nome: `Fulano ${RUN}`, email: `fulano.${RUN}@e2e.test` };
+const login = `novo.${RUN}`;
+const outro = { nome: `Fulano ${RUN}`, login: `fulano.${RUN}` };
 
 test.beforeAll(async () => {
   token = await tokenAdmin();
-  await criarUsuario(token, outro.nome, outro.email, 'ATENDENTE');
+  await criarUsuario(token, outro.nome, outro.login, 'ATENDENTE');
 });
 
-test('Criar usuário (validações, senha provisória) e e-mail duplicado volta como mensagem da API', async ({ page }) => {
+test('Criar usuário (validações, senha provisória) e login duplicado volta como mensagem da API', async ({ page }) => {
   await entrar(page, undefined, undefined, '/usuarios');
   await page.getByRole('button', { name: '+ Novo usuário' }).click();
   const m = page.getByRole('dialog', { name: 'Novo usuário' });
   await m.getByRole('button', { name: 'Salvar' }).click();
-  for (const erro of ['Informe o nome', 'Informe o e-mail', 'Escolha o papel', /ao menos 6 caracteres/]) await expect(m.getByText(erro)).toBeVisible();
+  for (const erro of ['Informe o nome', /De 3 a 40 caracteres/, 'Escolha o papel', /ao menos 6 caracteres/]) await expect(m.getByText(erro)).toBeVisible();
 
   await m.getByLabel('Nome').fill(`Novo ${RUN}`);
-  await m.getByLabel('E-mail').fill(email);
+  await m.getByLabel('Login').fill(login);
   await m.getByLabel('Papel').selectOption('GERENTE');
   await m.getByLabel('Senha provisória').fill('senha123');
   await m.getByRole('button', { name: 'Salvar' }).click();
   await expect(aviso(page, `Usuário Novo ${RUN} criado`)).toBeVisible();
-  await expect(page.getByRole('row').filter({ hasText: email })).toContainText('Gerente');
+  await expect(page.getByRole('row').filter({ hasText: login })).toContainText('Gerente');
 
   await page.getByRole('button', { name: '+ Novo usuário' }).click();
   const d = page.getByRole('dialog', { name: 'Novo usuário' });
   await d.getByLabel('Nome').fill('Duplicado');
-  await d.getByLabel('E-mail').fill(email);
+  await d.getByLabel('Login').fill(login);
   await d.getByLabel('Papel').selectOption('ATENDENTE');
   await d.getByLabel('Senha provisória').fill('senha123');
   await d.getByRole('button', { name: 'Salvar' }).click();
-  await expect(d.getByRole('alert')).toContainText(`Já existe um usuário com o e-mail ${email}`);
+  await expect(d.getByRole('alert')).toContainText(`Já existe um usuário com o login ${login}`);
   await d.getByRole('button', { name: 'Cancelar' }).click();
 });
 
 test('Editar: o próprio papel fica bloqueado; o de outro usuário muda', async ({ page }) => {
   await entrar(page, undefined, undefined, '/usuarios');
-  const meu = page.getByRole('row').filter({ hasText: ADMIN.email });
+  const meu = page.getByRole('row').filter({ hasText: ADMIN.login });
   await meu.getByRole('button', { name: /^Editar / }).click();
   const m = page.getByRole('dialog', { name: 'Editar usuário' });
   await expect(m.getByLabel(/^Papel/)).toBeDisabled();
@@ -54,8 +54,8 @@ test('Editar: o próprio papel fica bloqueado; o de outro usuário muda', async 
   await e.getByLabel(/^Papel/).selectOption('GERENTE');
   await e.getByRole('button', { name: 'Salvar' }).click();
   await expect(aviso(page, 'Usuário atualizado')).toBeVisible();
-  const usuarios = (await chamar('/usuarios', { token })).corpo as { email: string; papel: string }[];
-  expect(usuarios.find((u) => u.email === outro.email)!.papel).toBe('GERENTE');
+  const usuarios = (await chamar('/usuarios', { token })).corpo as { login: string; papel: string }[];
+  expect(usuarios.find((u) => u.login === outro.login)!.papel).toBe('GERENTE');
 });
 
 test('Redefinir senha pelo admin: a senha antiga deixa de valer e a nova funciona', async ({ page }) => {
@@ -69,8 +69,8 @@ test('Redefinir senha pelo admin: a senha antiga deixa de valer e a nova funcion
   await m.getByRole('button', { name: 'Redefinir senha' }).click();
   await expect(aviso(page, `Senha de ${outro.nome} redefinida`)).toBeVisible();
 
-  expect((await chamar('/auth/login', { method: 'POST', body: { email: outro.email, senha: 'senha123' } })).status).toBe(400);
-  expect((await chamar('/auth/login', { method: 'POST', body: { email: outro.email, senha: 'nova-senha-456' } })).status).toBe(200);
+  expect((await chamar('/auth/login', { method: 'POST', body: { login: outro.login, senha: 'senha123' } })).status).toBe(400);
+  expect((await chamar('/auth/login', { method: 'POST', body: { login: outro.login, senha: 'nova-senha-456' } })).status).toBe(200);
 });
 
 test('Desativar (com confirmação) e reativar', async ({ page }) => {
@@ -80,9 +80,9 @@ test('Desativar (com confirmação) e reativar', async ({ page }) => {
   await expect(c.getByRole('button', { name: 'Voltar' })).toBeFocused(); // ação perigosa: foco no cancelar
   await c.getByRole('button', { name: 'Desativar' }).click();
   await expect(aviso(page, `${outro.nome} desativado`)).toBeVisible();
-  const linha = page.getByRole('row').filter({ hasText: outro.email });
+  const linha = page.getByRole('row').filter({ hasText: outro.login });
   await expect(linha).toContainText('Inativo');
-  expect((await chamar('/auth/login', { method: 'POST', body: { email: outro.email, senha: 'nova-senha-456' } })).status).toBe(400); // "Usuário inativo"
+  expect((await chamar('/auth/login', { method: 'POST', body: { login: outro.login, senha: 'nova-senha-456' } })).status).toBe(400); // "Usuário inativo"
 
   await linha.getByRole('button', { name: `Reativar ${outro.nome}` }).click();
   await expect(aviso(page, `${outro.nome} reativado`)).toBeVisible();
@@ -90,14 +90,14 @@ test('Desativar (com confirmação) e reativar', async ({ page }) => {
 });
 
 test('F1 · Último acesso: "Nunca acessou" até o primeiro login, depois "Hoje · hh:mm" (registrado pela API)', async ({ page }) => {
-  const u = await criarUsuario(token, `Acesso ${RUN}`, `acesso.${RUN}@e2e.test`, 'ATENDENTE');
+  const u = await criarUsuario(token, `Acesso ${RUN}`, `acesso.${RUN}`, 'ATENDENTE');
   await entrar(page, undefined, undefined, '/usuarios');
-  const linha = page.getByRole('row').filter({ hasText: u.email });
+  const linha = page.getByRole('row').filter({ hasText: u.login });
   await expect(linha).toContainText('Nunca acessou');
-  await chamar('/auth/login', { method: 'POST', body: { email: u.email, senha: 'senha123' } });
-  const doApi = ((await chamar('/usuarios', { token })).corpo as { email: string; ultimoAcessoEm: string | null }[]).find((x) => x.email === u.email)!;
+  await chamar('/auth/login', { method: 'POST', body: { login: u.login, senha: 'senha123' } });
+  const doApi = ((await chamar('/usuarios', { token })).corpo as { login: string; ultimoAcessoEm: string | null }[]).find((x) => x.login === u.login)!;
   expect(doApi.ultimoAcessoEm).not.toBeNull();
   await page.reload(); // token só em memória: volta ao login
   await entrar(page, undefined, undefined, '/usuarios');
-  await expect(page.getByRole('row').filter({ hasText: u.email })).toContainText(/Hoje · \d{2}:\d{2}/);
+  await expect(page.getByRole('row').filter({ hasText: u.login })).toContainText(/Hoje · \d{2}:\d{2}/);
 });

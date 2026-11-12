@@ -2,7 +2,7 @@ import { expect, type Page } from '@playwright/test';
 
 export const API = process.env.E2E_API_URL ?? 'http://localhost:8080/api';
 export const ADMIN = {
-  email: process.env.E2E_USER ?? 'admin@santoandreplacas.com.br',
+  login: process.env.E2E_USER ?? 'admin',
   senha: process.env.E2E_PASSWORD ?? 'admin123',
 };
 
@@ -24,12 +24,12 @@ export async function chamar<T = any>(path: string, { method = 'GET', body, toke
   return { status: r.status, corpo: corpo as T };
 }
 
-export async function tokenDe(email: string, senha: string): Promise<string> {
-  const { status, corpo } = await chamar<{ token: string }>('/auth/login', { method: 'POST', body: { email, senha } });
-  if (status !== 200) throw new Error(`login de ${email} falhou (${status})`);
+export async function tokenDe(login: string, senha: string): Promise<string> {
+  const { status, corpo } = await chamar<{ token: string }>('/auth/login', { method: 'POST', body: { login, senha } });
+  if (status !== 200) throw new Error(`login de ${login} falhou (${status})`);
   return corpo.token;
 }
-export const tokenAdmin = () => tokenDe(ADMIN.email, ADMIN.senha);
+export const tokenAdmin = () => tokenDe(ADMIN.login, ADMIN.senha);
 
 /** CPF válido (dígitos verificadores corretos), formatado como o front grava: 000.000.000-00. */
 export function cpfValido(): string {
@@ -51,9 +51,9 @@ const D = () => Math.floor(Math.random() * 10);
 export const placaAleatoria = () => `${L()}${L()}${L()}${D()}${L()}${D()}${D()}`;
 
 /** Login pela tela, já indo para `destino`. */
-export async function entrar(page: Page, email = ADMIN.email, senha = ADMIN.senha, destino = '/dashboard') {
+export async function entrar(page: Page, login = ADMIN.login, senha = ADMIN.senha, destino = '/dashboard') {
   await page.goto(`/login?next=${encodeURIComponent(destino)}`);
-  await page.getByLabel('E-mail').fill(email);
+  await page.getByLabel('Usuário ou e-mail').fill(login);
   await page.getByLabel('Senha').fill(senha);
   await page.getByRole('button', { name: 'Entrar' }).click();
   await expect(page.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible();
@@ -103,8 +103,8 @@ export async function irPara(page: Page, rota: string) {
   await page.evaluate((r) => { history.pushState({}, '', r); dispatchEvent(new PopStateEvent('popstate')); }, rota);
 }
 
-export async function criarUsuario(token: string, nome: string, email: string, papel: 'ATENDENTE' | 'GERENTE' | 'ADMIN', senha = 'senha123') {
-  return (await chamar('/usuarios', { method: 'POST', token, body: { nome, email, papel, senha } })).corpo;
+export async function criarUsuario(token: string, nome: string, login: string, papel: 'ATENDENTE' | 'GERENTE' | 'ADMIN', senha = 'senha123') {
+  return (await chamar('/usuarios', { method: 'POST', token, body: { login, nome, papel, senha } })).corpo;
 }
 
 /** Toast: o Radix renderiza o texto duas vezes (visual + região aria-live), então pega o primeiro. */

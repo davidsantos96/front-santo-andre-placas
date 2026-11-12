@@ -16,7 +16,7 @@ Com `VITE_USE_MOCKS=true` o app usa MSW (dados fictícios em `src/mocks/`); com 
 
 ## Testando contra a API real (sem mock)
 
-1. Suba a API (`api-santo-andre-placas`) em `http://localhost:8080` (`./mvnw spring-boot:run`). Ela cria o administrador inicial sozinha: `admin@santoandreplacas.com.br` / `admin123` (configurável na API por `ADMIN_SEED_EMAIL`/`ADMIN_SEED_PASSWORD`).
+1. Suba a API (`api-santo-andre-placas`) em `http://localhost:8080` (`./mvnw spring-boot:run`). Ela cria o administrador inicial sozinha: login `admin` / `admin123` (configurável na API por `ADMIN_SEED_LOGIN`/`ADMIN_SEED_PASSWORD`).
 2. Crie um `.env.local` (ignorado pelo git) com:
    ```
    VITE_USE_MOCKS=false
@@ -51,7 +51,7 @@ Os roteiros em `e2e/` usam a API de verdade e **gravam dados** (clientes, pedido
 
 `07-rastreabilidade.spec.ts` cobre autoria, snapshot de preço, movimentações de estoque e o histórico (auditoria); `08-ajustes-finais.spec.ts` cobre o vínculo serviço↔item de estoque feito pela tela e as proteções da API (códigos de erro, usuários, busca, regras de pedido). A pasta inclui `06-acessibilidade.spec.ts`: axe-core (WCAG 2.1 A/AA, com contraste) em todas as rotas, modais e no mobile, mais testes de teclado e `prefers-reduced-motion`.
 
-Variáveis: `E2E_CONFIRM` (obrigatória), `E2E_API_URL` (padrão `http://localhost:8080/api`), `E2E_WEB_URL`, `E2E_USER`/`E2E_PASSWORD` (padrão `admin@santoandreplacas.com.br` / `admin123`), `E2E_CHROMIUM_PATH`. Tipos: `npm run e2e:typecheck`.
+Variáveis: `E2E_CONFIRM` (obrigatória), `E2E_API_URL` (padrão `http://localhost:8080/api`), `E2E_WEB_URL`, `E2E_USER`/`E2E_PASSWORD` (padrão `admin` / `admin123`), `E2E_CHROMIUM_PATH`. Tipos: `npm run e2e:typecheck`.
 
 ## Protótipo de referência
 

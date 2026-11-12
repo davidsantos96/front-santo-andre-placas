@@ -35,7 +35,8 @@ export function UsuariosPage() {
   // Colunas estáticas (handlers estáveis): as células não remontam e o foco nos botões se mantém.
   const colunas = useMemo<ColumnDef<Usuario>[]>(() => [
     { header: 'Nome', cell: ({ row }) => <span className={clsx('font-medium', !row.original.ativo && 'text-aco')}>{row.original.nome}</span> },
-    { header: 'E-mail', cell: ({ row }) => <span className="text-aco">{row.original.email}</span> },
+    { header: 'Login', cell: ({ row }) => <span className="font-mono text-xs">{row.original.login}</span> },
+    { header: 'E-mail', cell: ({ row }) => <span className="text-aco">{row.original.email || '—'}</span> },
     { header: 'Papel', cell: ({ row }) => <span className="rounded-sm border border-linha-badge px-1.5 py-[1.5px] text-[11px] font-semibold tracking-[0.6px] text-aco-700">{rotuloPapel(row.original.papel)}</span> },
     {
       header: 'Status',
@@ -53,7 +54,7 @@ export function UsuariosPage() {
       header: 'Ações',
       cell: ({ row }) => {
         const u = row.original;
-        const ehEu = u.email.toLowerCase() === eu?.email.toLowerCase();
+        const ehEu = u.login === eu?.login;
         return (
           <span className="flex gap-2">
             <button type="button" className={btn} onClick={() => setModal(u)} aria-label={`Editar ${u.nome}`}>Editar</button>
@@ -73,7 +74,7 @@ export function UsuariosPage() {
         );
       },
     },
-  ], [eu?.email, alterarStatus, toast]);
+  ], [eu?.login, alterarStatus, toast]);
 
   const lista = q.data ?? [];
   const estado = q.isPending ? 'loading' : q.isError ? 'erro' : lista.length === 0 ? 'vazio' : 'ok';

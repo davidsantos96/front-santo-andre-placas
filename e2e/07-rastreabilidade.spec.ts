@@ -118,7 +118,7 @@ test('Serviços → Histórico: evolução do preço e do nome, uma linha por ca
 });
 
 test('Usuários → Histórico: criação, troca de papel e reset de senha (a senha nunca aparece)', async ({ page }) => {
-  const u = await criarUsuario(token, `Hist ${RUN}`, `hist.${RUN}@e2e.test`, 'ATENDENTE');
+  const u = await criarUsuario(token, `Hist ${RUN}`, `hist.${RUN}`, 'ATENDENTE');
   await entrar(page, undefined, undefined, '/usuarios');
   await page.getByRole('button', { name: `Editar Hist ${RUN}` }).click();
   const e = page.getByRole('dialog', { name: 'Editar usuário' });
@@ -145,10 +145,10 @@ test('Usuários → Histórico: criação, troca de papel e reset de senha (a se
 });
 
 test('Nome do autor é snapshot: renomear o usuário depois NÃO reescreve o histórico', async ({ page }) => {
-  const autor = await criarUsuario(token, `Autor ${RUN}`, `autor.${RUN}@e2e.test`, 'GERENTE');
-  const tk = await tokenDe(autor.email, 'senha123');
+  const autor = await criarUsuario(token, `Autor ${RUN}`, `autor.${RUN}`, 'GERENTE');
+  const tk = await tokenDe(autor.login, 'senha123');
   const cli = (await chamar('/clientes', { method: 'POST', token: tk, body: { nome: `Snap autor ${RUN}`, telefone: '(11) 98877-1234', cpfCnpj: (await import('./helpers')).cpfValido(), email: '' } })).corpo;
-  await chamar(`/usuarios/${autor.id}`, { method: 'PUT', token, body: { nome: `Renomeado ${RUN}`, email: autor.email, papel: 'GERENTE' } });
+  await chamar(`/usuarios/${autor.id}`, { method: 'PUT', token, body: { nome: `Renomeado ${RUN}`, login: autor.login, papel: 'GERENTE' } });
 
   await entrar(page, undefined, undefined, `/clientes/${cli.id}`);
   await expect(page.getByTestId('autoria')).toContainText(`Cadastrado por Autor ${RUN} em`); // nome da época, não o atual
@@ -158,12 +158,12 @@ test('Nome do autor é snapshot: renomear o usuário depois NÃO reescreve o his
 });
 
 test('ATENDENTE: vê Movimentações, mas /auditoria responde 403 e o Histórico de usuários não existe para ele', async ({ page }) => {
-  const at = await criarUsuario(token, `Atend ${RUN}`, `atend.${RUN}@e2e.test`, 'ATENDENTE');
-  const tk = await tokenDe(at.email, 'senha123');
+  const at = await criarUsuario(token, `Atend ${RUN}`, `atend.${RUN}`, 'ATENDENTE');
+  const tk = await tokenDe(at.login, 'senha123');
   expect((await chamar('/auditoria', { token: tk })).status).toBe(403);
   expect((await chamar('/estoque/movimentacoes', { token: tk })).status).toBe(200);
 
-  await entrar(page, at.email, 'senha123', '/estoque?aba=movimentacoes');
+  await entrar(page, at.login, 'senha123', '/estoque?aba=movimentacoes');
   await expect(page.getByRole('combobox', { name: 'Item' })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Navegação principal' }).getByRole('link', { name: /Usuários|Serviços/ })).toHaveCount(0);
 });

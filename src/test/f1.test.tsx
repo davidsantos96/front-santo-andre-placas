@@ -9,7 +9,7 @@ import { reloginCancelado } from '@/api/sessaoEventos';
 
 afterEach(() => { reloginCancelado(); server.events.removeAllListeners(); });
 
-const gerente = 'gerente@sap.com';
+const gerente = 'carlos';
 const API = 'http://localhost:8080/api';
 const cartao = async (titulo: string) => (await screen.findByRole('heading', { name: titulo })).closest('section')!;
 const linha = async (texto: string | RegExp) => (await screen.findByText(texto)).closest('tr')!;

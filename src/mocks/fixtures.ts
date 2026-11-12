@@ -46,9 +46,9 @@ export const VINCULOS = [
 ];
 
 export const USUARIOS: (Usuario & { senha: string })[] = [
-  { id: 1, nome: 'Bruna Costa', email: 'atendente@sap.com', papel: 'ATENDENTE', ativo: true, senha: '123456' },
-  { id: 2, nome: 'Carlos Menezes', email: 'gerente@sap.com', papel: 'GERENTE', ativo: true, senha: '123456' },
-  { id: 3, nome: 'Admin SAP', email: 'admin@sap.com', papel: 'ADMIN', ativo: true, senha: '123456' },
+  { id: 1, login: 'bruna', nome: 'Bruna Costa', email: null, papel: 'ATENDENTE', ativo: true, senha: '123456' },
+  { id: 2, login: 'carlos', nome: 'Carlos Menezes', email: null, papel: 'GERENTE', ativo: true, senha: '123456' },
+  { id: 3, login: 'admin', nome: 'Admin SAP', email: 'admin@sap.com', papel: 'ADMIN', ativo: true, senha: '123456' },
 ];
 
 // [id, placa, cliente, cpfCnpj, tel, servicoId, origem, status, tempo, pago, marca+modelo, ano, forma]
@@ -124,7 +124,7 @@ export function criarBanco(agora = Date.now()) {
     estoque: structuredClone(ESTOQUE).map((i) => ({ ...i, criadoEm: iso(60 * 24 * 45, agora), criadoPor: 'Carlos Menezes', criadoPorId: 2 as number | null })),
     vinculos: structuredClone(VINCULOS),
     usuarios: structuredClone(USUARIOS),
-    tokens: new Map<string, { papel: Papel; nome: string; email: string }>(),
+    tokens: new Map<string, { papel: Papel; nome: string; login: string }>(),
   };
 }
 

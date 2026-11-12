@@ -9,7 +9,7 @@ import { useSessao } from '@/auth/SessionProvider';
 import { mensagemDeLogin } from '@/lib/erros';
 
 const schema = z.object({
-  email: z.string().min(1, 'Informe o e-mail').email('E-mail inválido'),
+  login: z.string().trim().min(1, 'Informe o usuário'),
   senha: z.string().min(1, 'Informe a senha'),
 });
 type Dados = z.infer<typeof schema>;
@@ -44,10 +44,10 @@ export function LoginPage() {
       <form onSubmit={enviar} noValidate className="w-[360px] max-w-full rounded-lg border border-linha bg-white p-6 shadow-card">
         <h1 className="mb-4 font-display text-[22px] font-bold">Entrar</h1>
         <label className="block text-xs font-semibold text-aco">
-          E-mail
-          <input type="email" autoComplete="username" autoFocus {...register('email')} aria-invalid={!!errors.email} className={campo} />
+          Usuário ou e-mail
+          <input type="text" autoComplete="username" autoCapitalize="none" spellCheck={false} autoFocus {...register('login')} aria-invalid={!!errors.login} className={campo} />
         </label>
-        {errors.email && <p role="alert" className="mt-1 text-xs text-erro">{errors.email.message}</p>}
+        {errors.login && <p role="alert" className="mt-1 text-xs text-erro">{errors.login.message}</p>}
         <label className="mt-3 block text-xs font-semibold text-aco">
           Senha
           <input type="password" autoComplete="current-password" {...register('senha')} aria-invalid={!!errors.senha} className={campo} />

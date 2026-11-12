@@ -5,7 +5,7 @@ import { EVENTO_SESSAO_EXPIRADA, reloginCancelado, reloginConcluido } from '@/ap
 import type { LoginRequest, LoginResponse } from '@/api/types';
 import type { Papel } from './papeis';
 
-export type Usuario = { nome: string; papel: Papel; email: string };
+export type Usuario = { nome: string; papel: Papel; /** Login (identidade) da pessoa, como a API resolveu — quem entra pode ter digitado o e-mail. */ login: string };
 
 type Sessao = {
   usuario: Usuario | null;
@@ -40,10 +40,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener(EVENTO_SESSAO_EXPIRADA, abrir);
   }, []);
 
-  const login = useCallback(async ({ email, senha }: LoginRequest) => {
-    const { data } = await api.post<LoginResponse>('/auth/login', { email, senha });
+  const login = useCallback(async ({ login: identificador, senha }: LoginRequest) => {
+    const { data } = await api.post<LoginResponse>('/auth/login', { login: identificador, senha });
     setAccessToken(data.token);
-    const u: Usuario = { nome: data.nome, papel: data.papel, email };
+    const u: Usuario = { nome: data.nome, papel: data.papel, login: data.login };
     setUsuario(u);
     if (sessaoExpirada) {
       setSessaoExpirada(false);

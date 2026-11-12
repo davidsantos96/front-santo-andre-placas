@@ -9,8 +9,8 @@ import { nomeAutor } from '@/lib/autor';
 
 afterEach(() => reloginCancelado());
 
-const gerente = 'gerente@sap.com';
-const admin = 'admin@sap.com';
+const gerente = 'carlos';
+const admin = 'admin';
 const linha = async (texto: string | RegExp) => (await screen.findByText(texto)).closest('tr')!;
 
 describe('Rastreabilidade — utilitários', () => {

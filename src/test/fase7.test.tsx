@@ -10,7 +10,7 @@ import { reloginCancelado } from '@/api/sessaoEventos';
 afterEach(() => reloginCancelado());
 
 const linha = async (texto: string | RegExp) => (await screen.findByText(texto)).closest('tr')!;
-const gerente = 'gerente@sap.com';
+const gerente = 'carlos';
 
 describe('Serviços', () => {
   it('lista com categoria, preço, pedidos no mês e status', async () => {
