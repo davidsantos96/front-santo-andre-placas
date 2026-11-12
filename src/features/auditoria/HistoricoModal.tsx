@@ -14,7 +14,8 @@ import type { Papel } from '@/auth/papeis';
 import { useAuditoria } from './api';
 
 const ROTULO_CAMPO: Record<EntidadeAuditada, Record<string, string>> = {
-  SERVICO: { nome: 'Nome', descricao: 'Descrição', precoCentavos: 'Preço', categoria: 'Categoria' },
+  // `itemEstoque`: vínculo com item de estoque incluído ("— → Lacre × 2") ou removido ("Lacre × 2 → —")
+  SERVICO: { nome: 'Nome', descricao: 'Descrição', precoCentavos: 'Preço', categoria: 'Categoria', itemEstoque: 'Baixa de estoque' },
   USUARIO: { nome: 'Nome', email: 'E-mail', papel: 'Papel' },
 };
 

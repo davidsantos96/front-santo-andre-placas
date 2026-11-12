@@ -10,6 +10,7 @@ import { PlacaCard } from '@/components/PlacaCard';
 import { HistoricoModal } from '@/features/auditoria/HistoricoModal';
 import { useAlternarServico, useServicos } from './api';
 import { ServicoModal } from './ServicoModal';
+import { VinculosModal } from './VinculosModal';
 
 function Switch({ ativo, nome, onChange }: { ativo: boolean; nome: string; onChange: (v: boolean) => void }) {
   return (
@@ -37,6 +38,7 @@ export function ServicosPage() {
   const q = useServicos({ incluirInativos: true });
   const [modal, setModal] = useState<Servico | 'novo' | null>(null);
   const [historico, setHistorico] = useState<Servico | null>(null);
+  const [vinculos, setVinculos] = useState<Servico | null>(null);
 
   const colunas = useMemo<ColumnDef<Servico>[]>(() => [
     { header: 'Nome', cell: ({ row }) => <span className={clsx('font-medium', !row.original.ativo && 'text-aco')}>{row.original.nome}</span> },
@@ -44,6 +46,18 @@ export function ServicosPage() {
     { header: 'Preço', meta: { align: 'right' }, cell: ({ row }) => <Money centavos={row.original.precoCentavos} /> },
     { header: 'Pedidos no mês', meta: { align: 'right' }, cell: ({ row }) => <span className="tabular-nums">{row.original.pedidosNoMes ?? '—'}</span> },
     { header: 'Status', cell: ({ row }) => <CelulaStatus servico={row.original} /> },
+    {
+      header: 'Baixa de estoque',
+      cell: ({ row }) => (
+        <button
+          type="button" aria-label={`Baixa de estoque de ${row.original.nome}`}
+          onClick={(e) => { e.stopPropagation(); setVinculos(row.original); }}
+          className="h-[26px] rounded border border-linha-forte bg-white px-2.5 text-sm font-medium text-aco hover:bg-fundo"
+        >
+          Itens
+        </button>
+      ),
+    },
     {
       header: 'Histórico',
       cell: ({ row }) => (
@@ -75,6 +89,7 @@ export function ServicosPage() {
         />
       </PlacaCard>
       <HistoricoModal entidade="SERVICO" alvo={historico && { id: historico.id, descricao: historico.nome }} onFechar={() => setHistorico(null)} />
+      <VinculosModal key={vinculos?.id ?? 'fechado'} servico={vinculos} onFechar={() => setVinculos(null)} />
       <ServicoModal key={modal === 'novo' ? 'novo' : modal?.id ?? 'fechado'} servico={modal} onFechar={() => setModal(null)} />
     </Pagina>
   );

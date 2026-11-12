@@ -84,6 +84,76 @@ describe('Serviços', () => {
   });
 });
 
+describe('Serviços — baixa de estoque (vínculo serviço↔item)', () => {
+  const abrir = async (servico: string) => {
+    await userEvent.click(within(await linha(servico)).getByRole('button', { name: `Baixa de estoque de ${servico}` }));
+    return screen.findByRole('dialog', { name: `Baixa de estoque de ${servico}` });
+  };
+
+  it('lista os itens vinculados, vincula um novo (sem repetir item) e remove', async () => {
+    await entrarComo('/servicos', gerente);
+    const m = await abrir('Par de placas Mercosul (carro)');
+    expect(screen.queryByRole('dialog', { name: 'Editar serviço' })).not.toBeInTheDocument(); // o botão não dispara o clique da linha
+
+    const lista = await within(m).findByRole('list', { name: 'Itens vinculados' });
+    expect(within(lista).getByText('Placa Mercosul carro (par)').closest('li')).toHaveTextContent('−1 por pedido');
+    expect(within(lista).getByText('Lacre inviolável').closest('li')).toHaveTextContent('−2 por pedido');
+
+    // itens já vinculados não aparecem para escolher de novo
+    const item = within(m).getByLabelText('Item de estoque');
+    expect(within(item).queryByRole('option', { name: 'Lacre inviolável' })).not.toBeInTheDocument();
+
+    await userEvent.click(within(m).getByRole('button', { name: 'Vincular item' }));
+    expect(await within(m).findByText('Escolha o item')).toBeInTheDocument();
+
+    await userEvent.selectOptions(item, 'Parafuso anti-furto (kit)');
+    const qtd = within(m).getByLabelText('Qtd. por pedido');
+    await userEvent.clear(qtd);
+    await userEvent.type(qtd, '0');
+    await userEvent.click(within(m).getByRole('button', { name: 'Vincular item' }));
+    expect(await within(m).findByText('A quantidade deve ser maior que zero')).toBeInTheDocument();
+    await userEvent.clear(qtd);
+    await userEvent.type(qtd, '4');
+    await userEvent.click(within(m).getByRole('button', { name: 'Vincular item' }));
+
+    await screen.findByText('Parafuso anti-furto (kit) vinculado a Par de placas Mercosul (carro)');
+    expect(db.vinculos.at(-1)).toMatchObject({ servicoId: 1, itemEstoqueId: 5, quantidadeNecessaria: 4 });
+    expect((await within(m).findByText('Parafuso anti-furto (kit)')).closest('li')).toHaveTextContent('−4 por pedido');
+
+    await userEvent.click(within(m).getByRole('button', { name: 'Remover Lacre inviolável' }));
+    await screen.findByText('Lacre inviolável desvinculado de Par de placas Mercosul (carro)');
+    await waitFor(() => expect(within(m).queryByText('Lacre inviolável', { selector: 'li *' })).not.toBeInTheDocument());
+    expect(db.vinculos.some((v) => v.servicoId === 1 && v.itemEstoqueId === 3)).toBe(false);
+  });
+
+  it('serviço sem vínculo avisa que não dá baixa; inclusão e remoção aparecem no Histórico do serviço', async () => {
+    await entrarComo('/servicos', gerente);
+    const m = await abrir('Lacre / desamassamento');
+    expect(await within(m).findByText(/Nenhum item vinculado/)).toBeInTheDocument();
+
+    await userEvent.selectOptions(within(m).getByLabelText('Item de estoque'), 'Lacre inviolável');
+    await userEvent.click(within(m).getByRole('button', { name: 'Vincular item' }));
+    await userEvent.click(await within(m).findByRole('button', { name: 'Remover Lacre inviolável' }));
+    expect(await within(m).findByText(/Nenhum item vinculado/)).toBeInTheDocument();
+    await userEvent.click(within(m).getByRole('button', { name: 'Fechar' }));
+
+    await userEvent.click(within(await linha('Lacre / desamassamento')).getByRole('button', { name: 'Histórico de Lacre / desamassamento' }));
+    const h = await screen.findByRole('dialog', { name: 'Histórico de Lacre / desamassamento' });
+    expect(await within(h).findByText('Baixa de estoque: — → Lacre inviolável × 1')).toBeInTheDocument();
+    expect(within(h).getByText('Baixa de estoque: Lacre inviolável × 1 → —')).toBeInTheDocument();
+  });
+
+  it('erro da API (ex.: item já vinculado por outra pessoa) aparece no modal', async () => {
+    server.use(http.post('http://localhost:8080/api/estoque/vinculos', () =>
+      HttpResponse.json({ mensagem: '"Película refletiva" já está vinculado a este serviço. Remova o vínculo para mudar a quantidade.' }, { status: 400 })));
+    await entrarComo('/servicos', gerente);
+    const m = await abrir('Lacre / desamassamento');
+    await userEvent.selectOptions(await within(m).findByLabelText('Item de estoque'), 'Película refletiva');
+    await userEvent.click(within(m).getByRole('button', { name: 'Vincular item' }));
+    expect(await within(m).findByRole('alert')).toHaveTextContent('já está vinculado a este serviço');
+  });
+});
+
 describe('Estoque', () => {
   it('destaca itens abaixo do mínimo com texto (não só cor) e mostra "—" para SKU/unidade ausentes', async () => {
     await entrarComo('/estoque');

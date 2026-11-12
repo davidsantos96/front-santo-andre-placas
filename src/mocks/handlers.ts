@@ -395,6 +395,39 @@ export const handlers = [
     return HttpResponse.json(db.vinculos.filter((v) => v.servicoId === servicoId));
   }),
 
+  http.post(url('/estoque/vinculos'), async ({ request }) => {
+    const u = autenticado(request);
+    if (!u) return naoAutorizado();
+    if (u.papel === 'ATENDENTE') return HttpResponse.json({ mensagem: 'Você não tem permissão para acessar este recurso.' }, { status: 403 });
+    const d = (await request.json()) as { servicoId: number; itemEstoqueId: number; quantidadeNecessaria: number };
+    const servico = db.servicos.find((s) => s.id === d.servicoId);
+    if (!servico) return naoEncontradoMock('Serviço', d.servicoId);
+    const item = db.estoque.find((i) => i.id === d.itemEstoqueId);
+    if (!item) return naoEncontradoMock('Item de estoque', d.itemEstoqueId);
+    if (!Number.isInteger(d.quantidadeNecessaria) || d.quantidadeNecessaria <= 0) return HttpResponse.json({ mensagem: 'A quantidade necessária deve ser maior que zero' }, { status: 400 });
+    if (db.vinculos.some((v) => v.servicoId === servico.id && v.itemEstoqueId === item.id)) {
+      return HttpResponse.json({ mensagem: `"${item.nome}" já está vinculado a este serviço. Remova o vínculo para mudar a quantidade.` }, { status: 400 });
+    }
+    const vinculo = {
+      id: Math.max(0, ...db.vinculos.map((v) => v.id)) + 1, servicoId: servico.id, servicoNome: servico.nome,
+      itemEstoqueId: item.id, itemEstoqueNome: item.nome, quantidadeNecessaria: d.quantidadeNecessaria,
+    };
+    db.vinculos.push(vinculo);
+    auditar(u, 'SERVICO', servico.id, servico.nome, 'ATUALIZACAO', [{ campo: 'itemEstoque', antes: null, depois: `${item.nome} × ${d.quantidadeNecessaria}` }]);
+    return HttpResponse.json({ ...vinculo, criadoEm: new Date().toISOString(), criadoPor: u.nome, criadoPorId: autor(u).id });
+  }),
+
+  http.delete(url('/estoque/vinculos/:id'), ({ request, params }) => {
+    const u = autenticado(request);
+    if (!u) return naoAutorizado();
+    if (u.papel === 'ATENDENTE') return HttpResponse.json({ mensagem: 'Você não tem permissão para acessar este recurso.' }, { status: 403 });
+    const i = db.vinculos.findIndex((v) => v.id === Number(params.id));
+    if (i < 0) return HttpResponse.json({ mensagem: `Vínculo não encontrado: ${params.id}` }, { status: 404 });
+    const [v] = db.vinculos.splice(i, 1);
+    auditar(u, 'SERVICO', v.servicoId, v.servicoNome, 'ATUALIZACAO', [{ campo: 'itemEstoque', antes: `${v.itemEstoqueNome} × ${v.quantidadeNecessaria}`, depois: null }]);
+    return new HttpResponse(null, { status: 200 });
+  }),
+
   http.get(url('/pagamentos'), ({ request }) => {
     const u = autenticado(request);
     if (!u) return naoAutorizado();

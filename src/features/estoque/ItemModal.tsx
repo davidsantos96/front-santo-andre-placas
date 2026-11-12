@@ -19,7 +19,7 @@ type Dados = z.infer<typeof schema>;
 
 const campo = 'mt-1 block h-9 w-full rounded border border-linha-forte bg-white px-2.5 text-base';
 
-/** Cadastro de item de estoque (GERENTE/ADMIN). O vínculo serviço↔item fica fora por enquanto. */
+/** Cadastro de item de estoque (GERENTE/ADMIN). O vínculo serviço↔item é feito na tela de Serviços (`VinculosModal`). */
 export function ItemModal({ aberto, onFechar }: { aberto: boolean; onFechar: () => void }) {
   const toast = useToast();
   const criar = useCriarItem();

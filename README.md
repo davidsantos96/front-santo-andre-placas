@@ -16,14 +16,28 @@ Com `VITE_USE_MOCKS=true` o app usa MSW (dados fictícios em `src/mocks/`); com 
 
 ## Testando contra a API real (sem mock)
 
-1. Suba a API (`api-santo-andre-placas`) em `http://localhost:8080` e garanta um usuário ativo no banco (não há seed).
+1. Suba a API (`api-santo-andre-placas`) em `http://localhost:8080` (`./mvnw spring-boot:run`). Ela cria o administrador inicial sozinha: `admin@santoandreplacas.com.br` / `admin123` (configurável na API por `ADMIN_SEED_EMAIL`/`ADMIN_SEED_PASSWORD`).
 2. Crie um `.env.local` (ignorado pelo git) com:
    ```
    VITE_USE_MOCKS=false
    VITE_API_URL=http://localhost:8080/api
    ```
-3. `npm run dev` e abra `http://localhost:5173` — a porta precisa ser essa, o CORS da API só libera `localhost:5173`/`127.0.0.1:5173`.
+3. `npm run dev` e abra `http://localhost:5173` — a porta precisa ser essa, o CORS da API só libera `localhost:5173`/`127.0.0.1:5173` (outras origens: variável `ALLOWED_ORIGINS` na API).
 4. O token fica só em memória: recarregar a página volta ao login.
+
+### Roteiro sugerido para o teste manual
+
+Com o banco vazio, na ordem em que o balcão usaria:
+
+1. **Usuários** (ADMIN): crie um GERENTE e um ATENDENTE; entre com cada um para conferir o que cada papel enxerga.
+2. **Serviços**: cadastre os serviços com preço.
+3. **Estoque**: cadastre os itens (placas, lacres…) com quantidade e mínimo.
+4. **Serviços → Baixa de estoque → Itens**: diga quanto de cada item o serviço consome. Sem isso o pedido não mexe no estoque.
+5. **Pedidos → Novo pedido**: cliente novo, veículo novo, serviço, forma de pagamento (ou "Depois").
+6. **Pedidos (quadro)**: arraste para *Em processamento* (o estoque baixa; se faltar, o pedido volta e avisa), *Placa pronta* e *Entregue* (pede confirmação se não estiver pago).
+7. **Detalhe do pedido**: registre pagamento parcial e depois o restante; confira a linha do tempo.
+8. **Financeiro** (Pagamentos e Caixa) e **Dashboard**: os valores do dia devem bater com o que foi pago.
+9. **Estoque → Movimentações** e **Histórico** em Serviços/Usuários: quem fez o quê.
 
 O que ainda diverge do esperado no backend está em [`PENDENCIAS.md`](PENDENCIAS.md) (seção "Verificação contra a API real").
 
@@ -35,7 +49,7 @@ Os roteiros em `e2e/` usam a API de verdade e **gravam dados** (clientes, pedido
 2. `npm run e2e:install` (baixa o Chromium; em ambientes com Chromium já instalado, use `E2E_CHROMIUM_PATH`).
 3. `E2E_CONFIRM=1 npm run e2e` — o Playwright sobe o Vite sozinho (mocks desligados, porta 5173).
 
-`07-rastreabilidade.spec.ts` cobre autoria, snapshot de preço, movimentações de estoque e o histórico (auditoria). A pasta inclui `06-acessibilidade.spec.ts`: axe-core (WCAG 2.1 A/AA, com contraste) em todas as rotas, modais e no mobile, mais testes de teclado e `prefers-reduced-motion`.
+`07-rastreabilidade.spec.ts` cobre autoria, snapshot de preço, movimentações de estoque e o histórico (auditoria); `08-ajustes-finais.spec.ts` cobre o vínculo serviço↔item de estoque feito pela tela e as proteções da API (códigos de erro, usuários, busca, regras de pedido). A pasta inclui `06-acessibilidade.spec.ts`: axe-core (WCAG 2.1 A/AA, com contraste) em todas as rotas, modais e no mobile, mais testes de teclado e `prefers-reduced-motion`.
 
 Variáveis: `E2E_CONFIRM` (obrigatória), `E2E_API_URL` (padrão `http://localhost:8080/api`), `E2E_WEB_URL`, `E2E_USER`/`E2E_PASSWORD` (padrão `admin@santoandreplacas.com.br` / `admin123`), `E2E_CHROMIUM_PATH`. Tipos: `npm run e2e:typecheck`.
 

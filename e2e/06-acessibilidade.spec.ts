@@ -86,6 +86,14 @@ test('Sobreposições: busca com resultados, modais e confirmação', async ({ p
   await expect(page.getByRole('dialog', { name: /^Histórico de / })).toBeVisible();
   await auditar(page, 'modal Histórico do serviço');
   await page.keyboard.press('Escape');
+
+  // vínculo serviço↔item de estoque (baixa automática)
+  await page.getByRole('button', { name: /^Baixa de estoque de / }).first().click();
+  const vinculos = page.getByRole('dialog', { name: /^Baixa de estoque de / });
+  await expect(vinculos.getByRole('button', { name: 'Fechar' })).toBeVisible();
+  await expect(vinculos.locator('.animate-pulse')).toHaveCount(0); // espera sair do carregamento
+  await auditar(page, 'modal Baixa de estoque do serviço');
+  await page.keyboard.press('Escape');
   await irPara(page, '/usuarios');
   await page.getByRole('button', { name: /^Histórico de / }).first().click();
   await expect(page.getByRole('dialog', { name: /^Histórico de / })).toBeVisible();

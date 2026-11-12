@@ -4,6 +4,20 @@ Lista viva. Cada item foi assumido de forma provisória para não travar a imple
 
 Legenda: **Backend** = depende de mudança/confirmação na API · **Front** = decisão só do front · **Produto** = decisão de negócio/UX.
 
+## Fechamento para o teste final (2026-11-11)
+
+Revisão conjunta de API e front. A suíte e2e já passava inteira antes; o que entrou:
+
+- [x] **Vínculo serviço↔item de estoque pela tela.** Em **Serviços**, coluna "Baixa de estoque" → botão **Itens** (`VinculosModal`): lista o que o serviço consome, vincula item + quantidade por pedido e remove. Antes o vínculo só existia via Swagger, então a baixa automática não era configurável pelo sistema (ficou de fora no B7). Backend: novo `DELETE /estoque/vinculos/{id}`, item repetido no mesmo serviço → 400; inclusão/remoção aparecem no **Histórico** do serviço como "Baixa de estoque: — → Lacre × 2".
+- [x] **Erros de uso não derrubam mais a sessão.** No backend, parâmetro inválido, rota inexistente e qualquer 500 saíam como **401**, e o front abria o modal de "Sessão expirada". Agora saem como 400/404/405/500 com `mensagem`; 401 ficou só para falta de login.
+- [x] **B17** (busca de clientes por nome casava dígitos soltos) e **B18** (e-mail de usuário com caixa diferente) — corrigidos no backend.
+- [x] **Proteções de administração** (item "Média" da Fase 9): o backend recusa desativar o próprio usuário e rebaixar o único ADMIN; senha mínima de 6 caracteres também na API (criação e reset).
+- [x] `POST`/`PUT`/`PATCH /servicos` devolvem `ServicoResponse` (com `pedidosNoMes`, sem `codigoExterno`). `POST /pedidos` recusa serviço inativo e veículo de outro cliente.
+
+Coberto por `e2e/08-ajustes-finais.spec.ts`, pelo bloco "Serviços — baixa de estoque" em `src/test/fase7.test.tsx` e, no backend, por `FluxoPrincipalTest` e `ErrosEProtecoesTest`.
+
+**Segue aberto (não bloqueia o teste):** B12 (observação na movimentação de estoque), P17 (paginação de clientes/veículos), edição de item de estoque (nome/mínimo), filtro `pago=false` em pedidos, troca da própria senha, P9 (`/pedidos/completo`), P14, P20, P33, e as migrations (Flyway) no backend.
+
 ## Resumo do que ainda está aberto (revisado em 2026-10-07)
 
 **Backend (para você):** todo o lote de 2026-10-02 foi validado na API real (B16, C2/B15, C3, B7, B8, B9, B10, B11, B13, P2, P15, P21, P24, P35). Restam **B17** (busca por nome casa dígitos soltos) e **B18** (e-mail com caixa diferente), mais P17 (paginação de listas).
@@ -145,8 +159,8 @@ Li o código do backend (`api-santo-andre-placas`, commit `6ad76ba`), subi a API
 **Baixa**
 - [x] **B13 · Infra.** Chave do JWT fixa no código; CORS só `localhost:5173`; `application.properties` usa H2 em memória (o `CONTEXT.md` fala em H2 de arquivo); não há seed de usuário (o primeiro ADMIN precisa ser inserido no banco). _(Parcial: seed do ADMIN criado (`AdminUsuarioSeeder`) e profile `supabase` para Postgres; chave do JWT, CORS só de dev e H2 em memória no perfil padrão seguem)_ _(Resolvido: `JWT_SECRET` e `ALLOWED_ORIGINS` por variável de ambiente (segredo curto falha no startup, origem fora da lista leva 403 no preflight); validado na API real em 2026-10-07. O perfil padrão segue em H2 em memória, e o `supabase` usa Postgres)_
 
-- [ ] **B17 · Busca de clientes por nome casa dígitos soltos (regressão do B8).** `ClienteService.listar` extrai os dígitos de **qualquer** texto (`termo.replaceAll("\\D","")`). Verificado: `GET /clientes?busca=Cliente E2E Naoexiste` devolve 17 clientes, porque o `2` de "E2E" casa com telefones/CPFs que contêm `2`. Sugestão: só comparar por dígitos quando a busca não tiver letras (ou tiver ≥ 3 dígitos e nenhuma letra). O e2e passou a procurar o cliente pelo nome exato por causa disso.
-- [ ] **B18 · E-mail de usuário com caixa diferente ainda é aceito.** Verificado: `AT6789@X.COM` foi criado com `at6789@x.com` já existente. A comparação segue sensível a maiúsculas/minúsculas.
+- [x] _(Resolvido no backend em 2026-11-11: só compara por dígitos quando a busca não tem letras.)_ **B17 · Busca de clientes por nome casa dígitos soltos (regressão do B8).** `ClienteService.listar` extrai os dígitos de **qualquer** texto (`termo.replaceAll("\\D","")`). Verificado: `GET /clientes?busca=Cliente E2E Naoexiste` devolve 17 clientes, porque o `2` de "E2E" casa com telefones/CPFs que contêm `2`. Sugestão: só comparar por dígitos quando a busca não tiver letras (ou tiver ≥ 3 dígitos e nenhuma letra). O e2e passou a procurar o cliente pelo nome exato por causa disso.
+- [x] _(Resolvido no backend em 2026-11-11: comparação sem diferenciar maiúsculas no cadastro, na edição e no login.)_ **B18 · E-mail de usuário com caixa diferente ainda é aceito.** Verificado: `AT6789@X.COM` foi criado com `at6789@x.com` já existente. A comparação segue sensível a maiúsculas/minúsculas.
 - [x] **F1 · Front: usar o que o backend novo entrega.** `?incluirInativos=true` na tela de Serviços (C3); consulta de placa no cadastro de veículo novo com `PUT /veiculos/{id}` (B3); `totalPedidos` na lista de clientes (P15) e `pedidosNoMes` nos serviços (P21) no lugar das contagens N+1/500; `?busca=` na tabela de pedidos (P2); tendência do tempo médio (P29); coluna "Último acesso" (P35); período nos mais vendidos. _(feito no front em 2026-10-07; coberto por vitest e e2e: `incluirInativos`, `totalPedidos`, `pedidosNoMes`, `?busca=` em pedidos, tendência do tempo médio, "Último acesso", mais vendidos com período e consulta de placa no cadastro novo)_
 
 ## Itens antigos resolvidos por esta verificação
@@ -222,7 +236,7 @@ Marque `[x]` quando o backend estiver ajustado **e** o front testado contra a AP
 - [x] **Alta — contratos de `/usuarios` (ADMIN).** `GET /usuarios` → `Usuario[] { id, nome, email, papel, ativo }` (inclui inativos; nunca `senhaHash`); `POST /usuarios` com `{ nome, email, papel, senha }`; `PUT /usuarios/{id}` com `{ nome, email, papel }` (**não** altera senha); `PATCH /usuarios/{id}/status` com `{ ativo: boolean }`. O nome do campo da senha na criação (`senha`? `senhaProvisoria`?) é **assumido** — confirmar. `papel ∈ ATENDENTE|GERENTE|ADMIN`. Demais papéis → `403`. _(confirmado; senha na criação é `senha`)_
 - [x] **Alta — e-mail duplicado.** `400` com `campos: { email: "..." }` tanto no `POST` quanto no `PUT` (o front mostra no campo e mantém o modal aberto). Comparação sem diferenciar maiúsculas/minúsculas. _(e-mail duplicado → 400 com `mensagem` (sem `campos`))_
 - [x] **Alta — usuário desativado.** Não pode logar (`POST /auth/login` → `401`) **e** o JWT já emitido (válido por 8h) deve parar de funcionar — o backend precisa checar `ativo` a cada requisição, senão um usuário desativado segue operando até o token expirar. _(login de inativo recusado e token invalidado)_
-- [ ] **Média — proteções de administração.** O front só **desabilita** o "Desativar" do próprio usuário logado. O backend deve impedir desativar a si mesmo e o **último ADMIN ativo** (e rebaixar o último ADMIN), respondendo `400` com `mensagem`.
+- [x] **Média — proteções de administração.** O front só **desabilita** o "Desativar" do próprio usuário logado. O backend deve impedir desativar a si mesmo e o **último ADMIN ativo** (e rebaixar o último ADMIN), respondendo `400` com `mensagem`. _(feito no backend em 2026-11-11)_
 - [x] **Média — senha.** Política mínima (o front exige 6 caracteres na senha provisória; definir a regra real e devolver `campos.senha` quando falhar) e **reset de senha** (não existe endpoint — §15.4 já lista como pendente). Sem ele, o ADMIN não consegue redefinir a senha de quem a esqueceu. _(reset existe: `PATCH /usuarios/{id}/senha { novaSenha }` (ADMIN); a política mínima de 6 caracteres segue só no front)_
 - [x] **Baixa — "último acesso".** Não é rastreado; a coluna foi omitida (§14.9). Se quiserem, registrar `ultimoAcessoEm` no login e expor em `UsuarioResponse`. _(`UsuarioResponse.ultimoAcessoEm` registrado a cada login; validado na API real em 2026-10-07. O front já mostra a coluna (F1))_
 

@@ -45,7 +45,37 @@ export const useVinculosDoServico = (servicoId: number) =>
     queryFn: async () => (await api.get<VinculoServicoItem[]>('/estoque/vinculos', { params: { servicoId } })).data,
   });
 
-export type NovoItemRequest = { nome: string; sku?: string; unidade?: string; quantidade: number; quantidadeMinima: number };
+/** O serviço passa a dar baixa de `quantidadeNecessaria` do item sempre que um pedido dele entra em processamento. */
+export type NovoVinculoRequest = { servicoId: number; itemEstoqueId: number; quantidadeNecessaria: number };
+
+/** Vínculos ficam sob a chave `estoque`; incluir/remover também entra no histórico (auditoria) do serviço. */
+function useInvalidarVinculos(servicoId: number) {
+  const qc = useQueryClient();
+  return () => {
+    void qc.invalidateQueries({ queryKey: ['estoque', 'vinculos', servicoId] });
+    void qc.invalidateQueries({ queryKey: ['auditoria', 'SERVICO', servicoId] });
+  };
+}
+
+/** `POST /estoque/vinculos` (GERENTE/ADMIN). Item já vinculado ao serviço → 400 com `mensagem`. */
+export function useCriarVinculo(servicoId: number) {
+  const invalidar = useInvalidarVinculos(servicoId);
+  return useMutation<VinculoServicoItem, ApiError, Omit<NovoVinculoRequest, 'servicoId'>>({
+    mutationFn: async (d) => (await api.post<VinculoServicoItem>('/estoque/vinculos', { servicoId, ...d })).data,
+    onSuccess: invalidar,
+  });
+}
+
+/** `DELETE /estoque/vinculos/{id}` (GERENTE/ADMIN): vale dali em diante; as baixas já feitas ficam nas movimentações. */
+export function useRemoverVinculo(servicoId: number) {
+  const invalidar = useInvalidarVinculos(servicoId);
+  return useMutation<void, ApiError, number>({
+    mutationFn: async (id) => { await api.delete(`/estoque/vinculos/${id}`); },
+    onSuccess: invalidar,
+  });
+}
+
+export type NovoItemRequest ={ nome: string; sku?: string; unidade?: string; quantidade: number; quantidadeMinima: number };
 
 /** `POST /estoque/itens` (GERENTE/ADMIN). */
 export function useCriarItem() {
