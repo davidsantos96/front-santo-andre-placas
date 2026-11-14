@@ -20,10 +20,19 @@ export function observarTeclado(): void {
     // 120px: ignora a barra do Safari recolhendo/expandindo; teclado é sempre bem maior.
     if (coberto > 120) raiz.dataset.teclado = '';
     else delete raiz.dataset.teclado;
+
+    // Login: o formulário já sobe sozinho (CSS). Se o Safari também rolar a página para
+    // "mostrar o campo", os dois deslocamentos se somam e o formulário some por cima; desfaz a rolagem.
+    if (coberto > 120 && document.querySelector('.auth-layout') && (window.scrollY !== 0 || vv.offsetTop !== 0)) {
+      window.scrollTo(0, 0);
+    }
   };
   const agendar = () => { if (!quadro) quadro = requestAnimationFrame(medir); };
 
   vv.addEventListener('resize', agendar);
   vv.addEventListener('scroll', agendar);
+  // O Safari rola a página um pouco depois de abrir o teclado; mede de novo ao trocar de campo.
+  window.addEventListener('scroll', agendar, { passive: true });
+  document.addEventListener('focusin', () => { agendar(); setTimeout(agendar, 350); });
   medir();
 }
