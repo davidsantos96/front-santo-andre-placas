@@ -19,7 +19,7 @@ export function ConfirmDialog({ aberto, onFechar, onConfirmar, titulo, descricao
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40" />
         <Dialog.Content onCloseAutoFocus={devolverFoco}
-          className="fixed left-1/2 top-1/2 z-50 w-[400px] max-w-[92vw] -translate-x-1/2 -translate-y-1/2 rounded-lg bg-white p-5 shadow-placa"
+          className="modal-folha fixed left-1/2 top-1/2 z-50 w-[400px] max-w-[92vw] -translate-x-1/2 -translate-y-1/2 rounded-lg bg-white p-5 shadow-placa"
           onOpenAutoFocus={(e) => {
             if (perigo) {
               e.preventDefault();

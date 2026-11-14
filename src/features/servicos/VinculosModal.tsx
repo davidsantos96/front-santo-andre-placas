@@ -134,7 +134,7 @@ export function VinculosModal({ servico, onFechar }: { servico: Servico | null; 
     <Dialog.Root open={servico !== null} onOpenChange={(o) => !o && onFechar()}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40" />
-        <Dialog.Content onCloseAutoFocus={devolverFoco} className="fixed left-1/2 top-1/2 z-50 flex max-h-[85vh] w-[520px] max-w-[94vw] -translate-x-1/2 -translate-y-1/2 flex-col overflow-auto rounded-lg bg-white p-5 shadow-placa">
+        <Dialog.Content onCloseAutoFocus={devolverFoco} className="modal-folha fixed left-1/2 top-1/2 z-50 flex max-h-[85vh] w-[520px] max-w-[94vw] -translate-x-1/2 -translate-y-1/2 flex-col overflow-auto rounded-lg bg-white p-5 shadow-placa">
           <Dialog.Title className="font-display text-[18px] font-bold">Baixa de estoque de {servico?.nome}</Dialog.Title>
           <Dialog.Description className="mt-1 text-sm text-aco">
             Itens retirados do estoque automaticamente quando um pedido deste serviço entra em processamento.

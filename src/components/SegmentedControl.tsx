@@ -17,7 +17,7 @@ export function SegmentedControl<T extends string>({ opcoes, valor, onChange, ar
   };
 
   return (
-    <div role="radiogroup" aria-label={ariaLabel} className="inline-flex overflow-hidden rounded border border-linha-forte">
+    <div role="radiogroup" aria-label={ariaLabel} className="inline-flex max-w-full overflow-x-auto rounded border border-linha-forte">
       {opcoes.map((o, i) => {
         const ativo = o.valor === valor;
         return (
@@ -31,7 +31,7 @@ export function SegmentedControl<T extends string>({ opcoes, valor, onChange, ar
             onClick={() => onChange(o.valor)}
             onKeyDown={(e) => onKey(e, i)}
             className={clsx(
-              'h-[30px] px-3 text-sm font-semibold',
+              'h-[30px] whitespace-nowrap px-3 text-sm font-semibold max-[420px]:px-2.5',
               i > 0 && 'border-l border-linha-forte',
               ativo ? 'bg-mercosul text-white' : 'bg-white text-aco',
             )}

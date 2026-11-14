@@ -12,7 +12,7 @@ export function ClientePainel({ aberto, onFechar, onSalvo, descricao = 'Ao salva
     <Dialog.Root open={aberto} onOpenChange={(o) => !o && onFechar()}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40" />
-        <Dialog.Content onCloseAutoFocus={devolverFoco} className="fixed inset-y-0 right-0 z-50 w-[420px] max-w-full overflow-auto bg-white p-5 shadow-placa">
+        <Dialog.Content onCloseAutoFocus={devolverFoco} className="painel-folha fixed inset-y-0 right-0 z-50 w-[420px] max-w-full overflow-auto bg-white p-5 shadow-placa">
           <Dialog.Title className="font-display text-[18px] font-bold">Novo cliente</Dialog.Title>
           <Dialog.Description className="mb-4 mt-1 text-sm text-aco">{descricao}</Dialog.Description>
           <ClienteForm onSalvo={onSalvo} onCancelar={onFechar} />

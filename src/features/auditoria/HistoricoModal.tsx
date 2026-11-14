@@ -62,7 +62,7 @@ export function HistoricoModal({ entidade, alvo, onFechar }: Props) {
     <Dialog.Root open={alvo !== null} onOpenChange={(o) => !o && onFechar()}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40" />
-        <Dialog.Content onCloseAutoFocus={devolverFoco} className="fixed left-1/2 top-1/2 z-50 flex max-h-[80vh] w-[560px] max-w-[94vw] -translate-x-1/2 -translate-y-1/2 flex-col rounded-lg bg-white p-5 shadow-placa">
+        <Dialog.Content onCloseAutoFocus={devolverFoco} className="modal-folha fixed left-1/2 top-1/2 z-50 flex max-h-[80vh] w-[560px] max-w-[94vw] -translate-x-1/2 -translate-y-1/2 flex-col rounded-lg bg-white p-5 shadow-placa">
           <Dialog.Title className="font-display text-[18px] font-bold">Histórico de {alvo?.descricao}</Dialog.Title>
           <Dialog.Description className="sr-only">Quem alterou, o quê e quando, do mais recente para o mais antigo.</Dialog.Description>
 

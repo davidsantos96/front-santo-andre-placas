@@ -47,7 +47,7 @@ export function Sidebar({ aberta, onFechar }: { aberta: boolean; onFechar: () =>
                     onClick={onFechar}
                     className={({ isActive }) =>
                       clsx(
-                        'relative flex items-center gap-2.5 px-3.5 py-[9px] text-md',
+                        'relative flex items-center gap-2.5 px-3.5 py-[9px] text-md toque:min-h-[44px]',
                         isActive ? 'bg-white/10 text-white' : 'text-noite-sub hover:bg-white/5 hover:text-white',
                       )
                     }

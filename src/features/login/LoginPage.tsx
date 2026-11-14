@@ -40,7 +40,7 @@ export function LoginPage() {
 
   return (
     <>
-      <PlacaBadge placa="SAP0001" tam="lg" className="mb-6" />
+      <PlacaBadge placa="SAP0001" tam="lg" className="auth-enfeite mb-6" />
       <form onSubmit={enviar} noValidate className="w-[360px] max-w-full rounded-lg border border-linha bg-white p-6 shadow-card">
         <h1 className="mb-4 font-display text-[22px] font-bold">Entrar</h1>
         <label className="block text-xs font-semibold text-aco">

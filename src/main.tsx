@@ -15,7 +15,10 @@ import { queryClient } from '@/api/queryClient';
 import { SessionProvider } from '@/auth/SessionProvider';
 import { ToastProvider } from '@/components/Toast';
 import { CarregandoApp } from '@/components/CarregandoApp';
+import { observarTeclado } from '@/lib/teclado';
 import { criarRouter } from './router';
+
+observarTeclado();
 
 const root = createRoot(document.getElementById('root')!);
 root.render(<CarregandoApp />);

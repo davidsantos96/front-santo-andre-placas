@@ -25,3 +25,31 @@
 /* Altura da tela que respeita a barra do Safari (dvh), com 100vh de reserva para navegadores antigos. */
 .h-tela { height: 100vh; height: 100dvh; }
 .min-h-tela { min-height: 100vh; min-height: 100dvh; }
+
+/* ---------- Toque: alvos de 44px (recomendação da Apple) ---------- */
+@media (pointer: coarse) {
+  button, select, [role='tab'], [role='radio'], [role='option'],
+  input:not([type='checkbox']):not([type='radio']) { min-height: 44px; }
+  /* Botões só de ícone ficam quadrados. */
+  button:has(> svg:only-child) { min-width: 44px; }
+}
+
+/* ---------- Teclado aberto no login: formulário sobe e a placa decorativa sai ---------- */
+html[data-teclado] .auth-layout { justify-content: flex-start; min-height: var(--vvh, 100dvh); padding-top: max(1rem, env(safe-area-inset-top)); padding-bottom: 1rem; }
+html[data-teclado] .auth-layout .auth-enfeite { display: none; }
+
+/* ---------- Modais viram folha que sobe da base no celular ---------- */
+@media (max-width: 639px) {
+  .modal-folha {
+    left: 0 !important; right: 0 !important; top: auto !important;
+    bottom: var(--kb, 0px) !important; /* encosta no teclado quando ele está aberto */
+    transform: none !important;
+    width: 100% !important; max-width: 100% !important;
+    max-height: calc(var(--vvh, 100dvh) - 24px) !important;
+    overflow-y: auto;
+    border-radius: 14px 14px 0 0 !important;
+    padding-bottom: max(1.25rem, env(safe-area-inset-bottom)) !important;
+  }
+  /* Painel lateral (novo cliente): ocupa a tela e deixa espaço para o teclado. */
+  .painel-folha { padding-bottom: calc(1.25rem + var(--kb, 0px) + env(safe-area-inset-bottom)) !important; padding-top: max(1.25rem, env(safe-area-inset-top)) !important; }
+}

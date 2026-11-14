@@ -273,7 +273,9 @@ export function NovoPedidoPage() {
         </Bloco>
       </div>
 
-      <div className="sticky bottom-0 -mx-6 flex items-center justify-between gap-4 border-t border-linha bg-white px-6 py-3">
+      {/* No celular a barra fica presa ao rodapé da tela; o espaçador evita que ela cubra o fim do formulário. */}
+      <div aria-hidden="true" className="h-24 min-[900px]:hidden" />
+      <div className="sticky bottom-0 -mx-6 flex items-center justify-between gap-4 border-t border-linha bg-white px-6 py-3 max-[899px]:fixed max-[899px]:inset-x-0 max-[899px]:z-20 max-[899px]:mx-0 max-[899px]:px-4 max-[899px]:pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <div className="flex min-w-0 items-center gap-3 text-base">
           {veiculo ? <PlacaBadge placa={veiculo.placa} /> : <span className="text-aco">Placa</span>}
           <span className="truncate text-aco">{servico?.nome ?? 'Serviço'}</span>
