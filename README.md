@@ -51,7 +51,7 @@ Os roteiros em `e2e/` usam a API de verdade e **gravam dados** (clientes, pedido
 
 `07-rastreabilidade.spec.ts` cobre autoria, snapshot de preço, movimentações de estoque e o histórico (auditoria); `08-ajustes-finais.spec.ts` cobre o vínculo serviço↔item de estoque feito pela tela e as proteções da API (códigos de erro, usuários, busca, regras de pedido). A pasta inclui `06-acessibilidade.spec.ts`: axe-core (WCAG 2.1 A/AA, com contraste) em todas as rotas, modais e no mobile, mais testes de teclado e `prefers-reduced-motion`.
 
-Variáveis: `E2E_CONFIRM` (obrigatória), `E2E_API_URL` (padrão `http://localhost:8080/api`), `E2E_WEB_URL`, `E2E_USER`/`E2E_PASSWORD` (sem padrão: informe o administrador do banco de teste), `E2E_CHROMIUM_PATH`. Tipos: `npm run e2e:typecheck`.
+Variáveis: `E2E_CONFIRM` (obrigatória), `E2E_API_URL` (padrão `http://localhost:8080/api`), `E2E_WEB_URL`, `E2E_USER`/`E2E_PASSWORD` (informe o administrador do banco de teste), `E2E_CHROMIUM_PATH`. Tipos: `npm run e2e:typecheck`.
 
 ## Protótipo de referência
 
