@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#001B4D"/>
+  <rect x="56" y="156" width="400" height="200" rx="18" fill="#FFFFFF" stroke="#1A1D21" stroke-width="10"/>
+  <path d="M61 174a13 13 0 0 1 13-13h364a13 13 0 0 1 13 13v38H61z" fill="#003399"/>
+  <text x="256" y="200" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="26" letter-spacing="10" fill="#FFFFFF">BRASIL</text>
+  <text x="256" y="318" text-anchor="middle" font-family="'Arial Narrow', Arial, Helvetica, sans-serif" font-weight="700" font-size="112" letter-spacing="4" fill="#1A1D21">SAP</text>
+</svg>

@@ -8,7 +8,7 @@ type Props = { onMenu: () => void; menuAberto: boolean };
 export const Topbar = forwardRef<HTMLInputElement, Props>(function Topbar({ onMenu, menuAberto }, buscaRef) {
   const navigate = useNavigate();
   return (
-    <header className="flex h-[54px] shrink-0 items-center gap-4 border-b border-linha bg-white px-5">
+    <header className="box-content flex h-[54px] shrink-0 items-center gap-4 border-b border-linha bg-white pl-5 max-[899px]:pl-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))] pt-[env(safe-area-inset-top)]">
       <button
         type="button"
         onClick={onMenu}

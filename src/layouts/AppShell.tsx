@@ -22,11 +22,11 @@ export function AppShell() {
   }, [menu]);
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-tela overflow-hidden">
       <Sidebar aberta={menu} onFechar={() => setMenu(false)} />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar ref={busca} onMenu={() => setMenu((m) => !m)} menuAberto={menu} />
-        <main className="flex-1 overflow-auto bg-fundo">
+        <main className="flex-1 overflow-auto bg-fundo pb-[env(safe-area-inset-bottom)] pr-[env(safe-area-inset-right)] max-[899px]:pl-[env(safe-area-inset-left)]">
           <Outlet />
         </main>
       </div>

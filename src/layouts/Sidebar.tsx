@@ -21,9 +21,11 @@ export function Sidebar({ aberta, onFechar }: { aberta: boolean; onFechar: () =>
       <aside
         id="menu-lateral"
         className={clsx(
-          'z-40 flex w-[214px] shrink-0 flex-col bg-noite text-white transition-transform',
+          'z-40 box-content flex w-[214px] shrink-0 flex-col bg-noite text-white transition-[transform,visibility] duration-200',
+          'pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pt-[env(safe-area-inset-top)]',
           'max-[899px]:fixed max-[899px]:inset-y-0 max-[899px]:left-0',
-          aberta ? 'max-[899px]:translate-x-0' : 'max-[899px]:-translate-x-full',
+          // Fechada no celular: fora da tela e invisível (sai da navegação por teclado e do leitor de tela).
+          aberta ? 'max-[899px]:translate-x-0' : 'max-[899px]:invisible max-[899px]:-translate-x-full',
         )}
       >
         <div className="flex items-center gap-2.5 border-b border-white/10 px-3.5 py-3.5">

@@ -3,11 +3,25 @@
 @tailwind utilities;
 
 @layer base {
+  /* Sem "elástico" na página: a rolagem é sempre do <main>, não do documento. */
+  html { overscroll-behavior-y: none; -webkit-tap-highlight-color: transparent; }
   body { @apply bg-fundo text-grafite font-sans text-base; }
   :focus-visible { @apply outline-2 outline-offset-2 outline-mercosul; outline-style: solid; }
   table { font-variant-numeric: tabular-nums; }
 }
 
+/* Telas de toque (celular/tablet). */
+@media (pointer: coarse) {
+  /* iOS dá zoom na página ao focar campo com fonte menor que 16px. */
+  input, select, textarea { font-size: 16px !important; }
+  /* Atalhos de teclado não servem no toque. */
+  kbd { display: none !important; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* Altura da tela que respeita a barra do Safari (dvh), com 100vh de reserva para navegadores antigos. */
+.h-tela { height: 100vh; height: 100dvh; }
+.min-h-tela { min-height: 100vh; min-height: 100dvh; }
