@@ -23,6 +23,20 @@ async function entrar(inicial: string) {
 }
 
 describe('Pedidos — quadro', () => {
+  it('pedido antigo em aberto continua no quadro; entregue antigo sai', async () => {
+    const haDias = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString();
+    const aberto = db.pedidos.find((p) => p.id === 1058)!; // RECEBIDO
+    aberto.criadoEm = haDias(12);
+    aberto.atualizadoEm = haDias(12);
+    const entregue = db.pedidos.find((p) => p.id === 1050)!; // ENTREGUE
+    entregue.criadoEm = haDias(9);
+    entregue.atualizadoEm = haDias(5);
+    await entrar('/pedidos');
+    const recebido = await screen.findByRole('region', { name: 'Recebido' });
+    expect(within(recebido).getByRole('button', { name: /Pedido 1058/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Pedido 1050/ })).not.toBeInTheDocument();
+  });
+
   it('agrupa por status, mostra "$ pendente" e mantém CANCELADO fora', async () => {
     db.pedidos.find((p) => p.id === 1048)!.status = 'CANCELADO';
     await entrar('/pedidos');
