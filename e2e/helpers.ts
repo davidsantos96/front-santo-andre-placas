@@ -3,7 +3,8 @@ import { expect, type Page } from '@playwright/test';
 export const API = process.env.E2E_API_URL ?? 'http://localhost:8080/api';
 export const ADMIN = {
   login: process.env.E2E_USER ?? 'admin',
-  senha: process.env.E2E_PASSWORD ?? 'admin123',
+  // Sem senha padrão: informe a do administrador do banco de teste (E2E_PASSWORD).
+  senha: process.env.E2E_PASSWORD ?? '',
 };
 
 /** Sufixo único por execução: os nomes criados não colidem com dados de execuções anteriores. */

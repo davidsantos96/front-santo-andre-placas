@@ -8,6 +8,7 @@ export default async function globalSetup() {
       'Use um banco de teste e rode com E2E_CONFIRM=1 (ex.: E2E_CONFIRM=1 npm run e2e).',
     );
   }
+  if (!ADMIN.senha) throw new Error('Defina E2E_PASSWORD com a senha do administrador do banco de teste (e E2E_USER, se não for admin).');
   const r = await fetch(`${API}/auth/login`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login: ADMIN.login, senha: ADMIN.senha }),
   }).catch(() => null);
